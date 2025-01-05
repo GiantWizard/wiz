@@ -155,22 +155,50 @@ def build_recipe_tree(data, item_id, prices, lbin_data, visited=None):
     hourly_instasells = prices.get(item_id, {}).get("hourly_instasells", 0)
     direct_fill_time = 1 / hourly_instasells if hourly_instasells > 0 else float('inf')
 
-    # Compare costs and fill times
+    # Compare costs and decide whether to craft or buy
     if bazaar_price > 0:
-        price_difference = (total_craft_cost - bazaar_price) / bazaar_price
-        if price_difference <= 0.15:  # 15% difference
-            tree["cost"] = total_craft_cost
-            tree["note"] = "crafting (price close)"
-        elif bazaar_price <= total_craft_cost:
-            tree = {
-                "name": item_id,
-                "count": 1,
-                "note": "purchased directly",
-                "cost": bazaar_price
-            }
+        if output_count > 1:
+            if total_craft_cost < bazaar_price:
+                tree["cost"] = total_craft_cost
+                tree["note"] = f"crafting ({output_count} outputs)"
+            else:
+                tree = {
+                    "name": item_id,
+                    "count": 1,
+                    "note": "base item (multiple output)",
+                    "cost": bazaar_price
+                }
         else:
-            tree["cost"] = total_craft_cost
-            tree["note"] = "crafting"
+            price_difference = (total_craft_cost - bazaar_price) / bazaar_price
+            total_items = sum(count for _, count in merged_ingredients.items())
+            
+            # For items under 1000 coins, only allow "price close" if less than 80 items
+            if bazaar_price < 1000 and total_items >= 80:
+                # Always buy directly if crafting cost is higher
+                if total_craft_cost >= bazaar_price:
+                    tree = {
+                        "name": item_id,
+                        "count": 1,
+                        "note": "purchased directly",
+                        "cost": bazaar_price
+                    }
+                else:
+                    tree["cost"] = total_craft_cost
+                    tree["note"] = "crafting"
+            else:
+                # For expensive items or small recipes
+                if total_craft_cost >= bazaar_price:
+                    # If crafting is more expensive, always buy directly
+                    tree = {
+                        "name": item_id,
+                        "count": 1,
+                        "note": "purchased directly",
+                        "cost": bazaar_price
+                    }
+                else:
+                    # Only show crafting if it's cheaper
+                    tree["cost"] = total_craft_cost
+                    tree["note"] = "crafting"
     else:
         tree["cost"] = total_craft_cost
         tree["note"] = "crafting (no bazaar price)"
