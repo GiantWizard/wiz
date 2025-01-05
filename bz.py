@@ -337,121 +337,15 @@ try:
 
     top_crafts = calculate_profit(data, prices, lbin_data)
 
-    print("Top 10 Most Profitable Crafts (Sorted by Coins per Hour):")
-    for craft in top_crafts:
-        print("""
-        - {item_id}:
-        Profit = {profit:,.2f}
-        Profit Percent = {profit_percent:,.2f}%
-        Crafting Cost = {crafting_cost:,.2f}
-        Sell Price = {sell_price:,.2f}
-        Coins Per Hour = {coins_per_hour:,.2f}
-        Total Time = {total_time:,.2f} hours
-        Sales Method = {sales_method}
-        Hourly Instabuys = {hourly_instabuys:,.2f}
-        """.format(
-                    item_id=craft['item_id'],
-                    profit=craft['profit'],
-                    profit_percent=craft['profit_percent'],
-                    crafting_cost=craft['crafting_cost'],
-                    sell_price=craft['sell_price'],
-                    coins_per_hour=craft['coins_per_hour'],
-                    total_time=craft['total_time'],
-                    sales_method=craft['sales_method'],
-                    hourly_instabuys=craft['hourly_instabuys']
-                ))
-
-    while True:
-        print("\nOptions:")
-        print("1. View recipe tree and craft cost")
-        print("2. Exit")
-        
-        choice = input("Enter your choice (1-2): ")
-
-        if choice == "2":
-            break
-        
-        if choice == "1":
-            item_name = input("\nEnter the item name: ")
-            item_id = get_item_id(data, item_name)
-            if item_id:
-                print(f"\nItem ID for '{item_name}': {item_id}\n")
-                recipe_tree = build_recipe_tree(data, item_id, prices, lbin_data)
-                print("Recipe Tree:")
-                print_recipe_tree(recipe_tree, prices)
-
-                raw_items = collect_raw_items(recipe_tree)
-                total_price = 0
-
-                print("\n--- Raw Items Needed ---")
-                for item, quantity in raw_items.items():
-                    recipe = data[item_id]["recipe"]
-                    output_count = int(recipe.get("count", 1))
-                    price_info = prices.get(item, {})
-                    price = price_info.get("price", 0)
-                    method = price_info.get("method", "N/A")
-                    if price == 0:  # Check Auctions if Bazaar price is not found
-                        price = fetch_lowest_auction_price(item, lbin_data) or 0
-                        method = "Auction" if price > 0 else "N/A"
-
-                    if price > 0:
-                        total_price += price * quantity
-                        print(f"- {item}: {quantity:,.2f} @ {price:,.2f} each = {price * quantity:,.2f} ({method})")
-                    else:
-                        print(f"- {item}: {quantity:,.2f} (No price available)")
-                
-                final = total_price
-
-                # Selling Price from Bazaar or Auction
-                sell_price = prices.get(item_id, {}).get("price", 0)
-                profit = sell_price - final if sell_price else "N/A"
-                profit_percentage = ((sell_price - final) / final) * 100 if isinstance(profit, (int, float)) and final > 0 else "N/A"
-
-                print(f"\nTotal cost of raw items: {final:,.2f}")
-                if sell_price:
-                    print(f"Selling Price: {sell_price:,.2f}")
-                print(f"Profit: {profit:,.2f}" if isinstance(profit, (int, float)) else "Profit: N/A")
-                print(f"Profit Percentage: {profit_percentage:,.2f}%" if isinstance(profit_percentage, (int, float)) else "Profit Percentage: N/A")
-                
-                # Calculate and display coins per hour
-                hourly_instabuys = prices.get(item_id, {}).get("hourly_instabuys", 0)
-                if isinstance(profit, (int, float)) and hourly_instabuys > 0:
-                    coins_per_hour = profit * hourly_instabuys
-                    print(f"Coins Per Hour: {coins_per_hour:,.2f}")
-                else:
-                    print("Coins Per Hour: N/A")
-
-                # Longest to fill calculation
-                longest_to_fill = find_longest_to_fill(raw_items, prices)
-                if longest_to_fill:
-                    print(f"\nSubitem taking the longest to fill: {longest_to_fill['item']}\n  Quantity: {longest_to_fill['quantity']:,.2f}\n  Price: {longest_to_fill['price']:,.2f}\n  Time to fill: {longest_to_fill['time_to_fill']:,.2f} hours\n  Method: {longest_to_fill['method']}")
-
-                # Profit per hour calculation
-                if longest_to_fill and "time_to_fill" in longest_to_fill:
-                    time_to_fill = longest_to_fill["time_to_fill"]
-                    sales_method = prices.get(item_id, {}).get("method", "")
-                    hourly_instabuys = prices.get(item_id, {}).get("hourly_instabuys", 0)
-                    
-                    # Calculate sales per hour based on instabuy rate
-                    if hourly_instabuys > 0:
-                        sales_per_hour = hourly_instabuys
-                        time_to_sell = 1 / hourly_instabuys
-                        total_time = time_to_fill + time_to_sell
-                        profit_per_hour = profit * sales_per_hour
-                    else:
-                        sales_per_hour = 0
-                        profit_per_hour = 0
-                    
-                    print(f"\nSales Method: {sales_method}")
-                    print(f"Hourly Instabuys: {hourly_instabuys:,.2f}")
-                    print(f"Sales Per Hour: {sales_per_hour:,.2f}")
-                    print(f"Time to Fill Orders: {time_to_fill:,.2f} hours")
-                    print(f"Time to Sell One Item: {time_to_sell:,.2f} hours")
-                    print(f"Total Time Per Item: {total_time:,.2f} hours")
-                    print(f"Profit Per Hour: {profit_per_hour:,.2f}")
-
-            else:
-                print(f"Item '{item_name}' not found in the data.")
+    # Only output the JSON data
+    print(json.dumps([{
+        "item_id": craft["item_id"],
+        "profit": craft["profit"],
+        "profit_percent": craft["profit_percent"],
+        "crafting_cost": craft["crafting_cost"],
+        "sell_price": craft["sell_price"],
+        "coins_per_hour": craft["coins_per_hour"]
+    } for craft in top_crafts]))
 
 except Exception as e:
-    print(f"An error occurred: {e}")
+    print(json.dumps({"error": str(e)}))
