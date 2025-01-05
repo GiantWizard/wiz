@@ -282,7 +282,7 @@ def calculate_profit(data, prices, lbin_data):
 
         profit = bazaar_price - crafting_cost
         
-        if profit > 0 and hourly_instabuys > 0:
+        if profit > 50000 and hourly_instabuys > 0:
             coins_per_hour = profit * hourly_instabuys
             profit_percent = (profit / crafting_cost) * 100 if crafting_cost > 0 else 0
             
@@ -372,7 +372,7 @@ try:
                     else:
                         print(f"- {item}: {quantity:,.2f} (No price available)")
                 
-                final = total_price / output_count if output_count != 9 else total_price
+                final = total_price
 
                 # Selling Price from Bazaar or Auction
                 sell_price = prices.get(item_id, {}).get("price", 0)
