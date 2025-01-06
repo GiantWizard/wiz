@@ -279,88 +279,13 @@ def find_longest_to_fill(raw_items, prices):
 
     return longest_item
 
-def calculate_profit(data, prices, lbin_data):
-    profits = []
-    for item_id in data.keys():
-        tree = build_recipe_tree(data, item_id, prices, lbin_data)
-        
-        # Check if any component has "no price" in its note
-        def has_no_price_items(node):
-            if "no price" in str(node.get("note", "")).lower():
-                return True
-            return any(has_no_price_items(child) for child in node.get("children", []))
-        
-        if has_no_price_items(tree):
-            continue
-            
-        crafting_cost = tree.get("cost", float("inf"))
-        price_info = prices.get(item_id, {})
-        bazaar_price = price_info.get("price", 0)
-        
-        # Skip if final item has no price
-        if bazaar_price <= 1:
-            auction_price = fetch_lowest_auction_price(item_id, lbin_data)
-            if not auction_price or auction_price <= 1:
-                continue
-            bazaar_price = auction_price
-        
-        sales_method = price_info.get("method", "")
-        hourly_instabuys = price_info.get("hourly_instabuys", 0)
-        hourly_instasells = price_info.get("hourly_instasells", 0)
-
-        profit = bazaar_price - crafting_cost
-        
-        if profit > 50000 and hourly_instabuys > 0:
-            coins_per_hour = profit * hourly_instabuys
-            profit_percent = (profit / crafting_cost) * 100 if crafting_cost > 0 else 0
-            
-            profits.append({
-                "item_id": item_id,
-                "profit": profit,
-                "profit_percent": profit_percent,
-                "crafting_cost": crafting_cost,
-                "sell_price": bazaar_price,
-                "coins_per_hour": coins_per_hour,
-                "total_time": 1 / hourly_instabuys,
-                "sales_method": sales_method,
-                "hourly_instabuys": hourly_instabuys,
-                "hourly_instasells": hourly_instasells
-            })
-
-    return sorted(profits, key=lambda x: x["coins_per_hour"], reverse=True)[:10]
 
 # Main execution
 try:
     data = load_data()
     prices = fetch_all_bazaar_prices()
     lbin_data = fetch_lbin_prices()
-
-    top_crafts = calculate_profit(data, prices, lbin_data)
-
-    print("Top 10 Most Profitable Crafts (Sorted by Coins per Hour):")
-    for craft in top_crafts:
-        print("""
-        - {item_id}:
-        Profit = {profit:,.2f}
-        Profit Percent = {profit_percent:,.2f}%
-        Crafting Cost = {crafting_cost:,.2f}
-        Sell Price = {sell_price:,.2f}
-        Coins Per Hour = {coins_per_hour:,.2f}
-        Total Time = {total_time:,.2f} hours
-        Sales Method = {sales_method}
-        Hourly Instabuys = {hourly_instabuys:,.2f}
-        """.format(
-                    item_id=craft['item_id'],
-                    profit=craft['profit'],
-                    profit_percent=craft['profit_percent'],
-                    crafting_cost=craft['crafting_cost'],
-                    sell_price=craft['sell_price'],
-                    coins_per_hour=craft['coins_per_hour'],
-                    total_time=craft['total_time'],
-                    sales_method=craft['sales_method'],
-                    hourly_instabuys=craft['hourly_instabuys']
-                ))
-
+    
     while True:
         print("\nOptions:")
         print("1. View recipe tree and craft cost")
@@ -382,6 +307,8 @@ try:
 
                 raw_items = collect_raw_items(recipe_tree)
                 total_price = 0
+                
+                longitem = find_longest_to_fill(raw_items, prices)
 
                 print("\n--- Raw Items Needed ---")
                 for item, quantity in raw_items.items():
