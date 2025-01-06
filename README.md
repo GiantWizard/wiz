@@ -1,2 +1,1 @@
-# wiz
-# wiz
+free money generator
