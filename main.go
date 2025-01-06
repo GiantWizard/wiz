@@ -22,8 +22,20 @@ type CraftProfit struct {
     CoinsPerHour  float64 `json:"coins_per_hour"`
 }
 
+type RecipeItem struct {
+    Name     string       `json:"name"`
+    Cost     float64     `json:"cost"`
+    Note     string      `json:"note"`
+    Count    float64     `json:"count"`
+    Price    float64     `json:"price"`
+    Method   string      `json:"method"`
+    Children []RecipeItem `json:"children"`
+    BaseItems []RecipeItem `json:"base_items"`
+}
+
 type RecipeData struct {
     ItemName string
+    Recipe   RecipeItem
 }
 
 // Cache structure
@@ -115,8 +127,36 @@ func main() {
     http.HandleFunc("/recipe/", func(w http.ResponseWriter, r *http.Request) {
         itemId := strings.TrimPrefix(r.URL.Path, "/recipe/")
         
-        recipeData := RecipeData{
-            ItemName: itemId,
+        // Convert URL format to display format
+        displayName := strings.ReplaceAll(itemId, "_", " ")
+        displayName = strings.Title(strings.ToLower(displayName))
+        
+        cmd := exec.Command("python3", "bz.py", "--recipe", itemId)
+        output, err := cmd.Output()
+        if err != nil {
+            log.Printf("Error getting recipe: %v", err)
+            http.Error(w, "Internal Server Error", 500)
+            return
+        }
+
+        var recipe RecipeItem
+        err = json.Unmarshal(output, &recipe)
+        if err != nil {
+            // Try parsing as array
+            var recipes []RecipeItem
+            err = json.Unmarshal(output, &recipes)
+            if err != nil {
+                http.Error(w, "Internal Server Error", 500)
+                return
+            }
+            if len(recipes) > 0 {
+                recipe = recipes[0]
+            }
+        }
+
+        data := RecipeData{
+            ItemName: displayName,
+            Recipe:   recipe,
         }
 
         tmpl, err := template.New("recipe.html").Funcs(funcMap).ParseFiles("recipe.html")
@@ -127,7 +167,7 @@ func main() {
         }
 
         w.Header().Set("Content-Type", "text/html; charset=utf-8")
-        err = tmpl.Execute(w, recipeData)
+        err = tmpl.Execute(w, data)
         if err != nil {
             if !strings.Contains(err.Error(), "broken pipe") {
                 log.Printf("Error executing template: %v", err)

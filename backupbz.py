@@ -50,25 +50,22 @@ def get_item_id(data, item_name):
     return None
 
 # Build recipe tree
-def build_recipe_tree(data, item_id, prices, lbin_data, visited=None, original_item=None, original_count=None):
+def build_recipe_tree(data, item_id, prices, lbin_data, visited=None):
     if visited is None:
         visited = set()
-        original_item = item_id
-        original_count = 1
 
     if item_id in visited:
-        # If cycle detected, return the original item
         price_info = prices.get(item_id, {"price": 0})
         return {
             "name": item_id,
-            "count": 1,  # Always 1
+            "count": 1,
             "note": "base item (cycle detected)",
-            "cost": price_info.get("price", 0)  # Just the base price
+            "cost": price_info.get("price", 0)
         }
 
     if item_id not in data or "recipe" not in data[item_id]:
         price_info = prices.get(item_id, {"price": 0})
-        if price_info["price"] == 0:
+        if price_info["price"] == 0:  # If not found in Bazaar, check Auctions
             auction_price = fetch_lowest_auction_price(item_id, lbin_data) or 0
             return {
                 "name": item_id, 
@@ -80,6 +77,13 @@ def build_recipe_tree(data, item_id, prices, lbin_data, visited=None, original_i
             return {"name": item_id, "count": 1, "note": "base item", "cost": price_info["price"]}
 
     recipe = data[item_id]["recipe"]
+    output_count = int(recipe.get("count", 1))
+    
+    # Skip crafting if recipe produces multiple items
+    if output_count > 1:
+        price_info = prices.get(item_id, {"price": 0})
+        return {"name": item_id, "count": 1, "note": "base item (multiple output)", "cost": price_info["price"]}
+
     merged_ingredients = defaultdict(int)
     visited.add(item_id)
 
@@ -89,60 +93,114 @@ def build_recipe_tree(data, item_id, prices, lbin_data, visited=None, original_i
             count = int(count) if count.isdigit() else 1
             merged_ingredients[name] += count
 
+    # Check if all components have no price
+    all_components_no_price = True
+    for name in merged_ingredients:
+        price = prices.get(name, {}).get("price", 0)
+        auction_price = fetch_lowest_auction_price(name, lbin_data) or 0
+        if price > 1 or auction_price > 1:
+            all_components_no_price = False
+            break
+
+    # If all components have no price but the item itself has a price, return it as base item
+    if all_components_no_price:
+        price_info = prices.get(item_id, {})
+        bazaar_price = price_info.get("price", 0)
+        auction_price = fetch_lowest_auction_price(item_id, lbin_data) or 0
+        if bazaar_price > 1 or auction_price > 1:
+            visited.remove(item_id)
+            return {
+                "name": item_id,
+                "count": 1,
+                "note": "base item (components have no price)",
+                "cost": bazaar_price if bazaar_price > 1 else auction_price
+            }
+
     tree = {"name": item_id, "children": [], "count": 1}
     total_craft_cost = 0
-    output_count = int(recipe.get("count", 1))
 
-    # Calculate fill time for crafting
-    total_craft_fill_time = 0
-    for name, count in merged_ingredients.items():
-        hourly_instasells = prices.get(name, {}).get("hourly_instasells", 0)
-        if hourly_instasells > 0:
-            total_craft_fill_time = max(total_craft_fill_time, count / hourly_instasells)
-
-    for name, count in merged_ingredients.items():
-        subitem_price = prices.get(name, {}).get("price", 0)
-        if subitem_price == 0:  # If not found in Bazaar, check Auctions
-            subitem_price = fetch_lowest_auction_price(name, lbin_data) or 0
+    # Check if the final item has a price
+    final_price = prices.get(item_id, {}).get("price", 0)
+    if final_price <= 1:
+        auction_price = fetch_lowest_auction_price(item_id, lbin_data) or 0
+        if auction_price <= 1:
+            # Try to find the highest level component with a price
+            highest_priced_component = None
+            highest_price = 0
             
-        aggregated_cost = subitem_price * count
-        bazaar_price = prices.get(item_id, {}).get("price", float("inf")) * output_count
+            for name, count in merged_ingredients.items():
+                child = build_recipe_tree(data, name, prices, lbin_data, visited)
+                if child and child.get("cost", 0) > 1:  # Found a component with price
+                    if child["cost"] > highest_price:
+                        highest_price = child["cost"]
+                        highest_priced_component = child
+                tree["children"].append(child)
 
-        child = build_recipe_tree(data, name, prices, lbin_data, visited)
-        child["count"] = count
-        total_craft_cost += child.get("cost", 0) * count
-        tree["children"].append(child)
-
-        if count >= 80 and subitem_price <= 1000:
-            tree = {"name": item_id, "count": 1, "note": "purchased directly", "cost": prices.get(item_id, {}).get("price", 0)}
             visited.remove(item_id)
-            return tree
+            if highest_priced_component:
+                return highest_priced_component  # Return the highest-priced component as base item
+            return {"name": item_id, "count": 1, "note": "base item (no price)", "cost": 0}
+
+    # Calculate normal crafting costs
+    for name, count in merged_ingredients.items():
+        child = build_recipe_tree(data, name, prices, lbin_data, visited)
+        if child:  # Make sure child exists
+            child["count"] = count
+            total_craft_cost += child.get("cost", 0) * count
+            tree["children"].append(child)
 
     bazaar_price = prices.get(item_id, {}).get("price", 0)
-    total_bazaar_price = bazaar_price * output_count
     
     # Calculate fill time for buying directly
     hourly_instasells = prices.get(item_id, {}).get("hourly_instasells", 0)
     direct_fill_time = 1 / hourly_instasells if hourly_instasells > 0 else float('inf')
 
-    # Compare costs and fill times
-    if total_bazaar_price > 0:
-        price_difference = (total_craft_cost - total_bazaar_price) / total_bazaar_price
-        if price_difference <= 0.15 and total_craft_fill_time < direct_fill_time:  # 15% difference and faster to fill
-            tree["cost"] = total_craft_cost / output_count
-            tree["note"] = "crafting (faster fill time)"
-        elif total_bazaar_price <= total_craft_cost:
-            tree = {
-                "name": item_id,
-                "count": output_count,
-                "note": "purchased directly",
-                "cost": total_bazaar_price / output_count
-            }
+    # Compare costs and decide whether to craft or buy
+    if bazaar_price > 0:
+        if output_count > 1:
+            if total_craft_cost < bazaar_price:
+                tree["cost"] = total_craft_cost
+                tree["note"] = f"crafting ({output_count} outputs)"
+            else:
+                tree = {
+                    "name": item_id,
+                    "count": 1,
+                    "note": "base item (multiple output)",
+                    "cost": bazaar_price
+                }
         else:
-            tree["cost"] = total_craft_cost / output_count
-            tree["note"] = "crafting"
+            price_difference = (total_craft_cost - bazaar_price) / bazaar_price
+            total_items = sum(count for _, count in merged_ingredients.items())
+            
+            # For items under 1000 coins, only allow "price close" if less than 80 items
+            if bazaar_price < 1000 and total_items >= 80:
+                # Always buy directly if crafting cost is higher
+                if total_craft_cost >= bazaar_price:
+                    tree = {
+                        "name": item_id,
+                        "count": 1,
+                        "note": "purchased directly",
+                        "cost": bazaar_price
+                    }
+                else:
+                    tree["cost"] = total_craft_cost
+                    tree["note"] = "crafting"
+            else:
+                # For expensive items or small recipes
+                if total_craft_cost >= bazaar_price:
+                    # If crafting is more expensive, always buy directly
+                    tree = {
+                        "name": item_id,
+                        "count": 1,
+                        "note": "purchased directly",
+                        "cost": bazaar_price
+                    }
+                else:
+                    # Only show crafting if it's cheaper
+                    tree["cost"] = total_craft_cost
+                    tree["note"] = "crafting"
     else:
-        tree["cost"] = total_craft_cost / output_count
+        tree["cost"] = total_craft_cost
         tree["note"] = "crafting (no bazaar price)"
 
     visited.remove(item_id)
@@ -252,7 +310,7 @@ def calculate_profit(data, prices, lbin_data):
 
         profit = bazaar_price - crafting_cost
         
-        if profit > 0 and hourly_instabuys > 0:
+        if profit > 50000 and hourly_instabuys > 0:
             coins_per_hour = profit * hourly_instabuys
             profit_percent = (profit / crafting_cost) * 100 if crafting_cost > 0 else 0
             
@@ -342,7 +400,7 @@ try:
                     else:
                         print(f"- {item}: {quantity:,.2f} (No price available)")
                 
-                final = total_price / output_count if output_count != 9 else total_price
+                final = total_price
 
                 # Selling Price from Bazaar or Auction
                 sell_price = prices.get(item_id, {}).get("price", 0)
