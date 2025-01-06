@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Bazaar Flips</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+        }
+        h1 {
+            text-align: center;
+            color: #1a237e;
+            margin-bottom: 30px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .flip-box {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .flip-box:hover {
+            transform: translateY(-5px);
+        }
+        .item-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+        .profit {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .stat {
+            margin: 8px 0;
+            font-size: 0.95em;
+            display: flex;
+            justify-content: space-between;
+        }
+        .stat-label {
+            color: #666;
+        }
+        .stat-value {
+            font-weight: 500;
+        }
+        @media (max-width: 1200px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Top 10 Most Profitable Crafts</h1>
+    <div class="grid-container">
+        {{range .}}
+            <div class="flip-box">
+                <div class="item-name">{{.Name}}</div>
+                <div class="stat">
+                    <span class="stat-label">Profit:</span>
+                    <span class="stat-value profit">{{formatNumber .Profit}}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Profit %:</span>
+                    <span class="stat-value">{{printf "%.1f" .ProfitPercent}}%</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Cost:</span>
+                    <span class="stat-value">{{formatNumber .CraftingCost}}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Sell:</span>
+                    <span class="stat-value">{{formatNumber .SellPrice}}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Coins/Hr:</span>
+                    <span class="stat-value">{{formatNumber .CoinsPerHour}}</span>
+                </div>
+            </div>
+        {{end}}
+    </div>
+</body>
+</html>

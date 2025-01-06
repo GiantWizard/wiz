@@ -1,6 +1,7 @@
 import json
 import requests
 from collections import defaultdict
+import sys
 
 # Load the JSON data from a local file
 def load_data():
@@ -335,17 +336,28 @@ try:
     prices = fetch_all_bazaar_prices()
     lbin_data = fetch_lbin_prices()
 
-    top_crafts = calculate_profit(data, prices, lbin_data)
-
-    # Only output the JSON data
-    print(json.dumps([{
-        "item_id": craft["item_id"],
-        "profit": craft["profit"],
-        "profit_percent": craft["profit_percent"],
-        "crafting_cost": craft["crafting_cost"],
-        "sell_price": craft["sell_price"],
-        "coins_per_hour": craft["coins_per_hour"]
-    } for craft in top_crafts]))
+    if len(sys.argv) > 1:
+        # Recipe request mode
+        item_id = sys.argv[1]
+        tree = build_recipe_tree(data, item_id, prices, lbin_data)
+        print("\nRecipe Tree:")
+        print_recipe_tree(tree, prices)
+        # ... rest of the recipe printing code ...
+    else:
+        # Normal top profits request - ONLY output JSON
+        top_crafts = calculate_profit(data, prices, lbin_data)
+        output = []
+        for craft in top_crafts:
+            output.append({
+                "item_id": craft["item_id"],
+                "name": data[craft["item_id"]].get("name", craft["item_id"]),
+                "profit": craft["profit"],
+                "profit_percent": craft["profit_percent"],
+                "crafting_cost": craft["crafting_cost"],
+                "sell_price": craft["sell_price"],
+                "coins_per_hour": craft["coins_per_hour"]
+            })
+        print(json.dumps(output))
 
 except Exception as e:
     print(json.dumps({"error": str(e)}))
