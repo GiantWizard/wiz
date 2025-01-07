@@ -1,6 +1,9 @@
 import json
 import requests
 from collections import defaultdict
+import os
+import sys
+import traceback
 
 # Load the JSON data from a local file
 def load_data():
@@ -208,32 +211,108 @@ def build_recipe_tree(data, item_id, prices, lbin_data, visited=None):
 
 
 # Print the recipe tree with multipliers, prices, and formatting
-def print_recipe_tree(tree, prices, level=0, multiplier=1):
-    indent = "  " * level
-    note = f" ({tree['note']})" if "note" in tree else ""
-    total_count = tree["count"] * multiplier
+def print_recipe_tree(tree, prices):
+    output = {
+        "recipe_tree": _build_tree_structure(tree, prices),
+        "raw_materials": [],
+        "longest_fill": None,
+        "financials": {}
+    }
 
+    # Collect raw items
+    raw_items = collect_raw_items(tree)
+    total_price = 0
+    longest_item = None
+    longest_time = 0
+    
+    # Process raw items and calculate total cost
+    for item, quantity in raw_items.items():
+        price_info = prices.get(item, {})
+        price = price_info.get("price", 0)
+        method = price_info.get("method", "N/A")
+        hourly_instasells = price_info.get("hourly_instasells", 0)
+        
+        # Calculate fill time for bazaar items
+        if method in ["Buy Order", "Instabuy"]:
+            fill_time = quantity / hourly_instasells if hourly_instasells > 0 else float('inf')
+            if method != "Instabuy" and fill_time > longest_time:
+                longest_time = fill_time
+                longest_item = {
+                    "name": item,
+                    "quantity": quantity,
+                    "price": price,
+                    "time": fill_time,
+                    "method": method,
+                    "hourly_rate": hourly_instasells
+                }
+        
+        # Add raw material to output
+        material = {
+            "item": item,
+            "quantity": quantity,
+            "price": price,
+            "total_cost": price * quantity if price > 0 else 0,
+            "method": method
+        }
+        output["raw_materials"].append(material)
+        if price > 0:
+            total_price += price * quantity
+
+    # Add longest fill information
+    if longest_item:
+        output["longest_fill"] = {
+            "item": longest_item["name"],
+            "quantity": longest_item["quantity"],
+            "time": longest_item["time"],
+            "method": longest_item["method"]
+        }
+
+    # Add financial information
+    sell_price = prices.get(tree["name"], {}).get("price", 0)
+    output["financials"] = {
+        "total_cost": total_price,
+        "sell_price": sell_price
+    }
+    
+    if sell_price:
+        profit = sell_price - total_price
+        output["financials"].update({
+            "profit": profit,
+            "profit_percentage": (profit/total_price*100) if total_price > 0 else 0
+        })
+        
+        hourly_instabuys = prices.get(tree["name"], {}).get("hourly_instabuys", 0)
+        if hourly_instabuys > 0:
+            output["financials"]["coins_per_hour"] = profit * hourly_instabuys
+
+    # Print the final JSON
+    print(json.dumps(output, indent=2))
+
+def _build_tree_structure(tree, prices, level=0):
+    """Helper function to build tree structure as JSON"""
+    node = {
+        "name": tree["name"],
+        "count": tree["count"]
+    }
+    
+    if "note" in tree:
+        node["note"] = tree["note"]
+    
     price_info = prices.get(tree["name"], {})
     price = price_info.get("price", 0)
     method = price_info.get("method", None)
 
-    # If it's an auction item (no bazaar price), use the cost from the tree
-    if price == 0 and "cost" in tree and tree.get("note", "").startswith("base item (from auction)"):
-        price = tree["cost"]
-        method = "Auction"
-
     if price > 0:
-        unit_price = f"{price:,.2f} per unit"
-        total_price = price * total_count
-        price_info = f" ({total_count:,.2f} @ {total_price:,.2f} - {method})"
-    else:
-        unit_price = "No price"
-        price_info = ""
+        node.update({
+            "unit_price": price,
+            "total_price": price * tree["count"],
+            "method": method
+        })
 
-    print(f"{indent}- {tree['name']} x{total_count:,.2f}{note} {unit_price}{price_info}")
+    if "children" in tree and tree["children"]:
+        node["children"] = [_build_tree_structure(child, prices, level + 1) for child in tree["children"]]
 
-    for child in tree.get("children", []):
-        print_recipe_tree(child, prices, level + 1, total_count)
+    return node
 
 # Collect raw items recursively
 def collect_raw_items(tree, multiplier=1, raw_items=None):
@@ -281,104 +360,75 @@ def find_longest_to_fill(raw_items, prices):
 
 
 # Main execution
-try:
-    data = load_data()
-    prices = fetch_all_bazaar_prices()
-    lbin_data = fetch_lbin_prices()
-    
-    while True:
-        print("\nOptions:")
-        print("1. View recipe tree and craft cost")
-        print("2. Exit")
+if __name__ == "__main__":
+    try:
+        item_id = os.getenv('ITEM_ID')
+        if not item_id:
+            print(json.dumps({"error": "Waiting for item ID..."}))
+            sys.exit(0)  # Exit cleanly, not an error
+
+        print(f"Debug: Processing item ID: {item_id}", file=sys.stderr)
         
-        choice = input("Enter your choice (1-2): ")
-
-        if choice == "2":
-            break
+        data = load_data()
+        prices = fetch_all_bazaar_prices()
+        lbin_data = fetch_lbin_prices()
         
-        if choice == "1":
-            item_name = input("\nEnter the item name: ")
-            item_id = get_item_id(data, item_name)
-            if item_id:
-                print(f"\nItem ID for '{item_name}': {item_id}\n")
-                recipe_tree = build_recipe_tree(data, item_id, prices, lbin_data)
-                print("Recipe Tree:")
-                print_recipe_tree(recipe_tree, prices)
+        recipe_tree = build_recipe_tree(data, item_id, prices, lbin_data)
+        output = {
+            "recipe_tree": recipe_tree,
+            "raw_materials": [],
+            "longest_fill": None,
+            "financials": {}
+        }
+        
+        # Process raw materials
+        raw_items = collect_raw_items(recipe_tree)
+        total_cost = 0
+        
+        for item, quantity in raw_items.items():
+            price_info = prices.get(item, {})
+            price = price_info.get("price", 0)
+            method = price_info.get("method", "N/A")
+            
+            material = {
+                "item": item,
+                "quantity": quantity,
+                "price": price,
+                "total_cost": price * quantity if price > 0 else 0,
+                "method": method
+            }
+            output["raw_materials"].append(material)
+            if price > 0:
+                total_cost += price * quantity
+        
+        # Find longest fill time
+        longest = find_longest_to_fill(raw_items, prices)
+        if longest:
+            output["longest_fill"] = longest
+        
+        # Add financial information
+        sell_price = prices.get(item_id, {}).get("price", 0)
+        output["financials"] = {
+            "total_cost": total_cost,
+            "sell_price": sell_price
+        }
+        
+        if sell_price:
+            profit = sell_price - total_cost
+            output["financials"].update({
+                "profit": profit,
+                "profit_percentage": (profit/total_cost*100) if total_cost > 0 else 0
+            })
+            
+            hourly_instabuys = prices.get(item_id, {}).get("hourly_instabuys", 0)
+            if hourly_instabuys > 0:
+                output["financials"]["coins_per_hour"] = profit * hourly_instabuys
+        
+        print(json.dumps(output))
 
-                raw_items = collect_raw_items(recipe_tree)
-                total_price = 0
-                
-                longitem = find_longest_to_fill(raw_items, prices)
-
-                print("\n--- Raw Items Needed ---")
-                for item, quantity in raw_items.items():
-                    recipe = data[item_id]["recipe"]
-                    output_count = int(recipe.get("count", 1))
-                    price_info = prices.get(item, {})
-                    price = price_info.get("price", 0)
-                    method = price_info.get("method", "N/A")
-                    if price == 0:  # Check Auctions if Bazaar price is not found
-                        price = fetch_lowest_auction_price(item, lbin_data) or 0
-                        method = "Auction" if price > 0 else "N/A"
-
-                    if price > 0:
-                        total_price += price * quantity
-                        print(f"- {item}: {quantity:,.2f} @ {price:,.2f} each = {price * quantity:,.2f} ({method})")
-                    else:
-                        print(f"- {item}: {quantity:,.2f} (No price available)")
-                
-                final = total_price
-
-                # Selling Price from Bazaar or Auction
-                sell_price = prices.get(item_id, {}).get("price", 0)
-                profit = sell_price - final if sell_price else "N/A"
-                profit_percentage = ((sell_price - final) / final) * 100 if isinstance(profit, (int, float)) and final > 0 else "N/A"
-
-                print(f"\nTotal cost of raw items: {final:,.2f}")
-                if sell_price:
-                    print(f"Selling Price: {sell_price:,.2f}")
-                print(f"Profit: {profit:,.2f}" if isinstance(profit, (int, float)) else "Profit: N/A")
-                print(f"Profit Percentage: {profit_percentage:,.2f}%" if isinstance(profit_percentage, (int, float)) else "Profit Percentage: N/A")
-                
-                # Calculate and display coins per hour
-                hourly_instabuys = prices.get(item_id, {}).get("hourly_instabuys", 0)
-                if isinstance(profit, (int, float)) and hourly_instabuys > 0:
-                    coins_per_hour = profit * hourly_instabuys
-                    print(f"Coins Per Hour: {coins_per_hour:,.2f}")
-                else:
-                    print("Coins Per Hour: N/A")
-
-                # Longest to fill calculation
-                longest_to_fill = find_longest_to_fill(raw_items, prices)
-                if longest_to_fill:
-                    print(f"\nSubitem taking the longest to fill: {longest_to_fill['item']}\n  Quantity: {longest_to_fill['quantity']:,.2f}\n  Price: {longest_to_fill['price']:,.2f}\n  Time to fill: {longest_to_fill['time_to_fill']:,.2f} hours\n  Method: {longest_to_fill['method']}")
-
-                # Profit per hour calculation
-                if longest_to_fill and "time_to_fill" in longest_to_fill:
-                    time_to_fill = longest_to_fill["time_to_fill"]
-                    sales_method = prices.get(item_id, {}).get("method", "")
-                    hourly_instabuys = prices.get(item_id, {}).get("hourly_instabuys", 0)
-                    
-                    # Calculate sales per hour based on instabuy rate
-                    if hourly_instabuys > 0:
-                        sales_per_hour = hourly_instabuys
-                        time_to_sell = 1 / hourly_instabuys
-                        total_time = time_to_fill + time_to_sell
-                        profit_per_hour = profit * sales_per_hour
-                    else:
-                        sales_per_hour = 0
-                        profit_per_hour = 0
-                    
-                    print(f"\nSales Method: {sales_method}")
-                    print(f"Hourly Instabuys: {hourly_instabuys:,.2f}")
-                    print(f"Sales Per Hour: {sales_per_hour:,.2f}")
-                    print(f"Time to Fill Orders: {time_to_fill:,.2f} hours")
-                    print(f"Time to Sell One Item: {time_to_sell:,.2f} hours")
-                    print(f"Total Time Per Item: {total_time:,.2f} hours")
-                    print(f"Profit Per Hour: {profit_per_hour:,.2f}")
-
-            else:
-                print(f"Item '{item_name}' not found in the data.")
-
-except Exception as e:
-    print(f"An error occurred: {e}")
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), file=sys.stderr)
+        sys.exit(1)
