@@ -150,24 +150,24 @@
     
     <div class="recipe-container">
         <div class="header-section">
-            <h1 id="itemName">{{index .recipe_tree "name"}}</h1>
+            <h1>{{index .names (index .recipe.recipe_tree "name")}}</h1>
             <div class="recipe-details">
-                <div>Cost: {{formatNumber (index .recipe_tree "cost")}}</div>
-                <div>Sell: {{formatNumber (index .financials "sell_price")}}</div>
-                <div class="{{if gt (index .financials "profit") 0.0}}profit-positive{{else}}profit-negative{{end}}">
-                    Profit: {{formatNumber (index .financials "profit")}}
+                <div>Cost: {{formatNumber (index .recipe.recipe_tree "cost")}}</div>
+                <div>Sell: {{formatNumber (index .recipe.financials "sell_price")}}</div>
+                <div class="{{if gt (index .recipe.financials "profit") 0.0}}profit-positive{{else}}profit-negative{{end}}">
+                    Profit: {{formatNumber (index .recipe.financials "profit")}}
                 </div>
-                <div>Profit %: {{formatNumber (index .financials "profit_percentage")}}%</div>
-                <div>Coins/Hour: {{formatNumber (index .financials "coins_per_hour")}}</div>
+                <div>Profit %: {{formatNumber (index .recipe.financials "profit_percentage")}}%</div>
+                <div>Coins/Hour: {{formatNumber (index .recipe.financials "coins_per_hour")}}</div>
             </div>
         </div>
 
         <div class="section">
             <h2>Recipe Tree</h2>
-            {{with index .recipe_tree "children"}}
+            {{with index .recipe.recipe_tree "children"}}
                 {{range .}}
                     <div class="tree-node">
-                        <h3>{{.name}} (×{{.count}})</h3>
+                        <h3>{{index $.names .name}} (×{{.count}})</h3>
                         <div class="recipe-details">
                             <div>Cost per item: {{formatNumber .cost}}</div>
                             {{if .note}}<div class="note">{{.note}}</div>{{end}}
@@ -176,7 +176,7 @@
                             <div class="tree-container">
                                 {{range .children}}
                                     <div class="tree-node">
-                                        <h4>{{.name}} (×{{.count}})</h4>
+                                        <h4>{{index $.names .name}} (×{{.count}})</h4>
                                         <div class="recipe-details">
                                             <div>Cost per item: {{formatNumber .cost}}</div>
                                             {{if .note}}<div class="note">{{.note}}</div>{{end}}
@@ -193,9 +193,9 @@
         <div class="section">
             <h2>Raw Materials Needed</h2>
             <ul class="materials-grid">
-                {{range .raw_materials}}
+                {{range .recipe.raw_materials}}
                     <li class="material-card">
-                        <strong>{{.item}}</strong>
+                        <strong>{{index $.names .item}}</strong>
                         <div class="recipe-details">
                             <div>Quantity: {{.quantity}}</div>
                             <div>Price each: {{formatNumber .price}}</div>
@@ -207,12 +207,12 @@
             </ul>
         </div>
 
-        {{with .longest_fill}}
+        {{with .recipe.longest_fill}}
             <div class="section">
                 <h2>Longest to Fill</h2>
                 <div class="longest-fill">
                     <div class="recipe-details">
-                        <div>Item: {{.item}}</div>
+                        <div>Item: {{index $.names .item}}</div>
                         <div>Method: {{.method}}</div>
                         <div>Price: {{formatNumber .price}}</div>
                         <div>Quantity: {{.quantity}}</div>

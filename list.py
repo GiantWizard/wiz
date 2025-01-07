@@ -174,17 +174,13 @@ def build_recipe_tree(data, item_id, prices, lbin_data, visited=None):
             
             # For items under 1000 coins, only allow "price close" if less than 80 items
             if bazaar_price < 1000 and total_items >= 80:
-                # Always buy directly if crafting cost is higher
-                if total_craft_cost >= bazaar_price:
-                    tree = {
-                        "name": item_id,
-                        "count": 1,
-                        "note": "purchased directly",
-                        "cost": bazaar_price
-                    }
-                else:
-                    tree["cost"] = total_craft_cost
-                    tree["note"] = "crafting"
+                # Always buy directly for low-value items with many components
+                tree = {
+                    "name": item_id,
+                    "count": 1,
+                    "note": "purchased directly",
+                    "cost": bazaar_price
+                }
             else:
                 # For expensive items or small recipes
                 if total_craft_cost >= bazaar_price:

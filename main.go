@@ -12,38 +12,24 @@ import (
     "bytes"
 )
 
-// Add this function before main()
-func getItemIdFromName(urlName string) string {
-    // Read and parse data.json
-    data, err := os.ReadFile("static/data.json")
+func loadItemNames() (map[string]string, error) {
+    data, err := os.ReadFile("data.json")
     if err != nil {
-        log.Printf("Error reading data.json: %v", err)
-        return urlName
+        return nil, err
     }
 
-    var items []struct {
-        ID   string `json:"id"`
+    var items map[string]struct {
         Name string `json:"name"`
     }
     if err := json.Unmarshal(data, &items); err != nil {
-        log.Printf("Error parsing data.json: %v", err)
-        return urlName
+        return nil, err
     }
 
-    // Convert URL name to lowercase for comparison
-    urlName = strings.ToLower(urlName)
-    urlName = strings.ReplaceAll(urlName, "-", " ")
-
-    // Find matching item
-    for _, item := range items {
-        itemNameNormalized := strings.ToLower(item.Name)
-        itemNameNormalized = strings.ReplaceAll(itemNameNormalized, "-", " ")
-        if itemNameNormalized == urlName {
-            return item.ID
-        }
+    names := make(map[string]string)
+    for id, item := range items {
+        names[id] = item.Name
     }
-
-    return urlName // Fallback to using the URL name as the ID
+    return names, nil
 }
 
 func main() {
@@ -70,12 +56,15 @@ func main() {
             return
         }
 
-        // Convert URL-safe name back to item ID
-        itemId := getItemIdFromName(urlName)
+        // Load item names
+        itemNames, err := loadItemNames()
+        if err != nil {
+            log.Printf("Error loading item names: %v", err)
+        }
 
         // Run recipe.py with the item ID
         cmd := exec.Command("python3", "recipe.py")
-        cmd.Env = append(os.Environ(), fmt.Sprintf("ITEM_ID=%s", itemId))
+        cmd.Env = append(os.Environ(), fmt.Sprintf("ITEM_ID=%s", urlName))
         
         output, err := cmd.CombinedOutput()
         if err != nil {
@@ -99,13 +88,19 @@ func main() {
             return
         }
 
+        // Add item names to the template data
+        templateData := map[string]interface{}{
+            "recipe": recipeData,
+            "names": itemNames,
+        }
+
         // Execute the recipe template
         tmpl, err := template.New("recipe.html").Funcs(funcMap).ParseFiles("static/recipe.html")
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
-        tmpl.Execute(w, recipeData)
+        tmpl.Execute(w, templateData)
     })
 
     // Main page handler
@@ -124,12 +119,27 @@ func main() {
             return
         }
 
-        // Parse the JSON output
+        // Parse the JSON output as array
         var items []map[string]interface{}
         if err := json.Unmarshal(output, &items); err != nil {
             log.Printf("Error parsing JSON: %v", err)
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
+        }
+
+        // Load item names
+        itemNames, err := loadItemNames()
+        if err != nil {
+            log.Printf("Error loading item names: %v", err)
+        } else {
+            // Replace item IDs with names
+            for _, item := range items {
+                if id, ok := item["item_id"].(string); ok {
+                    if name, exists := itemNames[id]; exists {
+                        item["name"] = name
+                    }
+                }
+            }
         }
 
         // Execute template with the items data
