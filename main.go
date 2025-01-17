@@ -45,8 +45,6 @@ func main() {
         },
     }
 
-    // Serve static files
-    http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
     // Recipe handler
     http.HandleFunc("/recipe/", func(w http.ResponseWriter, r *http.Request) {
