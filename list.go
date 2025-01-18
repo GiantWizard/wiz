@@ -1,6 +1,11 @@
 package main
 
 import (
+    "context"
+    "bytes"
+    "github.com/andybalholm/brotli"
+    "crypto/tls"
+    "net"
     "bufio"
     "compress/gzip"
     "encoding/json"
@@ -128,6 +133,57 @@ func formatPrice(price float64) string {
     return fmt.Sprintf("%.2f", price)
 }
 
+type PerformanceMetrics struct {
+    ItemLoadTime         time.Duration
+    FirstAPICallTime     time.Duration
+    SecondAPICallTime    time.Duration
+    CacheInitTime        time.Duration
+    RecipeTreeBuildTime  time.Duration
+    TotalProcessingTime  time.Duration
+    LastUpdate          time.Time
+    mu                  sync.RWMutex
+}
+
+func NewPerformanceMetrics() *PerformanceMetrics {
+    return &PerformanceMetrics{
+        LastUpdate: time.Now(),
+    }
+}
+
+func (pm *PerformanceMetrics) Track(operation string, duration time.Duration) {
+    pm.mu.Lock()
+    defer pm.mu.Unlock()
+
+    switch operation {
+    case "item_load":
+        pm.ItemLoadTime = duration
+    case "bazaar_api":
+        pm.FirstAPICallTime = duration
+    case "bins_api":
+        pm.SecondAPICallTime = duration
+    case "cache_init":
+        pm.CacheInitTime = duration
+    case "recipe_tree":
+        pm.RecipeTreeBuildTime = duration
+    }
+    pm.TotalProcessingTime = pm.ItemLoadTime + pm.FirstAPICallTime + 
+        pm.SecondAPICallTime + pm.CacheInitTime + pm.RecipeTreeBuildTime
+}
+
+func (pm *PerformanceMetrics) PrintMetrics() {
+    pm.mu.RLock()
+    defer pm.mu.RUnlock()
+
+    fmt.Println("\n╔════════════════════ Performance Metrics ════════════════════")
+    fmt.Printf("║ Items Load Time:        %8.2fms\n", float64(pm.ItemLoadTime.Microseconds())/1000.0)
+    fmt.Printf("║ Bazaar API Call:        %8.2fms\n", float64(pm.FirstAPICallTime.Microseconds())/1000.0)
+    fmt.Printf("║ Lowest Bins API Call:   %8.2fms\n", float64(pm.SecondAPICallTime.Microseconds())/1000.0)
+    fmt.Printf("║ Cache Initialization:   %8.2fms\n", float64(pm.CacheInitTime.Microseconds())/1000.0)
+    fmt.Printf("║ Recipe Tree Building:   %8.2fms\n", float64(pm.RecipeTreeBuildTime.Microseconds())/1000.0)
+    fmt.Printf("║ Total Processing Time:  %8.2fms\n", float64(pm.TotalProcessingTime.Microseconds())/1000.0)
+    fmt.Println("╚═══════════════════════════════════════════════════════════\n")
+}
+
 // Add this function after the Recipe struct methods
 func isBaseMaterial(itemID string) bool {
     item, exists := items[itemID]
@@ -148,31 +204,182 @@ func isBaseMaterial(itemID string) bool {
     return nonEmptySlots == 0 || (nonEmptySlots == 1 && recipe.GetCount() == 9)
 }
 
-// Global variables
 var (
-    cache      PriceCache
-    items      ItemDatabase
-    httpClient = &http.Client{
+    cache PriceCache
+    items ItemDatabase
+    stats = &metrics{
+        updateTimes: make([]time.Duration, 0, 100),
+    }
+    pool = &http.Client{
         Timeout: httpTimeout,
         Transport: &http.Transport{
-            MaxIdleConns:        100,
-            MaxIdleConnsPerHost: 100,
-            IdleConnTimeout:     90 * time.Second,
-            DisableCompression:  false,
+            ForceAttemptHTTP2:     true,
+            MaxIdleConns:          poolSize,
+            MaxIdleConnsPerHost:   poolSize,
+            MaxConnsPerHost:       poolSize,
+            IdleConnTimeout:       90 * time.Second,
+            TLSHandshakeTimeout:   5 * time.Second,
+            ResponseHeaderTimeout: 5 * time.Second,
+            ExpectContinueTimeout: 1 * time.Second,
+            WriteBufferSize:       64 * 1024,
+            ReadBufferSize:        64 * 1024,
+            DisableKeepAlives:     false,
+            TLSClientConfig: &tls.Config{
+                MinVersion: tls.VersionTLS13,
+            },
+            DialContext: (&net.Dialer{
+                Timeout:   5 * time.Second,
+                KeepAlive: 30 * time.Second,
+                DualStack: true,
+            }).DialContext,
         },
     }
 )
 
+type brotliReadCloser struct {
+    br *brotli.Reader
+    rc io.ReadCloser
+}
+
+func (b *brotliReadCloser) Read(p []byte) (n int, err error) {
+    return b.br.Read(p)
+}
+
+func (b *brotliReadCloser) Close() error {
+    return b.rc.Close()
+}
+
+func newBrotliReadCloser(r io.ReadCloser) io.ReadCloser {
+    return &brotliReadCloser{
+        br: brotli.NewReader(r),
+        rc: r,
+    }
+}
+
+// Add these constants
 const (
     bazaarURL    = "https://api.hypixel.net/v2/skyblock/bazaar"
     lowestBinURL = "https://moulberry.codes/lowestbin.json"
     cacheTimeout = 5 * time.Minute
     httpTimeout  = 10 * time.Second
+    maxRetries   = 3
+    backoffBase  = 500 * time.Millisecond
+    poolSize     = 100
+    maxCacheSize = 1000
 )
 
 type fetchResult struct {
     data []byte
     err  error
+}
+
+func fetchWithRetry(url string) ([]byte, error) {
+    var lastErr error
+    for attempt := 0; attempt < maxRetries; attempt++ {
+        if attempt > 0 {
+            backoff := backoffBase * time.Duration(1<<uint(attempt-1))
+            time.Sleep(backoff)
+        }
+
+        ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
+        req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+        if err != nil {
+            cancel()
+            lastErr = err
+            continue
+        }
+
+        req.Header.Set("Accept-Encoding", "gzip, br")
+        req.Header.Set("Connection", "keep-alive")
+        req.Header.Set("Accept", "application/json")
+
+        // Use pool directly since it's an *http.Client
+        resp, err := pool.Do(req)
+        if err != nil {
+            cancel()
+            lastErr = err
+            continue
+        }
+
+        data, err := handleResponse(resp)
+        cancel()
+        if err != nil {
+            lastErr = err
+            continue
+        }
+
+        return data, nil
+    }
+    return nil, fmt.Errorf("all retries failed: %v", lastErr)
+}
+
+type metrics struct {
+    mu            sync.RWMutex
+    updateTimes   []time.Duration
+    failedUpdates int
+    lastError     error
+}
+
+func (m *metrics) recordUpdate(d time.Duration) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.updateTimes = append(m.updateTimes, d)
+    if len(m.updateTimes) > 100 {
+        m.updateTimes = m.updateTimes[1:]
+    }
+}
+
+func (m *metrics) getAverageTime() time.Duration {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    
+    if len(m.updateTimes) == 0 {
+        return 0
+    }
+    
+    var total time.Duration
+    for _, t := range m.updateTimes {
+        total += t
+    }
+    return total / time.Duration(len(m.updateTimes))
+}
+
+func handleResponse(resp *http.Response) ([]byte, error) {
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+    }
+
+    var reader io.ReadCloser
+    switch resp.Header.Get("Content-Encoding") {
+    case "gzip":
+        var err error
+        reader, err = gzip.NewReader(resp.Body)
+        if err != nil {
+            return nil, err
+        }
+        defer reader.Close()
+    case "br":
+        reader = newBrotliReadCloser(resp.Body)
+        defer reader.Close()
+    default:
+        reader = resp.Body
+    }
+
+    // Use a buffered reader with a reasonable size
+    return io.ReadAll(bufio.NewReaderSize(reader, 64*1024))
+}
+
+func getCurrentFormattedTime() string {
+    return time.Now().UTC().Format("2006-01-02 15:04:05")
+}
+
+type apiResponse struct {
+    data     []byte
+    err      error
+    name     string
+    duration time.Duration
 }
 
 func (c *PriceCache) getOrBuildRecipeTree(itemID string) *RecipeTree {
@@ -183,131 +390,177 @@ func (c *PriceCache) getOrBuildRecipeTree(itemID string) *RecipeTree {
     }
     c.mu.RUnlock()
 
-    // Build new tree
+    // Build new tree without holding the lock
     visited := make(map[string]bool)
     tree := buildRecipeTree(itemID, 1, visited)
 
-    // Cache it
+    // Try to store in cache, but don't block if another routine beat us to it
     c.mu.Lock()
+    if existing, exists := c.recipeTrees[itemID]; exists {
+        c.mu.Unlock()
+        return cloneRecipeTree(existing, 1)
+    }
     c.recipeTrees[itemID] = tree
     c.mu.Unlock()
 
     return cloneRecipeTree(tree, 1)
 }
 
+type decodedResponse struct {
+    bazaarData *BazaarResponse
+    binsData   LowestBinData
+    err        error
+    duration   time.Duration
+}
+
 func (c *PriceCache) update() error {
-    c.mu.Lock()
-    defer c.mu.Unlock()
-
     startTime := time.Now()
+    currentTime := getCurrentFormattedTime()
+    log.Printf("[%s] Starting cache update process...", currentTime)
 
-    // Create channels for parallel fetching
-    bazaarChan := make(chan fetchResult)
-    binsChan := make(chan fetchResult)
+    // Create channels for both API and decode responses
+    apiChan := make(chan apiResponse, 2)
+    decodeChan := make(chan decodedResponse, 2)
+    var wg sync.WaitGroup
+    wg.Add(2)
 
-    // Fetch Bazaar data concurrently
+    // Launch parallel API fetches with immediate decoding
     go func() {
-        req, err := http.NewRequest("GET", bazaarURL, nil)
-        if err != nil {
-            bazaarChan <- fetchResult{nil, err}
-            return
-        }
-        req.Header.Set("Accept-Encoding", "gzip, deflate")
+        defer wg.Done()
+        fetchStart := time.Now()
+        data, err := fetchWithRetry(bazaarURL)
+        fetchDuration := time.Since(fetchStart)
         
-        resp, err := httpClient.Do(req)
-        if err != nil {
-            bazaarChan <- fetchResult{nil, err}
-            return
-        }
-        defer resp.Body.Close()
+        log.Printf("[%s] Bazaar API fetch completed in %dms", 
+            getCurrentFormattedTime(), fetchDuration.Milliseconds())
 
-        var reader io.ReadCloser
-        switch resp.Header.Get("Content-Encoding") {
-        case "gzip":
-            reader, err = gzip.NewReader(resp.Body)
-            if err != nil {
-                bazaarChan <- fetchResult{nil, err}
-                return
+        apiChan <- apiResponse{
+            data:     data,
+            err:     err,
+            name:    "Bazaar",
+            duration: fetchDuration,
+        }
+
+        if err == nil {
+            decodeStart := time.Now()
+            // Preallocate BazaarResponse with estimated size
+            bazaarResp := &BazaarResponse{
+                Products: make(map[string]BazaarProduct, 1500), // Preallocate map
             }
-            defer reader.Close()
-        default:
-            reader = resp.Body
+            
+            decoder := json.NewDecoder(bytes.NewReader(data))
+            decoder.UseNumber() // More efficient number handling
+            decodeErr := decoder.Decode(bazaarResp)
+            
+            decodeChan <- decodedResponse{
+                bazaarData: bazaarResp,
+                err:       decodeErr,
+                duration:  time.Since(decodeStart),
+            }
         }
-
-        data, err := io.ReadAll(reader)
-        bazaarChan <- fetchResult{data, err}
     }()
 
-    // Fetch Lowest Bin data concurrently
     go func() {
-        req, err := http.NewRequest("GET", lowestBinURL, nil)
-        if err != nil {
-            binsChan <- fetchResult{nil, err}
-            return
-        }
-        req.Header.Set("Accept-Encoding", "gzip, deflate")
+        defer wg.Done()
+        fetchStart := time.Now()
+        data, err := fetchWithRetry(lowestBinURL)
+        fetchDuration := time.Since(fetchStart)
         
-        resp, err := httpClient.Do(req)
-        if err != nil {
-            binsChan <- fetchResult{nil, err}
-            return
-        }
-        defer resp.Body.Close()
+        log.Printf("[%s] Lowest Bins API fetch completed in %dms", 
+            getCurrentFormattedTime(), fetchDuration.Milliseconds())
 
-        var reader io.ReadCloser
-        switch resp.Header.Get("Content-Encoding") {
-        case "gzip":
-            reader, err = gzip.NewReader(resp.Body)
-            if err != nil {
-                binsChan <- fetchResult{nil, err}
-                return
+        apiChan <- apiResponse{
+            data:     data,
+            err:     err,
+            name:    "Lowest Bins",
+            duration: fetchDuration,
+        }
+
+        if err == nil {
+            decodeStart := time.Now()
+            // Preallocate LowestBinData with estimated size
+            lowestBins := make(LowestBinData, 10000)
+            
+            decoder := json.NewDecoder(bytes.NewReader(data))
+            decoder.UseNumber() // More efficient number handling
+            decodeErr := decoder.Decode(&lowestBins)
+            
+            decodeChan <- decodedResponse{
+                binsData: lowestBins,
+                err:      decodeErr,
+                duration: time.Since(decodeStart),
             }
-            defer reader.Close()
-        default:
-            reader = resp.Body
         }
-
-        data, err := io.ReadAll(reader)
-        binsChan <- fetchResult{data, err}
     }()
 
-    // Wait for both results
-    bazaarResult := <-bazaarChan
-    if bazaarResult.err != nil {
-        return fmt.Errorf("failed to fetch bazaar data: %v", bazaarResult.err)
-    }
+    // Process API responses
+    var (
+        bazaarFetchDuration, binsFetchDuration time.Duration
+        bazaarDecodeDuration, binsDecodeDuration time.Duration
+        bazaarResp *BazaarResponse
+        lowestBins LowestBinData
+        fetchErr error
+    )
 
-    binsResult := <-binsChan
-    if binsResult.err != nil {
-        return fmt.Errorf("failed to fetch lowest bin data: %v", binsResult.err)
-    }
-
-    // Decode data
-    if err := json.Unmarshal(bazaarResult.data, &c.bazaarData); err != nil {
-        return fmt.Errorf("failed to decode bazaar data: %v", err)
-    }
-
-    if err := json.Unmarshal(binsResult.data, &c.lowestBins); err != nil {
-        return fmt.Errorf("failed to decode lowest bin data: %v", err)
-    }
-
-    // Initialize recipe trees if not already done
-    if c.recipeTrees == nil {
-        c.recipeTrees = make(map[string]*RecipeTree)
-        currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-        log.Printf("[%s] Precomputing recipe trees...", currentTime)
-        for itemID := range items {
-            visited := make(map[string]bool)
-            c.recipeTrees[itemID] = buildRecipeTree(itemID, 1, visited)
+    // Collect API responses
+    for i := 0; i < 2; i++ {
+        resp := <-apiChan
+        if resp.err != nil {
+            fetchErr = resp.err
+            continue
         }
-        log.Printf("[%s] Recipe tree precomputation complete", currentTime)
+        switch resp.name {
+        case "Bazaar":
+            bazaarFetchDuration = resp.duration
+        case "Lowest Bins":
+            binsFetchDuration = resp.duration
+        }
     }
+
+    if fetchErr != nil {
+        return fmt.Errorf("API fetch failed: %v", fetchErr)
+    }
+
+    // Collect decoded responses
+    for i := 0; i < 2; i++ {
+        resp := <-decodeChan
+        if resp.err != nil {
+            return fmt.Errorf("decode failed: %v", resp.err)
+        }
+        if resp.bazaarData != nil {
+            bazaarResp = resp.bazaarData
+            bazaarDecodeDuration = resp.duration
+        } else {
+            lowestBins = resp.binsData
+            binsDecodeDuration = resp.duration
+        }
+    }
+
+    // Update cache
+    updateStart := time.Now()
+    c.mu.Lock()
+    c.bazaarData = *bazaarResp
+    c.lowestBins = lowestBins
+    c.lastUpdate = time.Now()
+    c.mu.Unlock()
+    updateDuration := time.Since(updateStart)
 
     totalDuration := time.Since(startTime)
-    currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-    log.Printf("[%s] Cache update timing - Total: %dms", currentTime, totalDuration.Milliseconds())
 
-    c.lastUpdate = time.Now()
+    // Print detailed timing summary
+    fmt.Println("\n╔════════════════════ Cache Update Summary ═══════════════════════")
+    fmt.Printf("║ UTC Time:              %s\n", getCurrentFormattedTime())
+    fmt.Printf("║ User:                  %s\n", os.Getenv("USER"))
+    fmt.Printf("║ Bazaar Fetch:          %8dms\n", bazaarFetchDuration.Milliseconds())
+    fmt.Printf("║ Bazaar Decode:         %8dms\n", bazaarDecodeDuration.Milliseconds())
+    fmt.Printf("║ Bins Fetch:            %8dms\n", binsFetchDuration.Milliseconds())
+    fmt.Printf("║ Bins Decode:           %8dms\n", binsDecodeDuration.Milliseconds())
+    fmt.Printf("║ Cache Update:          %8dms\n", updateDuration.Milliseconds())
+    fmt.Printf("║ Total Time:            %8dms\n", totalDuration.Milliseconds())
+    fmt.Printf("║ Items Loaded:          %8d Bazaar, %d Bins\n", 
+        len(bazaarResp.Products), len(lowestBins))
+    fmt.Println("╚═══════════════════════════════════════════════════════════════\n")
+
     return nil
 }
 
@@ -593,34 +846,184 @@ func printTotals(rootItemID string, totals ItemTotals, costs map[string]float64)
     fmt.Println("╚════════════════════════════════════════════════════════════════")
 }
 
-func main() {
+var perfMetrics = NewPerformanceMetrics()
+
+func initialize() error {
+    initStart := time.Now()
     currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
+    
+    log.Printf("[%s] Starting initialization...", currentTime)
+    
+    // Initialize cache and database
+    cache = *NewCache()
+    items = make(ItemDatabase)
+
+    // Load items with retry
+    itemLoadStart := time.Now()
+    var loadErr error
+    for attempt := 0; attempt < maxRetries; attempt++ {
+        if err := loadItems(); err != nil {
+            loadErr = err
+            log.Printf("[%s] Item load attempt %d failed: %v", currentTime, attempt+1, err)
+            time.Sleep(backoffBase * time.Duration(1<<uint(attempt)))
+            continue
+        }
+        loadErr = nil
+        break
+    }
+    perfMetrics.Track("item_load", time.Since(itemLoadStart))
+    
+    if loadErr != nil {
+        return fmt.Errorf("failed to load items after %d attempts: %v", maxRetries, loadErr)
+    }
+
+    // Initial cache update with retry - Track API calls separately
+    bazaarStart := time.Now()
+    bazaarData, err := fetchWithRetry(bazaarURL)
+    perfMetrics.Track("bazaar_api", time.Since(bazaarStart))
+    if err != nil {
+        return fmt.Errorf("failed to fetch bazaar data: %v", err)
+    }
+
+    binsStart := time.Now()
+    binsData, err := fetchWithRetry(lowestBinURL)
+    perfMetrics.Track("bins_api", time.Since(binsStart))
+    if err != nil {
+        return fmt.Errorf("failed to fetch lowest bin data: %v", err)
+    }
+
+    // Cache initialization
+    cacheStart := time.Now()
+    if err := initializeCache(bazaarData, binsData); err != nil {
+        return fmt.Errorf("failed to initialize cache: %v", err)
+    }
+    perfMetrics.Track("cache_init", time.Since(cacheStart))
+
+    // Log total initialization time
+    totalTime := time.Since(initStart)
+    log.Printf("[%s] Initialization completed in %.2fms", 
+        currentTime, 
+        float64(totalTime.Microseconds())/1000.0)
+
+    perfMetrics.PrintMetrics()
+    return nil
+}
+
+func initializeCache(bazaarData, binsData []byte) error {
+    // Parse the data
+    var bazaarResp BazaarResponse
+    if err := json.NewDecoder(bytes.NewReader(bazaarData)).Decode(&bazaarResp); err != nil {
+        return fmt.Errorf("failed to decode bazaar data: %v", err)
+    }
+
+    var lowestBins LowestBinData
+    if err := json.NewDecoder(bytes.NewReader(binsData)).Decode(&lowestBins); err != nil {
+        return fmt.Errorf("failed to decode lowest bin data: %v", err)
+    }
+
+    // Update cache with the parsed data
+    cache.mu.Lock()
+    defer cache.mu.Unlock()
+    
+    cache.bazaarData = bazaarResp
+    cache.lowestBins = lowestBins
+    cache.lastUpdate = time.Now()
+
+    log.Printf("[%s] Cache initialized with %d bazaar items and %d lowest bin items", 
+        time.Now().UTC().Format("2006-01-02 15:04:05"),
+        len(bazaarResp.Products),
+        len(lowestBins))
+
+    return nil
+}
+
+// Add this to the main function where you process recipe trees
+func processRecipeTree(itemID string) {
+    fmt.Printf("\n[%s] Starting recipe processing for %s...\n", getCurrentTimestamp(), items[itemID].Name)
+    
+    treeStart := time.Now()
+    tree := cache.getOrBuildRecipeTree(itemID)
+    treeBuildTime := time.Since(treeStart)
+    fmt.Printf("[%s] Recipe tree built in %dms\n", getCurrentTimestamp(), treeBuildTime.Milliseconds())
+    
+    totalsStart := time.Now()
+    totals := make(ItemTotals)
+    costs := make(map[string]float64)
+    
+    fmt.Printf("[%s] Calculating costs and printing tree...\n", getCurrentTimestamp())
+    printRecipeTree(tree, 0, totals, costs)
+    
+    printStart := time.Now()
+    printTotals(itemID, totals, costs)
+    printTime := time.Since(printStart)
+    
+    totalTime := time.Since(treeStart)
+    
+    fmt.Println("\n╔════════════════════ Recipe Processing Timing ════════════════════")
+    fmt.Printf("║ Tree Building:         %8dms\n", treeBuildTime.Milliseconds())
+    fmt.Printf("║ Cost Calculation:      %8dms\n", time.Since(totalsStart).Milliseconds())
+    fmt.Printf("║ Results Printing:      %8dms\n", printTime.Milliseconds())
+    fmt.Printf("║ Total Processing:      %8dms\n", totalTime.Milliseconds())
+    fmt.Println("╚═════════════════════════════════════════════════════════════════\n")
+}
+
+func healthCheck() {
+    ticker := time.NewTicker(time.Minute)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        currentTime := getCurrentTimestamp()
+        avgTime := stats.getAverageTime()
+        
+        if avgTime > httpTimeout/2 {
+            log.Printf("[%s] WARNING: High average update time: %dms", currentTime, avgTime.Milliseconds())
+        }
+        
+        stats.mu.RLock()
+        if stats.failedUpdates > 0 {
+            log.Printf("[%s] WARNING: %d failed updates, last error: %v", 
+                currentTime, stats.failedUpdates, stats.lastError)
+        }
+        stats.mu.RUnlock()
+    }
+}
+
+func getCurrentTimestamp() string {
+    return time.Now().UTC().Format("2006-01-02 15:04:05")
+}
+
+func main() {
+    currentTime := getCurrentTimestamp()
     log.Printf("[%s] Starting Skyblock Recipe Checker", currentTime)
-    log.Printf("User: %s", os.Getenv("USER"))
+    log.Printf("[%s] User: GiantWizard", currentTime)
+
+    // Initialize global variables
+    initStart := time.Now()
+    cache = *NewCache()
+    items = make(ItemDatabase)
 
     if err := loadItems(); err != nil {
-        log.Fatalf("Failed to load items: %v", err)
+        log.Fatalf("[%s] Failed to load items: %v", getCurrentTimestamp(), err)
     }
+    log.Printf("[%s] Items loaded in %dms", getCurrentTimestamp(), time.Since(initStart).Milliseconds())
 
     // Initial cache update
+    updateStart := time.Now()
     if err := cache.update(); err != nil {
-        log.Fatalf("Failed to initialize cache: %v", err)
+        log.Fatalf("[%s] Failed to initialize cache: %v", getCurrentTimestamp(), err)
     }
+    log.Printf("[%s] Initial cache update complete in %dms", getCurrentTimestamp(), time.Since(updateStart).Milliseconds())
 
-    // Precompute all recipe trees
-    log.Printf("Precomputing recipe trees...")
-    for itemID := range items {
-        cache.getOrBuildRecipeTree(itemID)
-    }
-    log.Printf("Recipe tree precomputation complete")
+    // Start health check routine
+    go healthCheck()
 
     // Start periodic cache updates
     go func() {
         ticker := time.NewTicker(cacheTimeout)
+        defer ticker.Stop()
         for range ticker.C {
             if err := cache.update(); err != nil {
-                currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-                log.Printf("[%s] Cache update failed: %v", currentTime, err)
+                log.Printf("[%s] Cache update failed: %v", getCurrentTimestamp(), err)
             }
         }
     }()
@@ -642,15 +1045,12 @@ func main() {
             continue
         }
 
-        startTime := time.Now()
         tree := cache.getOrBuildRecipeTree(itemID)
         totals := make(ItemTotals)
         costs := make(map[string]float64)
         
-        currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-        fmt.Printf("\n[%s] Recipe tree for %s:\n", currentTime, items[itemID].Name)
+        fmt.Printf("\n[%s] Recipe tree for %s:\n", getCurrentTimestamp(), items[itemID].Name)
         printRecipeTree(tree, 0, totals, costs)
-        printTotals(itemID, totals, costs)  // This is the updated line
-        fmt.Printf("Total processing time: %.2fms\n\n", float64(time.Since(startTime).Microseconds())/1000.0)
+        printTotals(itemID, totals, costs)
     }
 }
