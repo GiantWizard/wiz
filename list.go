@@ -218,8 +218,7 @@ type MarketMetrics struct {
 }
 
 func calculateMarketPressure(metrics MarketMetrics) float64 {
-    // Calculate volume pressure (-1 to 1 range)
-    // Positive means more selling pressure, negative means more buying pressure
+    // Calculate volume pressure as before
     totalVolume := float64(metrics.SellMovingWeek + metrics.BuyMovingWeek)
     if totalVolume == 0 {
         return 0
@@ -227,17 +226,65 @@ func calculateMarketPressure(metrics MarketMetrics) float64 {
     
     volumePressure := (float64(metrics.SellMovingWeek) - float64(metrics.BuyMovingWeek)) / totalVolume
     
-    // Calculate price spread pressure (0 to 1 range)
-    // How far apart are buy/sell prices relative to the average price
+    // Calculate price spread pressure relative to item value
     avgPrice := (metrics.BuyPrice + metrics.SellPrice) / 2
     if avgPrice == 0 {
         return 0
     }
     
-    spreadPressure := math.Abs(metrics.BuyPrice - metrics.SellPrice) / avgPrice
+    // For higher value items, spread needs to be larger to justify buy orders
+    // Scale the significance of the spread based on price magnitude
+    priceScale := math.Log10(avgPrice) / 5 // Dividing by 5 to normalize the scale
+    spreadPressure := (math.Abs(metrics.BuyPrice - metrics.SellPrice) / avgPrice) / priceScale
     
-    // Combine pressures - spreadPressure amplifies the effect of volumePressure
-    return volumePressure * (1 + spreadPressure)
+    // For high-value items, volume pressure becomes less important compared to spread
+    return (volumePressure * 0.3) + (spreadPressure * 0.7)
+}
+
+func determineBuyMethod(qs QuickStatus) PriceMethod {
+    metrics := MarketMetrics{
+        SellPrice:      qs.SellPrice,
+        BuyPrice:       qs.BuyPrice,
+        SellMovingWeek: qs.SellMovingWeek,
+        BuyMovingWeek:  qs.BuyMovingWeek,
+    }
+    
+    // Calculate absolute price difference
+    priceDiff := metrics.BuyPrice - metrics.SellPrice
+    
+    // For high-value items, require larger absolute savings to justify buy orders
+    minSavingsPercent := 0.02 * math.Log10(metrics.BuyPrice) // Scales with item value
+    
+    // If potential savings percentage is too small, just instabuy
+    if (priceDiff / metrics.BuyPrice) < minSavingsPercent {
+        return PriceMethod{
+            Price:  metrics.BuyPrice,
+            Method: "instabuy",
+        }
+    }
+    
+    pressure := calculateMarketPressure(metrics)
+    idealPrice := calculateIdealPrice(metrics)
+    
+    // For high-value items, be more conservative with buy orders
+    if math.Abs(pressure) < (0.2 * math.Log10(metrics.BuyPrice)) {
+        return PriceMethod{
+            Price:  metrics.BuyPrice,
+            Method: "instabuy",
+        }
+    }
+    
+    if pressure < 0 {
+        return PriceMethod{
+            Price:  metrics.BuyPrice,
+            Method: "instabuy",
+        }
+    }
+    
+    return PriceMethod{
+        Price:  idealPrice,
+        Method: "buy order",
+    }
 }
 
 func calculateIdealPrice(metrics MarketMetrics) float64 {
@@ -272,33 +319,6 @@ func calculateIdealPrice(metrics MarketMetrics) float64 {
     
     return math.Max(minPrice, math.Min(maxPrice, adjustedPrice))
 }
-
-func determineBuyMethod(qs QuickStatus) PriceMethod {
-    metrics := MarketMetrics{
-        SellPrice:      qs.SellPrice,
-        BuyPrice:       qs.BuyPrice,
-        SellMovingWeek: qs.SellMovingWeek,
-        BuyMovingWeek:  qs.BuyMovingWeek,
-    }
-    
-    pressure := calculateMarketPressure(metrics)
-    idealPrice := calculateIdealPrice(metrics)
-    
-    // If pressure is strongly negative, suggest instabuy
-    if pressure < 0 {
-        return PriceMethod{
-            Price:  idealPrice,
-            Method: "instabuy",
-        }
-    }
-    
-    // If pressure is positive, suggest buy order
-    return PriceMethod{
-            Price:  idealPrice,
-            Method: "buy order",
-    }
-}
-
 // Add this function after the Recipe struct methods
 func isBaseMaterial(itemID string) bool {
     item, exists := items[itemID]
