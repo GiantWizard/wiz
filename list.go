@@ -18,6 +18,7 @@ import (
     "strings"
     "sync"
     "time"
+    "math"
 )
 
 // Structures for Hypixel Bazaar API
@@ -110,6 +111,11 @@ func NewCache() *PriceCache {
     }
 }
 
+type PriceMethod struct {
+    Price  float64
+    Method string // "buy order" or "instabuy"
+}
+
 type ItemDatabase map[string]Item
 type ItemTotals map[string]int
 
@@ -120,22 +126,22 @@ type OrderSummary struct {
     Orders       int     `json:"orders"`
 }
 
-
-func getPriceFromCache(itemID string) (float64, string) {
+func getPriceFromCache(itemID string) (float64, string, string) {
     cache.mu.RLock()
     defer cache.mu.RUnlock()
 
     // Try Bazaar first
     if product, exists := cache.bazaarData.Products[itemID]; exists {
-        return product.QuickStatus.BuyPrice, "Bazaar"
+        priceMethod := determineBuyMethod(product.QuickStatus)
+        return priceMethod.Price, priceMethod.Method, "Bazaar"
     }
 
     // Try Lowest Bin
     if price, exists := cache.lowestBins[itemID]; exists {
-        return price, "Lowest Bin"
+        return price, "buy", "Lowest Bin"
     }
 
-    return 0, ""
+    return 0, "", ""
 }
 
 func formatPrice(price float64) string {
@@ -198,6 +204,99 @@ func (pm *PerformanceMetrics) PrintMetrics() {
     fmt.Printf("║ Recipe Tree Building:   %8.2fms\n", float64(pm.RecipeTreeBuildTime.Microseconds())/1000.0)
     fmt.Printf("║ Total Processing Time:  %8.2fms\n", float64(pm.TotalProcessingTime.Microseconds())/1000.0)
     fmt.Println("╚═══════════════════════════════════════════════════════════\n")
+}
+
+type MarketMetrics struct {
+    SellPrice      float64
+    BuyPrice       float64
+    SellVolume     int
+    BuyVolume      int
+    SellMovingWeek int
+    BuyMovingWeek  int
+    SellOrders     int
+    BuyOrders      int
+}
+
+func calculateMarketPressure(metrics MarketMetrics) float64 {
+    // Calculate volume pressure (-1 to 1 range)
+    // Positive means more selling pressure, negative means more buying pressure
+    totalVolume := float64(metrics.SellMovingWeek + metrics.BuyMovingWeek)
+    if totalVolume == 0 {
+        return 0
+    }
+    
+    volumePressure := (float64(metrics.SellMovingWeek) - float64(metrics.BuyMovingWeek)) / totalVolume
+    
+    // Calculate price spread pressure (0 to 1 range)
+    // How far apart are buy/sell prices relative to the average price
+    avgPrice := (metrics.BuyPrice + metrics.SellPrice) / 2
+    if avgPrice == 0 {
+        return 0
+    }
+    
+    spreadPressure := math.Abs(metrics.BuyPrice - metrics.SellPrice) / avgPrice
+    
+    // Combine pressures - spreadPressure amplifies the effect of volumePressure
+    return volumePressure * (1 + spreadPressure)
+}
+
+func calculateIdealPrice(metrics MarketMetrics) float64 {
+    // Base price starts at weighted average
+    totalVolume := float64(metrics.SellMovingWeek + metrics.BuyMovingWeek)
+    if totalVolume == 0 {
+        return (metrics.SellPrice + metrics.BuyPrice) / 2
+    }
+
+    // Calculate market pressure (-1 to 1 range)
+    pressure := calculateMarketPressure(metrics)
+    
+    // Calculate dynamic spread threshold based on volume ratio
+    volumeRatio := math.Abs(float64(metrics.SellMovingWeek-metrics.BuyMovingWeek)) / totalVolume
+    
+    // Price adjustment factor scales with pressure and volume
+    adjustment := pressure * volumeRatio
+    
+    // Calculate base price
+    basePrice := metrics.SellPrice
+    if pressure < 0 {
+        // Negative pressure (more buying) suggests using buyPrice as base
+        basePrice = metrics.BuyPrice
+    }
+    
+    // Apply dynamic adjustment
+    adjustedPrice := basePrice * (1 - adjustment)
+    
+    // Ensure price stays within reasonable bounds
+    minPrice := math.Min(metrics.SellPrice, metrics.BuyPrice)
+    maxPrice := math.Max(metrics.SellPrice, metrics.BuyPrice)
+    
+    return math.Max(minPrice, math.Min(maxPrice, adjustedPrice))
+}
+
+func determineBuyMethod(qs QuickStatus) PriceMethod {
+    metrics := MarketMetrics{
+        SellPrice:      qs.SellPrice,
+        BuyPrice:       qs.BuyPrice,
+        SellMovingWeek: qs.SellMovingWeek,
+        BuyMovingWeek:  qs.BuyMovingWeek,
+    }
+    
+    pressure := calculateMarketPressure(metrics)
+    idealPrice := calculateIdealPrice(metrics)
+    
+    // If pressure is strongly negative, suggest instabuy
+    if pressure < 0 {
+        return PriceMethod{
+            Price:  idealPrice,
+            Method: "instabuy",
+        }
+    }
+    
+    // If pressure is positive, suggest buy order
+    return PriceMethod{
+            Price:  idealPrice,
+            Method: "buy order",
+    }
 }
 
 // Add this function after the Recipe struct methods
@@ -392,6 +491,27 @@ type apiResponse struct {
     err      error
     name     string
     duration time.Duration
+}
+
+func (c *PriceCache) getIdealPrice(itemID string) float64 {
+    c.mu.RLock()
+    defer c.mu.RUnlock()
+    
+    if product, exists := c.bazaarData.Products[itemID]; exists {
+        metrics := MarketMetrics{
+            SellPrice:      product.QuickStatus.SellPrice,
+            BuyPrice:       product.QuickStatus.BuyPrice,
+            SellVolume:     product.QuickStatus.SellVolume,
+            BuyVolume:      product.QuickStatus.BuyVolume,
+            SellMovingWeek: product.QuickStatus.SellMovingWeek,
+            BuyMovingWeek:  product.QuickStatus.BuyMovingWeek,
+            SellOrders:     product.QuickStatus.SellOrders,
+            BuyOrders:      product.QuickStatus.BuyOrders,
+        }
+        return calculateIdealPrice(metrics)
+    }
+    
+    return 0
 }
 
 func (c *PriceCache) getOrBuildRecipeTree(itemID string) *RecipeTree {
@@ -689,7 +809,7 @@ func printRecipeTree(tree *RecipeTree, level int, totals ItemTotals, costs map[s
     // Print current item
     if isBaseMaterial(tree.ItemID) {
         totals[tree.ItemID] += tree.Quantity
-        price, source := getPriceFromCache(tree.ItemID)
+        price, method, source := getPriceFromCache(tree.ItemID)
         totalCost := price * float64(tree.Quantity)
         costs[tree.ItemID] = totalCost
         
@@ -697,9 +817,10 @@ func printRecipeTree(tree *RecipeTree, level int, totals ItemTotals, costs map[s
             displayName,
             tree.Quantity)
         if price > 0 {
-            fmt.Printf(" │ Cost: %-12s (%s ea) from %s", 
+            fmt.Printf(" │ Cost: %-12s (%.2f ea - %s) from %s", 
                 formatPrice(totalCost),
-                formatPrice(price),
+                price,
+                method,
                 source)
         }
         fmt.Println()
@@ -813,14 +934,14 @@ func printTotals(rootItemID string, totals ItemTotals, costs map[string]float64)
 
     for _, name := range sortedNames {
         for _, itemID := range baseMatsByName[name] {
-            price, source := getPriceFromCache(itemID)
+            price, method, source := getPriceFromCache(itemID)
             totalItemCost := price * float64(totals[itemID])
             costPerUnit := price
             totalCost += totalItemCost
             
             if price > 0 {
-                fmt.Printf("╠═ %-30s x%-10d │ Cost: %-10s (%.2f ea) from %s\n", 
-                    name, totals[itemID], formatPrice(totalItemCost), costPerUnit, source)
+                fmt.Printf("╠═ %-30s x%-10d │ Cost: %-10s (%.2f ea - %s) from %s\n", 
+                    name, totals[itemID], formatPrice(totalItemCost), costPerUnit, method, source)
             } else {
                 fmt.Printf("╠═ %-30s x%-10d │ No price data available\n", 
                     name, totals[itemID])
