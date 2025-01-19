@@ -12,7 +12,6 @@ import (
     "fmt"
     "io"
     "io/ioutil"
-    "log"
     "net/http"
     "os"
     "sort"
@@ -29,15 +28,24 @@ type BazaarResponse struct {
 }
 
 type BazaarProduct struct {
-    ProductID   string      `json:"product_id"`
-    QuickStatus QuickStatus `json:"quick_status"`
+    ProductID    string         `json:"product_id"`
+    SellSummary  []OrderSummary `json:"sell_summary"`
+    BuySummary   []OrderSummary `json:"buy_summary"`
+    QuickStatus  QuickStatus    `json:"quick_status"`
 }
 
 type QuickStatus struct {
-    ProductID string  `json:"productId"`
-    BuyPrice  float64 `json:"buyPrice"`
-    SellPrice float64 `json:"sellPrice"`
+    ProductID       string  `json:"productId"`
+    SellPrice       float64 `json:"sellPrice"`
+    SellVolume      int     `json:"sellVolume"`
+    SellMovingWeek  int     `json:"sellMovingWeek"`
+    SellOrders      int     `json:"sellOrders"`
+    BuyPrice        float64 `json:"buyPrice"`
+    BuyVolume       int     `json:"buyVolume"`
+    BuyMovingWeek   int     `json:"buyMovingWeek"`
+    BuyOrders       int     `json:"buyOrders"`
 }
+
 
 // Recipe structures
 type Recipe struct {
@@ -104,6 +112,14 @@ func NewCache() *PriceCache {
 
 type ItemDatabase map[string]Item
 type ItemTotals map[string]int
+
+
+type OrderSummary struct {
+    Amount       int     `json:"amount"`
+    PricePerUnit float64 `json:"pricePerUnit"`
+    Orders       int     `json:"orders"`
+}
+
 
 func getPriceFromCache(itemID string) (float64, string) {
     cache.mu.RLock()
@@ -371,10 +387,6 @@ func handleResponse(resp *http.Response) ([]byte, error) {
     return io.ReadAll(bufio.NewReaderSize(reader, 64*1024))
 }
 
-func getCurrentFormattedTime() string {
-    return time.Now().UTC().Format("2006-01-02 15:04:05")
-}
-
 type apiResponse struct {
     data     []byte
     err      error
@@ -415,8 +427,6 @@ type decodedResponse struct {
 
 func (c *PriceCache) update() error {
     startTime := time.Now()
-    currentTime := getCurrentFormattedTime()
-    log.Printf("[%s] Starting cache update process...", currentTime)
 
     // Create channels for both API and decode responses
     apiChan := make(chan apiResponse, 2)
@@ -430,9 +440,6 @@ func (c *PriceCache) update() error {
         fetchStart := time.Now()
         data, err := fetchWithRetry(bazaarURL)
         fetchDuration := time.Since(fetchStart)
-        
-        log.Printf("[%s] Bazaar API fetch completed in %dms", 
-            getCurrentFormattedTime(), fetchDuration.Milliseconds())
 
         apiChan <- apiResponse{
             data:     data,
@@ -443,13 +450,12 @@ func (c *PriceCache) update() error {
 
         if err == nil {
             decodeStart := time.Now()
-            // Preallocate BazaarResponse with estimated size
             bazaarResp := &BazaarResponse{
-                Products: make(map[string]BazaarProduct, 1500), // Preallocate map
+                Products: make(map[string]BazaarProduct, 1500),
             }
             
             decoder := json.NewDecoder(bytes.NewReader(data))
-            decoder.UseNumber() // More efficient number handling
+            decoder.UseNumber()
             decodeErr := decoder.Decode(bazaarResp)
             
             decodeChan <- decodedResponse{
@@ -465,9 +471,6 @@ func (c *PriceCache) update() error {
         fetchStart := time.Now()
         data, err := fetchWithRetry(lowestBinURL)
         fetchDuration := time.Since(fetchStart)
-        
-        log.Printf("[%s] Lowest Bins API fetch completed in %dms", 
-            getCurrentFormattedTime(), fetchDuration.Milliseconds())
 
         apiChan <- apiResponse{
             data:     data,
@@ -478,11 +481,10 @@ func (c *PriceCache) update() error {
 
         if err == nil {
             decodeStart := time.Now()
-            // Preallocate LowestBinData with estimated size
             lowestBins := make(LowestBinData, 10000)
             
             decoder := json.NewDecoder(bytes.NewReader(data))
-            decoder.UseNumber() // More efficient number handling
+            decoder.UseNumber()
             decodeErr := decoder.Decode(&lowestBins)
             
             decodeChan <- decodedResponse{
@@ -547,9 +549,8 @@ func (c *PriceCache) update() error {
 
     totalDuration := time.Since(startTime)
 
-    // Print detailed timing summary
+    // Print timing summary
     fmt.Println("\n╔════════════════════ Cache Update Summary ═══════════════════════")
-    fmt.Printf("║ UTC Time:              %s\n", getCurrentFormattedTime())
     fmt.Printf("║ User:                  %s\n", os.Getenv("USER"))
     fmt.Printf("║ Bazaar Fetch:          %8dms\n", bazaarFetchDuration.Milliseconds())
     fmt.Printf("║ Bazaar Decode:         %8dms\n", bazaarDecodeDuration.Milliseconds())
@@ -578,13 +579,10 @@ func loadItems() error {
     if cache.recipeTrees == nil {
         cache.mu.Lock()
         cache.recipeTrees = make(map[string]*RecipeTree)
-        currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-        log.Printf("[%s] Building initial recipe tree cache for user %s", currentTime, os.Getenv("USER"))
         for itemID := range items {
             visited := make(map[string]bool)
             cache.recipeTrees[itemID] = buildRecipeTree(itemID, 1, visited)
         }
-        log.Printf("[%s] Recipe tree cache initialization complete", currentTime)
         cache.mu.Unlock()
     }
 
@@ -849,10 +847,6 @@ func printTotals(rootItemID string, totals ItemTotals, costs map[string]float64)
 var perfMetrics = NewPerformanceMetrics()
 
 func initialize() error {
-    initStart := time.Now()
-    currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-    
-    log.Printf("[%s] Starting initialization...", currentTime)
     
     // Initialize cache and database
     cache = *NewCache()
@@ -864,7 +858,6 @@ func initialize() error {
     for attempt := 0; attempt < maxRetries; attempt++ {
         if err := loadItems(); err != nil {
             loadErr = err
-            log.Printf("[%s] Item load attempt %d failed: %v", currentTime, attempt+1, err)
             time.Sleep(backoffBase * time.Duration(1<<uint(attempt)))
             continue
         }
@@ -899,12 +892,6 @@ func initialize() error {
     }
     perfMetrics.Track("cache_init", time.Since(cacheStart))
 
-    // Log total initialization time
-    totalTime := time.Since(initStart)
-    log.Printf("[%s] Initialization completed in %.2fms", 
-        currentTime, 
-        float64(totalTime.Microseconds())/1000.0)
-
     perfMetrics.PrintMetrics()
     return nil
 }
@@ -929,102 +916,92 @@ func initializeCache(bazaarData, binsData []byte) error {
     cache.lowestBins = lowestBins
     cache.lastUpdate = time.Now()
 
-    log.Printf("[%s] Cache initialized with %d bazaar items and %d lowest bin items", 
-        time.Now().UTC().Format("2006-01-02 15:04:05"),
-        len(bazaarResp.Products),
-        len(lowestBins))
-
     return nil
 }
 
 // Add this to the main function where you process recipe trees
 func processRecipeTree(itemID string) {
-    fmt.Printf("\n[%s] Starting recipe processing for %s...\n", getCurrentTimestamp(), items[itemID].Name)
-    
+    startTime := time.Now()
+    fmt.Printf("\n╔════════════════════ Process Started ════════════════════")
+    fmt.Printf("\n║ Time (UTC):           %s", time.Now().UTC().Format("2006-01-02 15:04:05"))
+    fmt.Printf("\n║ User:                 %s", os.Getenv("USER"))
+    fmt.Printf("\n║ Item:                 %s", items[itemID].Name)
+    fmt.Println("\n╚════════════════════════════════════════════════════════")
+    // Recipe Tree Processing Phase
     treeStart := time.Now()
     tree := cache.getOrBuildRecipeTree(itemID)
     treeBuildTime := time.Since(treeStart)
-    fmt.Printf("[%s] Recipe tree built in %dms\n", getCurrentTimestamp(), treeBuildTime.Milliseconds())
-    
+
+    // Cost Calculation Phase
     totalsStart := time.Now()
     totals := make(ItemTotals)
     costs := make(map[string]float64)
-    
-    fmt.Printf("[%s] Calculating costs and printing tree...\n", getCurrentTimestamp())
+
+    fmt.Println("\n╔════════════════════ Recipe Tree ════════════════════")
     printRecipeTree(tree, 0, totals, costs)
-    
-    printStart := time.Now()
+    treeProcessTime := time.Since(totalsStart)
+
+    // Results Processing Phase
+    resultsStart := time.Now()
     printTotals(itemID, totals, costs)
-    printTime := time.Since(printStart)
-    
-    totalTime := time.Since(treeStart)
-    
-    fmt.Println("\n╔════════════════════ Recipe Processing Timing ════════════════════")
-    fmt.Printf("║ Tree Building:         %8dms\n", treeBuildTime.Milliseconds())
-    fmt.Printf("║ Cost Calculation:      %8dms\n", time.Since(totalsStart).Milliseconds())
-    fmt.Printf("║ Results Printing:      %8dms\n", printTime.Milliseconds())
-    fmt.Printf("║ Total Processing:      %8dms\n", totalTime.Milliseconds())
-    fmt.Println("╚═════════════════════════════════════════════════════════════════\n")
+    resultsTime := time.Since(resultsStart)
+
+    // Final Timing Summary
+    totalTime := time.Since(startTime)
+    fmt.Println("\n╔════════════════════ Processing Times ════════════════════")
+    fmt.Printf("║ Tree Building:         %8.2fms\n", float64(treeBuildTime.Microseconds())/1000.0)
+    fmt.Printf("║ Tree Processing:       %8.2fms\n", float64(treeProcessTime.Microseconds())/1000.0)
+    fmt.Printf("║ Results Processing:    %8.2fms\n", float64(resultsTime.Microseconds())/1000.0)
+    fmt.Printf("║ Total Time:           %8.2fms\n", float64(totalTime.Microseconds())/1000.0)
+    fmt.Println("╚═════════════════════════════════════════════════════════")
 }
 
-func healthCheck() {
-    ticker := time.NewTicker(time.Minute)
-    defer ticker.Stop()
+// Helper function to find all base materials in a recipe tree
+func findBaseMaterials(tree *RecipeTree, materials map[string]bool) {
+    if tree == nil {
+        return
+    }
 
-    for range ticker.C {
-        currentTime := getCurrentTimestamp()
-        avgTime := stats.getAverageTime()
-        
-        if avgTime > httpTimeout/2 {
-            log.Printf("[%s] WARNING: High average update time: %dms", currentTime, avgTime.Milliseconds())
-        }
-        
-        stats.mu.RLock()
-        if stats.failedUpdates > 0 {
-            log.Printf("[%s] WARNING: %d failed updates, last error: %v", 
-                currentTime, stats.failedUpdates, stats.lastError)
-        }
-        stats.mu.RUnlock()
+    if isBaseMaterial(tree.ItemID) {
+        materials[tree.ItemID] = true
+        return
+    }
+
+    for _, child := range tree.Children {
+        findBaseMaterials(child, materials)
     }
 }
 
-func getCurrentTimestamp() string {
-    return time.Now().UTC().Format("2006-01-02 15:04:05")
+// Helper function to format price differences
+func formatPriceDiff(price float64) string {
+    if price > 0 {
+        return fmt.Sprintf("+%s", formatPrice(price))
+    }
+    return formatPrice(price)
 }
 
 func main() {
-    currentTime := getCurrentTimestamp()
-    log.Printf("[%s] Starting Skyblock Recipe Checker", currentTime)
-    log.Printf("[%s] User: GiantWizard", currentTime)
-
     // Initialize global variables
-    initStart := time.Now()
     cache = *NewCache()
     items = make(ItemDatabase)
 
     if err := loadItems(); err != nil {
-        log.Fatalf("[%s] Failed to load items: %v", getCurrentTimestamp(), err)
+        fmt.Printf("Failed to load items: %v\n", err)
+        os.Exit(1)
     }
-    log.Printf("[%s] Items loaded in %dms", getCurrentTimestamp(), time.Since(initStart).Milliseconds())
 
     // Initial cache update
-    updateStart := time.Now()
     if err := cache.update(); err != nil {
-        log.Fatalf("[%s] Failed to initialize cache: %v", getCurrentTimestamp(), err)
+        fmt.Printf("Failed to initialize cache: %v\n", err)
+        os.Exit(1)
     }
-    log.Printf("[%s] Initial cache update complete in %dms", getCurrentTimestamp(), time.Since(updateStart).Milliseconds())
-
-    // Start health check routine
-    go healthCheck()
 
     // Start periodic cache updates
     go func() {
         ticker := time.NewTicker(cacheTimeout)
         defer ticker.Stop()
         for range ticker.C {
-            if err := cache.update(); err != nil {
-                log.Printf("[%s] Cache update failed: %v", getCurrentTimestamp(), err)
-            }
+            cache.update()
         }
     }()
 
@@ -1045,12 +1022,6 @@ func main() {
             continue
         }
 
-        tree := cache.getOrBuildRecipeTree(itemID)
-        totals := make(ItemTotals)
-        costs := make(map[string]float64)
-        
-        fmt.Printf("\n[%s] Recipe tree for %s:\n", getCurrentTimestamp(), items[itemID].Name)
-        printRecipeTree(tree, 0, totals, costs)
-        printTotals(itemID, totals, costs)
+        processRecipeTree(itemID)
     }
 }
