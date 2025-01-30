@@ -1,0 +1,2374 @@
+[
+  {
+    "item": "STARRED_MIDAS_SWORD",
+    "profit_per_hour": 4428003888000.0,
+    "crafting_savings": 123000108.0,
+    "fill_time": 0.1,
+    "sell_price": 579000000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 455999892.0,
+    "ingredients": [
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "MIDAS_SWORD",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 240000000.0
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      },
+      {
+        "item": "GOLDEN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 26999986.5
+      }
+    ]
+  },
+  {
+    "item": "DIAMOND_CHESTPLATE",
+    "profit_per_hour": 2339638012800.0,
+    "crafting_savings": 64989944.8,
+    "fill_time": 0.1,
+    "sell_price": 64990000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 55.2,
+    "ingredients": [
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      },
+      {
+        "item": "DIAMOND",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.9
+      }
+    ]
+  },
+  {
+    "item": "SCAVENGER_ARTIFACT",
+    "profit_per_hour": 1768732204320.0,
+    "crafting_savings": 49131450.12,
+    "fill_time": 0.1,
+    "sell_price": 307727776.92,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 258596326.8,
+    "ingredients": [
+      {
+        "item": "BLOOD_SOAKED_COINS",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 9289996.9
+      },
+      {
+        "item": "FRESHLY_MINTED_COINS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 8527271.2
+      },
+      {
+        "item": "BLOOD_SOAKED_COINS",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 9289996.9
+      },
+      {
+        "item": "FRESHLY_MINTED_COINS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 8527271.2
+      },
+      {
+        "item": "SCAVENGER_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 85000000.0
+      },
+      {
+        "item": "FRESHLY_MINTED_COINS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 8527271.2
+      },
+      {
+        "item": "BLOOD_SOAKED_COINS",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 9289996.9
+      },
+      {
+        "item": "FRESHLY_MINTED_COINS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 8527271.2
+      },
+      {
+        "item": "BLOOD_SOAKED_COINS",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 9289996.9
+      }
+    ]
+  },
+  {
+    "item": "STARRED_SPIRIT_MASK",
+    "profit_per_hour": 1260782308800.0,
+    "crafting_savings": 35021730.8,
+    "fill_time": 0.1,
+    "sell_price": 578025350.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 543003619.2,
+    "ingredients": [
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "SPIRIT_MASK",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 543000000.0
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      }
+    ]
+  },
+  {
+    "item": "HEARTFIRE_DAGGER",
+    "profit_per_hour": 942830179200.0,
+    "crafting_savings": 26189727.2,
+    "fill_time": 0.1,
+    "sell_price": 204580000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 178390272.8,
+    "ingredients": [
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MOLTEN_POWDER",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 999996.6
+      },
+      {
+        "item": "INFERNO_VERTEX",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 5513071.0
+      },
+      {
+        "item": "BURSTFIRE_DAGGER",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 13900000.0
+      },
+      {
+        "item": "INFERNO_VERTEX",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 5513071.0
+      }
+    ]
+  },
+  {
+    "item": "MASTER_SKULL_TIER_7",
+    "profit_per_hour": 305665200000.0,
+    "crafting_savings": 8490700.0,
+    "fill_time": 0.1,
+    "sell_price": 592490700.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 584000000.0,
+    "ingredients": [
+      {
+        "item": "MASTER_SKULL_TIER_6",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 146000000.0
+      },
+      {
+        "item": "MASTER_SKULL_TIER_6",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 146000000.0
+      },
+      {
+        "item": "MASTER_SKULL_TIER_6",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 146000000.0
+      },
+      {
+        "item": "MASTER_SKULL_TIER_6",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 146000000.0
+      }
+    ]
+  },
+  {
+    "item": "REAPER_ORB",
+    "profit_per_hour": 297720000000.0,
+    "crafting_savings": 8270000.0,
+    "fill_time": 0.1,
+    "sell_price": 88270000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 80000000.0,
+    "ingredients": [
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      },
+      {
+        "item": "SCYTHE_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10000000.0
+      }
+    ]
+  },
+  {
+    "item": "JERRY_TALISMAN_PURPLE",
+    "profit_per_hour": 267850800000.0,
+    "crafting_savings": 7440300.0,
+    "fill_time": 0.1,
+    "sell_price": 82440300.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 75000000.0,
+    "ingredients": [
+      {
+        "item": "JERRY_TALISMAN_BLUE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 15000000.0
+      },
+      {
+        "item": "JERRY_TALISMAN_BLUE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 15000000.0
+      },
+      {
+        "item": "JERRY_TALISMAN_BLUE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 15000000.0
+      },
+      {
+        "item": "JERRY_TALISMAN_BLUE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 15000000.0
+      },
+      {
+        "item": "JERRY_TALISMAN_BLUE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 15000000.0
+      }
+    ]
+  },
+  {
+    "item": "TREASURE_ARTIFACT",
+    "profit_per_hour": 234684000000.0,
+    "crafting_savings": 6519000.0,
+    "fill_time": 0.1,
+    "sell_price": 90210000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 83691000.0,
+    "ingredients": [
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      },
+      {
+        "item": "TREASURE_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 9299000.0
+      }
+    ]
+  },
+  {
+    "item": "INFERNO_ROD",
+    "profit_per_hour": 226882483200.0,
+    "crafting_savings": 6302291.2,
+    "fill_time": 0.1,
+    "sell_price": 31040000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 24737708.8,
+    "ingredients": [
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_ROD",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 175000.0
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      }
+    ]
+  },
+  {
+    "item": "SMOLDERING_CHAMBERS_TRAVEL_SCROLL",
+    "profit_per_hour": 186467875560.0,
+    "crafting_savings": 5179663.21,
+    "fill_time": 0.1,
+    "sell_price": 42033333.01,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 36853669.8,
+    "ingredients": [
+      {
+        "item": "MOLTEN_POWDER",
+        "count_per_item": 3.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 999996.6
+      },
+      {
+        "item": "ENCHANTED_BLAZE_ROD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1649995.3
+      },
+      {
+        "item": "MOLTEN_POWDER",
+        "count_per_item": 3.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 999996.6
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "INFERNO_VERTEX",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 5513071.0
+      },
+      {
+        "item": "MAGMA_FISH_GOLD",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1535169.3
+      },
+      {
+        "item": "MOLTEN_POWDER",
+        "count_per_item": 3.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 999996.6
+      },
+      {
+        "item": "ENCHANTED_BLAZE_ROD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1649995.3
+      },
+      {
+        "item": "MOLTEN_POWDER",
+        "count_per_item": 3.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 999996.6
+      }
+    ]
+  },
+  {
+    "item": "REAPER_BOOTS",
+    "profit_per_hour": 150570521450.29,
+    "crafting_savings": 13218528.0,
+    "fill_time": 0.32,
+    "sell_price": 32980000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 19761472.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_BOOTS",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 900000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      }
+    ]
+  },
+  {
+    "item": "ATOMSPLIT_KATANA",
+    "profit_per_hour": 137908929600.0,
+    "crafting_savings": 3830803.6,
+    "fill_time": 0.1,
+    "sell_price": 76630000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 72799196.4,
+    "ingredients": [
+      {
+        "item": "NULL_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31999598.2
+      },
+      {
+        "item": "NULL_BLADE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31999598.2
+      },
+      {
+        "item": "VORPAL_KATANA",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 8800000.0
+      }
+    ]
+  },
+  {
+    "item": "STARRED_SHADOW_FURY",
+    "profit_per_hour": 137157544800.0,
+    "crafting_savings": 3809931.8,
+    "fill_time": 0.1,
+    "sell_price": 45589903.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 41779971.2,
+    "ingredients": [
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "SHADOW_FURY",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 40500000.0
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      },
+      {
+        "item": "LIVID_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 159996.4
+      }
+    ]
+  },
+  {
+    "item": "SHIMMERING_LIGHT_SLIPPERS",
+    "profit_per_hour": 121743568800.0,
+    "crafting_savings": 3381765.8,
+    "fill_time": 0.1,
+    "sell_price": 7644000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 4262234.2,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MYCELIUM_CUBE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 136132.1
+      },
+      {
+        "item": "ENCHANTED_MYCELIUM_CUBE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 136132.1
+      },
+      {
+        "item": "X",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 39899.7
+      },
+      {
+        "item": "X",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 39899.7
+      }
+    ]
+  },
+  {
+    "item": "REAPER_CHESTPLATE",
+    "profit_per_hour": 105234862640.76,
+    "crafting_savings": 9238528.0,
+    "fill_time": 0.32,
+    "sell_price": 29100000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 19861472.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_CHESTPLATE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 1000000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "ENCHANTED_DIAMOND_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 202000.0
+      }
+    ]
+  },
+  {
+    "item": "CHESTPLATE_OF_THE_PACK",
+    "profit_per_hour": 103677883200.0,
+    "crafting_savings": 2879941.2,
+    "fill_time": 0.1,
+    "sell_price": 4214000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 1334058.8,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MUTTON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7089.1
+      },
+      {
+        "item": "ENCHANTED_MUTTON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7089.1
+      },
+      {
+        "item": "ENCHANTED_MUTTON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7089.1
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "ENCHANTED_MUTTON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7089.1
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      }
+    ]
+  },
+  {
+    "item": "ETERNAL_HOOF",
+    "profit_per_hour": 100414310400.0,
+    "crafting_savings": 2789286.4,
+    "fill_time": 0.1,
+    "sell_price": 16005000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 13215713.6,
+    "ingredients": [
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "LUCKY_HOOF",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 195000.0
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      },
+      {
+        "item": "SOUL_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1627589.2
+      }
+    ]
+  },
+  {
+    "item": "SHIMMERING_LIGHT_HOOD",
+    "profit_per_hour": 99316108800.0,
+    "crafting_savings": 2758780.8,
+    "fill_time": 0.1,
+    "sell_price": 9016000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 6257219.2,
+    "ingredients": [
+      {
+        "item": "X",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 39899.7
+      },
+      {
+        "item": "X",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 39899.7
+      },
+      {
+        "item": "X",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 39899.7
+      },
+      {
+        "item": "ENCHANTED_MYCELIUM_CUBE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 136132.1
+      },
+      {
+        "item": "ENCHANTED_MYCELIUM_CUBE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 136132.1
+      }
+    ]
+  },
+  {
+    "item": "INFERNO_HEAVY_MAGMA_CREAM",
+    "profit_per_hour": 90569991600.0,
+    "crafting_savings": 2515833.1,
+    "fill_time": 0.1,
+    "sell_price": 3724000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 1208166.9,
+    "ingredients": [
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      },
+      {
+        "item": "INFERNO_FUEL_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 107459.9
+      },
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      },
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      },
+      {
+        "item": "HEAVY_GABAGOOL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 897249.5
+      },
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      },
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      },
+      {
+        "item": "INFERNO_FUEL_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 107459.9
+      },
+      {
+        "item": "MAGMA_CREAM_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 15999.6
+      }
+    ]
+  },
+  {
+    "item": "NUTCRACKER_CHESTPLATE",
+    "profit_per_hour": 89964000000.0,
+    "crafting_savings": 2499000.0,
+    "fill_time": 0.1,
+    "sell_price": 3724000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 1225000.0,
+    "ingredients": [
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "SNOW_SUIT_CHESTPLATE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 100000.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      },
+      {
+        "item": "WALNUT",
+        "count_per_item": 3.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 46875.0
+      }
+    ]
+  },
+  {
+    "item": "PUMPKIN_LAUNCHER",
+    "profit_per_hour": 86284166400.0,
+    "crafting_savings": 2396782.4,
+    "fill_time": 0.1,
+    "sell_price": 22795000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 20398217.6,
+    "ingredients": [
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 20.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      },
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      },
+      {
+        "item": "PUMPKIN_BOMB",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 9190.3
+      },
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      },
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 20.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "PUMPKIN_GUTS",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 407929.1
+      }
+    ]
+  },
+  {
+    "item": "SPEED_ARTIFACT",
+    "profit_per_hour": 84671769600.0,
+    "crafting_savings": 2351993.6,
+    "fill_time": 0.1,
+    "sell_price": 7448000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 5096006.4,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "SPEED_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 150000.0
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      },
+      {
+        "item": "ENCHANTED_SUGAR_CANE",
+        "count_per_item": 6.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 103041.8
+      }
+    ]
+  },
+  {
+    "item": "BLAZE_TALISMAN",
+    "profit_per_hour": 82741449600.0,
+    "crafting_savings": 2298373.6,
+    "fill_time": 0.1,
+    "sell_price": 15520000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 13221626.4,
+    "ingredients": [
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "ENCHANTED_BLAZE_ROD",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1649995.3
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      },
+      {
+        "item": "MILLENIA_OLD_BLAZE_ASHES",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2708.0
+      }
+    ]
+  },
+  {
+    "item": "MELON_DICER_2",
+    "profit_per_hour": 81569635200.0,
+    "crafting_savings": 2265823.2,
+    "fill_time": 0.1,
+    "sell_price": 7839020.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 5573196.8,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "MELON_DICER",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2400000.0
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      },
+      {
+        "item": "ENCHANTED_MELON_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 49581.2
+      }
+    ]
+  },
+  {
+    "item": "TANK_WITHER_CHESTPLATE",
+    "profit_per_hour": 79113686400.0,
+    "crafting_savings": 2197602.4,
+    "fill_time": 0.1,
+    "sell_price": 12610000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 10412397.6,
+    "ingredients": [
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "WITHER_CHESTPLATE",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 10400000.0
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      },
+      {
+        "item": "GIANT_FRAGMENT_BOULDER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1549.7
+      }
+    ]
+  },
+  {
+    "item": "STARRED_ITEM_SPIRIT_BOW",
+    "profit_per_hour": 75131308800.0,
+    "crafting_savings": 2086980.8,
+    "fill_time": 0.1,
+    "sell_price": 6340600.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 4253619.2,
+    "ingredients": [
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "ITEM_SPIRIT_BOW",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 4250000.0
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      },
+      {
+        "item": "THORN_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 452.4
+      }
+    ]
+  },
+  {
+    "item": "INFERNO_HEAVY_CRUDE_GABAGOOL",
+    "profit_per_hour": 75039238800.0,
+    "crafting_savings": 2084423.3,
+    "fill_time": 0.1,
+    "sell_price": 3626000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 1541576.7,
+    "ingredients": [
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      },
+      {
+        "item": "INFERNO_FUEL_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 107459.9
+      },
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      },
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      },
+      {
+        "item": "HEAVY_GABAGOOL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 897249.5
+      },
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      },
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      },
+      {
+        "item": "INFERNO_FUEL_BLOCK",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 107459.9
+      },
+      {
+        "item": "CRUDE_GABAGOOL_DISTILLATE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 71567.9
+      }
+    ]
+  },
+  {
+    "item": "BAT_PERSON_ARTIFACT",
+    "profit_per_hour": 71479958400.0,
+    "crafting_savings": 1985554.4,
+    "fill_time": 0.1,
+    "sell_price": 46317500.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 44331945.6,
+    "ingredients": [
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "BAT_PERSON_RING",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 11000000.0
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 4.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      }
+    ]
+  },
+  {
+    "item": "GLOSSY_MINERAL_HELMET",
+    "profit_per_hour": 70632403200.0,
+    "crafting_savings": 1962011.2,
+    "fill_time": 0.1,
+    "sell_price": 41710000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 39747988.8,
+    "ingredients": [
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "MINERAL_HELMET",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 1500000.0
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      }
+    ]
+  },
+  {
+    "item": "HUNTER_TALISMAN",
+    "profit_per_hour": 70119936000.0,
+    "crafting_savings": 1947776.0,
+    "fill_time": 0.1,
+    "sell_price": 8820000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 6872224.0,
+    "ingredients": [
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "ENCHANTED_ROTTEN_FLESH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1430.0
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      },
+      {
+        "item": "GOLDEN_TOOTH",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 106663.5
+      }
+    ]
+  },
+  {
+    "item": "SPEED_WITHER_HELMET",
+    "profit_per_hour": 70098069600.0,
+    "crafting_savings": 1947168.6,
+    "fill_time": 0.1,
+    "sell_price": 4900000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 2952831.4,
+    "ingredients": [
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "WITHER_HELMET",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2888997.0
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      },
+      {
+        "item": "GIANT_FRAGMENT_BIGFOOT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 7979.3
+      }
+    ]
+  },
+  {
+    "item": "OPAL_POWER_SCROLL",
+    "profit_per_hour": 69704755200.0,
+    "crafting_savings": 1936243.2,
+    "fill_time": 0.1,
+    "sell_price": 2940000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 1003756.8,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_PAPER",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 4591.8
+      },
+      {
+        "item": "ENCHANTED_PAPER",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 4591.8
+      },
+      {
+        "item": "ENCHANTED_PAPER",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 4591.8
+      },
+      {
+        "item": "FINE_OPAL_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 48959.4
+      }
+    ]
+  },
+  {
+    "item": "HUB_CRYPTS_TRAVEL_SCROLL",
+    "profit_per_hour": 68434318800.0,
+    "crafting_savings": 1900953.3,
+    "fill_time": 0.1,
+    "sell_price": 2450000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 549046.7,
+    "ingredients": [
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "REVENANT_VISCERA",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 137886.5
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1500.7
+      },
+      {
+        "item": "ENCHANTED_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 958.2
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1500.7
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1500.7
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1500.7
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1500.7
+      }
+    ]
+  },
+  {
+    "item": "BAT_PERSON_RING",
+    "profit_per_hour": 68292489600.0,
+    "crafting_savings": 1897013.6,
+    "fill_time": 0.1,
+    "sell_price": 10670000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 8772986.4,
+    "ingredients": [
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "BAT_PERSON_TALISMAN",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 440000.0
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      },
+      {
+        "item": "ECTOPLASM",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 250493.5
+      },
+      {
+        "item": "SPOOKY_SHARD",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 79298.6
+      }
+    ]
+  },
+  {
+    "item": "THEORETICAL_HOE_WHEAT_2",
+    "profit_per_hour": 63877593600.0,
+    "crafting_savings": 1774377.6,
+    "fill_time": 0.1,
+    "sell_price": 5390000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 3615622.4,
+    "ingredients": [
+      {
+        "item": "JACOBS_TICKET",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 16514.4
+      },
+      {
+        "item": "ENCHANTED_WHEAT",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 917.2
+      },
+      {
+        "item": "JACOBS_TICKET",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 16514.4
+      },
+      {
+        "item": "ENCHANTED_WHEAT",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 917.2
+      },
+      {
+        "item": "THEORETICAL_HOE_WHEAT_1",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "ENCHANTED_WHEAT",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 917.2
+      },
+      {
+        "item": "JACOBS_TICKET",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 16514.4
+      },
+      {
+        "item": "ENCHANTED_WHEAT",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 917.2
+      },
+      {
+        "item": "JACOBS_TICKET",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 16514.4
+      }
+    ]
+  },
+  {
+    "item": "EMBER_LEGGINGS",
+    "profit_per_hour": 62171965080.0,
+    "crafting_savings": 1726999.03,
+    "fill_time": 0.1,
+    "sell_price": 23279999.03,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 21553000.0,
+    "ingredients": [
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      },
+      {
+        "item": "EMBER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 3079000.0
+      }
+    ]
+  },
+  {
+    "item": "INTIMIDATION_RELIC",
+    "profit_per_hour": 60839965080.0,
+    "crafting_savings": 1689999.03,
+    "fill_time": 0.1,
+    "sell_price": 26189999.03,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 24500000.0,
+    "ingredients": [
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "INTIMIDATION_ARTIFACT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 4500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      },
+      {
+        "item": "SCARE_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2500000.0
+      }
+    ]
+  },
+  {
+    "item": "STARRED_ICE_SPRAY_WAND",
+    "profit_per_hour": 60177686400.0,
+    "crafting_savings": 1671602.4,
+    "fill_time": 0.1,
+    "sell_price": 39770000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 38098397.6,
+    "ingredients": [
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "ICE_SPRAY_WAND",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 24450000.0
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      },
+      {
+        "item": "WINTER_FRAGMENT",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1706049.7
+      }
+    ]
+  },
+  {
+    "item": "GLOSSY_MINERAL_LEGGINGS",
+    "profit_per_hour": 59616403200.0,
+    "crafting_savings": 1656011.2,
+    "fill_time": 0.1,
+    "sell_price": 41904000.0,
+    "sell_method": "AH BIN (after tax)",
+    "crafting_cost": 40247988.8,
+    "ingredients": [
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "MINERAL_LEGGINGS",
+        "count_per_item": 1.0,
+        "buy_method": "AH BIN (before tax)",
+        "cost_per_unit": 2000000.0
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      },
+      {
+        "item": "GLOSSY_GEMSTONE",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 2390499.3
+      }
+    ]
+  }
+]
