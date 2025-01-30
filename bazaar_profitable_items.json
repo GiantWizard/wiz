@@ -1,0 +1,1766 @@
+[
+  {
+    "item": "MOLTEN_POWDER",
+    "profit_per_hour": 139967305.36,
+    "crafting_savings": 92850.6,
+    "fill_time": 0.1,
+    "sell_price": 899999.3,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 807148.7,
+    "ingredients": [
+      {
+        "item": "DERELICT_ASHE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 4300.0
+      },
+      {
+        "item": "DERELICT_ASHE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 4300.0
+      },
+      {
+        "item": "AMALGAMATED_CRIMSONITE_NEW",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 256748.7
+      },
+      {
+        "item": "DERELICT_ASHE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 4300.0
+      },
+      {
+        "item": "DERELICT_ASHE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 4300.0
+      }
+    ]
+  },
+  {
+    "item": "REVENANT_VISCERA",
+    "profit_per_hour": 119438023.18,
+    "crafting_savings": 33867.0,
+    "fill_time": 0.1,
+    "sell_price": 140599.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 106732.8,
+    "ingredients": [
+      {
+        "item": "REVENANT_FLESH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27.9
+      },
+      {
+        "item": "REVENANT_FLESH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27.9
+      },
+      {
+        "item": "ENCHANTED_STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3223.8
+      },
+      {
+        "item": "REVENANT_FLESH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27.9
+      },
+      {
+        "item": "REVENANT_FLESH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27.9
+      }
+    ]
+  },
+  {
+    "item": "SUPER_COMPACTOR_3000",
+    "profit_per_hour": 87103825.09,
+    "crafting_savings": 131057.1,
+    "fill_time": 0.1,
+    "sell_price": 405996.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 274939.7,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "COMPACTOR",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 29109.3
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      },
+      {
+        "item": "ENCHANTED_REDSTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1739.2
+      },
+      {
+        "item": "ENCHANTED_COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 849.0
+      }
+    ]
+  },
+  {
+    "item": "FLAWLESS_AMBER_GEM",
+    "profit_per_hour": 80633635.16,
+    "crafting_savings": 726312.3,
+    "fill_time": 0.62,
+    "sell_price": 2302720.3,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1576408.0,
+    "ingredients": [
+      {
+        "item": "FINE_AMBER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 19705.1
+      },
+      {
+        "item": "FINE_AMBER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 19705.1
+      },
+      {
+        "item": "FINE_AMBER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 19705.1
+      },
+      {
+        "item": "FINE_AMBER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 19705.1
+      },
+      {
+        "item": "FINE_AMBER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 19705.1
+      }
+    ]
+  },
+  {
+    "item": "SEARING_STONE",
+    "profit_per_hour": 73060092.78,
+    "crafting_savings": 1864230.8,
+    "fill_time": 0.13,
+    "sell_price": 3499998.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1635768.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MAGMA_CREAM",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31199.5
+      },
+      {
+        "item": "ENCHANTED_MAGMA_CREAM",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31199.5
+      },
+      {
+        "item": "ENCHANTED_MAGMA_CREAM",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31199.5
+      },
+      {
+        "item": "ENCHANTED_MAGMA_CREAM",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31199.5
+      },
+      {
+        "item": "MAGMA_CHUNK",
+        "count_per_item": 50.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1449.8
+      },
+      {
+        "item": "ENCHANTED_MAGMA_CREAM",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 31199.5
+      },
+      {
+        "item": "ENCHANTED_NETHERRACK",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 110.1
+      },
+      {
+        "item": "ENCHANTED_NETHERRACK",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 110.1
+      },
+      {
+        "item": "ENCHANTED_NETHERRACK",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 110.1
+      }
+    ]
+  },
+  {
+    "item": "MAGMA_FISH_SILVER",
+    "profit_per_hour": 62885996.84,
+    "crafting_savings": 4613.4,
+    "fill_time": 0.1,
+    "sell_price": 18933.4,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 14320.0,
+    "ingredients": [
+      {
+        "item": "MAGMA_FISH",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 179.0
+      },
+      {
+        "item": "MAGMA_FISH",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 179.0
+      },
+      {
+        "item": "MAGMA_FISH",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 179.0
+      },
+      {
+        "item": "MAGMA_FISH",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 179.0
+      },
+      {
+        "item": "MAGMA_FISH",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 179.0
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_SUGAR_CANE",
+    "profit_per_hour": 61736223.96,
+    "crafting_savings": 14675.1,
+    "fill_time": 0.1,
+    "sell_price": 103043.1,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 88368.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_SUGAR",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 552.3
+      },
+      {
+        "item": "ENCHANTED_SUGAR",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 552.3
+      },
+      {
+        "item": "ENCHANTED_SUGAR",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 552.3
+      },
+      {
+        "item": "ENCHANTED_SUGAR",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 552.3
+      },
+      {
+        "item": "ENCHANTED_SUGAR",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 552.3
+      }
+    ]
+  },
+  {
+    "item": "VERY_CRUDE_GABAGOOL",
+    "profit_per_hour": 60398806.7,
+    "crafting_savings": 21675.0,
+    "fill_time": 0.1,
+    "sell_price": 149547.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 127872.0,
+    "ingredients": [
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      },
+      {
+        "item": "CRUDE_GABAGOOL",
+        "count_per_item": 24.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 666.0
+      }
+    ]
+  },
+  {
+    "item": "TARANTULA_SILK",
+    "profit_per_hour": 59371952.51,
+    "crafting_savings": 49215.9,
+    "fill_time": 0.1,
+    "sell_price": 363897.5,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 314681.6,
+    "ingredients": [
+      {
+        "item": "TARANTULA_WEB",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 963.9
+      },
+      {
+        "item": "TARANTULA_WEB",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 963.9
+      },
+      {
+        "item": "ENCHANTED_FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 5978.2
+      },
+      {
+        "item": "TARANTULA_WEB",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 963.9
+      },
+      {
+        "item": "TARANTULA_WEB",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 963.9
+      }
+    ]
+  },
+  {
+    "item": "RED_GIFT",
+    "profit_per_hour": 57843824.31,
+    "crafting_savings": 24174.2,
+    "fill_time": 0.1,
+    "sell_price": 24174.2,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 0.0,
+    "ingredients": []
+  },
+  {
+    "item": "FLAWLESS_JASPER_GEM",
+    "profit_per_hour": 56257982.08,
+    "crafting_savings": 501397.4,
+    "fill_time": 1.52,
+    "sell_price": 7701917.4,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 7200520.0,
+    "ingredients": [
+      {
+        "item": "FINE_JASPER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.5
+      },
+      {
+        "item": "FINE_JASPER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.5
+      },
+      {
+        "item": "FINE_JASPER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.5
+      },
+      {
+        "item": "FINE_JASPER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.5
+      },
+      {
+        "item": "FINE_JASPER_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.5
+      }
+    ]
+  },
+  {
+    "item": "NULL_OVOID",
+    "profit_per_hour": 53902338.45,
+    "crafting_savings": 16214.8,
+    "fill_time": 0.1,
+    "sell_price": 101165.2,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 84950.4,
+    "ingredients": [
+      {
+        "item": "NULL_SPHERE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 282.1
+      },
+      {
+        "item": "NULL_SPHERE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 282.1
+      },
+      {
+        "item": "ENCHANTED_OBSIDIAN",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1526.3
+      },
+      {
+        "item": "NULL_SPHERE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 282.1
+      },
+      {
+        "item": "NULL_SPHERE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 282.1
+      }
+    ]
+  },
+  {
+    "item": "PRECURSOR_APPARATUS",
+    "profit_per_hour": 53482853.58,
+    "crafting_savings": 132225.5,
+    "fill_time": 8.34,
+    "sell_price": 1258792.6,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1126567.1,
+    "ingredients": [
+      {
+        "item": "CONTROL_SWITCH",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 184500.2
+      },
+      {
+        "item": "ELECTRON_TRANSMITTER",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 190754.4
+      },
+      {
+        "item": "FTX_3070",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 188275.5
+      },
+      {
+        "item": "ROBOTRON_REFLECTOR",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 174486.5
+      },
+      {
+        "item": "SUPERLITE_MOTOR",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 40275.7
+      },
+      {
+        "item": "SYNTHETIC_HEART",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 348274.8
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_LAVA_BUCKET",
+    "profit_per_hour": 51582021.89,
+    "crafting_savings": 85517.0,
+    "fill_time": 3.22,
+    "sell_price": 269986.5,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 184469.5,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_IRON",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1485.7
+      },
+      {
+        "item": "ENCHANTED_COAL_BLOCK",
+        "count_per_item": 2.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 90006.2
+      },
+      {
+        "item": "ENCHANTED_IRON",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1485.7
+      },
+      {
+        "item": "ENCHANTED_IRON",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1485.7
+      }
+    ]
+  },
+  {
+    "item": "FINE_AQUAMARINE_GEM",
+    "profit_per_hour": 48623004.97,
+    "crafting_savings": 13000.1,
+    "fill_time": 0.1,
+    "sell_price": 34136.1,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 21136.0,
+    "ingredients": [
+      {
+        "item": "FLAWED_AQUAMARINE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 264.2
+      },
+      {
+        "item": "FLAWED_AQUAMARINE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 264.2
+      },
+      {
+        "item": "FLAWED_AQUAMARINE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 264.2
+      },
+      {
+        "item": "FLAWED_AQUAMARINE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 264.2
+      },
+      {
+        "item": "FLAWED_AQUAMARINE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 264.2
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_QUARTZ_BLOCK",
+    "profit_per_hour": 43367399.86,
+    "crafting_savings": 35193.5,
+    "fill_time": 0.1,
+    "sell_price": 310009.5,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 274816.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_QUARTZ",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1717.6
+      },
+      {
+        "item": "ENCHANTED_QUARTZ",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1717.6
+      },
+      {
+        "item": "ENCHANTED_QUARTZ",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1717.6
+      },
+      {
+        "item": "ENCHANTED_QUARTZ",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1717.6
+      },
+      {
+        "item": "ENCHANTED_QUARTZ",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1717.6
+      }
+    ]
+  },
+  {
+    "item": "BLAZE_WAX",
+    "profit_per_hour": 38959573.97,
+    "crafting_savings": 1041401.5,
+    "fill_time": 0.28,
+    "sell_price": 1841508.5,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 800107.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "BEZOS",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 1556.3
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 10.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      }
+    ]
+  },
+  {
+    "item": "GOLDEN_TOOTH",
+    "profit_per_hour": 38918152.93,
+    "crafting_savings": 20803.9,
+    "fill_time": 0.1,
+    "sell_price": 106128.7,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 85324.8,
+    "ingredients": [
+      {
+        "item": "WOLF_TOOTH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 546.5
+      },
+      {
+        "item": "WOLF_TOOTH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 546.5
+      },
+      {
+        "item": "ENCHANTED_GOLD",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 480.4
+      },
+      {
+        "item": "WOLF_TOOTH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 546.5
+      },
+      {
+        "item": "WOLF_TOOTH",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 546.5
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_GLOWSTONE_DUST",
+    "profit_per_hour": 37202742.05,
+    "crafting_savings": 1978.0,
+    "fill_time": 0.1,
+    "sell_price": 3050.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1072.0,
+    "ingredients": [
+      {
+        "item": "GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.7
+      },
+      {
+        "item": "GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.7
+      },
+      {
+        "item": "GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.7
+      },
+      {
+        "item": "GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.7
+      },
+      {
+        "item": "GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.7
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_COOKIE",
+    "profit_per_hour": 37092521.7,
+    "crafting_savings": 11429.6,
+    "fill_time": 0.1,
+    "sell_price": 71759.2,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 60329.6,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_COCOA",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 470.6
+      },
+      {
+        "item": "ENCHANTED_COCOA",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 470.6
+      },
+      {
+        "item": "WHEAT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.9
+      },
+      {
+        "item": "ENCHANTED_COCOA",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 470.6
+      },
+      {
+        "item": "ENCHANTED_COCOA",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 470.6
+      }
+    ]
+  },
+  {
+    "item": "LARGE_ENCHANTED_CHEST",
+    "profit_per_hour": 35403347.71,
+    "crafting_savings": 253874.1,
+    "fill_time": 0.13,
+    "sell_price": 1354084.4,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1100210.3,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "MEDIUM_ENCHANTED_CHEST",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 120600.7
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      },
+      {
+        "item": "ENCHANTED_OAK_LOG",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 3826.6
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_JUNGLE_LOG",
+    "profit_per_hour": 33700099.6,
+    "crafting_savings": 1481.9,
+    "fill_time": 0.1,
+    "sell_price": 2569.9,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1088.0,
+    "ingredients": [
+      {
+        "item": "LOG-3",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.8
+      },
+      {
+        "item": "LOG-3",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.8
+      },
+      {
+        "item": "LOG-3",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.8
+      },
+      {
+        "item": "LOG-3",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.8
+      },
+      {
+        "item": "LOG-3",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 6.8
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_MYCELIUM",
+    "profit_per_hour": 32907600.0,
+    "crafting_savings": 914.1,
+    "fill_time": 0.1,
+    "sell_price": 1346.1,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 432.0,
+    "ingredients": [
+      {
+        "item": "MYCEL",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.7
+      },
+      {
+        "item": "MYCEL",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.7
+      },
+      {
+        "item": "MYCEL",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.7
+      },
+      {
+        "item": "MYCEL",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.7
+      },
+      {
+        "item": "MYCEL",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.7
+      }
+    ]
+  },
+  {
+    "item": "TESSELLATED_ENDER_PEARL",
+    "profit_per_hour": 31960190.4,
+    "crafting_savings": 2460729.6,
+    "fill_time": 1.29,
+    "sell_price": 10850648.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 8389918.4,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_LAPIS_LAZULI_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 96867.2
+      },
+      {
+        "item": "ABSOLUTE_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 66127.1
+      },
+      {
+        "item": "ENCHANTED_LAPIS_LAZULI_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 96867.2
+      },
+      {
+        "item": "ABSOLUTE_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 66127.1
+      },
+      {
+        "item": "ABSOLUTE_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 66127.1
+      },
+      {
+        "item": "ABSOLUTE_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 66127.1
+      },
+      {
+        "item": "ENCHANTED_LAPIS_LAZULI_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 96867.2
+      },
+      {
+        "item": "ABSOLUTE_ENDER_PEARL",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 66127.1
+      },
+      {
+        "item": "ENCHANTED_LAPIS_LAZULI_BLOCK",
+        "count_per_item": 8.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 96867.2
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_STRING",
+    "profit_per_hour": 31308254.55,
+    "crafting_savings": 1063.8,
+    "fill_time": 0.1,
+    "sell_price": 3223.8,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 2160.0,
+    "ingredients": [
+      {
+        "item": "STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 13.5
+      },
+      {
+        "item": "STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 13.5
+      },
+      {
+        "item": "STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 13.5
+      },
+      {
+        "item": "STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 13.5
+      },
+      {
+        "item": "STRING",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 13.5
+      }
+    ]
+  },
+  {
+    "item": "FLAWLESS_RUBY_GEM",
+    "profit_per_hour": 29844162.45,
+    "crafting_savings": 279757.8,
+    "fill_time": 1.01,
+    "sell_price": 2049389.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1769632.0,
+    "ingredients": [
+      {
+        "item": "FINE_RUBY_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 22120.4
+      },
+      {
+        "item": "FINE_RUBY_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 22120.4
+      },
+      {
+        "item": "FINE_RUBY_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 22120.4
+      },
+      {
+        "item": "FINE_RUBY_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 22120.4
+      },
+      {
+        "item": "FINE_RUBY_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 22120.4
+      }
+    ]
+  },
+  {
+    "item": "NULL_BLADE",
+    "profit_per_hour": 28982541.17,
+    "crafting_savings": 3742557.2,
+    "fill_time": 2.3,
+    "sell_price": 31999597.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 28257040.6,
+    "ingredients": [
+      {
+        "item": "NULL_OVOID",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 101165.2
+      },
+      {
+        "item": "NULL_EDGE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 647286.6
+      },
+      {
+        "item": "NULL_OVOID",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 101165.2
+      },
+      {
+        "item": "ENCHANTED_QUARTZ_BLOCK",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 310009.5
+      },
+      {
+        "item": "NULL_EDGE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 647286.6
+      },
+      {
+        "item": "ENCHANTED_QUARTZ_BLOCK",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 310009.5
+      },
+      {
+        "item": "NULL_OVOID",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 101165.2
+      },
+      {
+        "item": "NULL_EDGE",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 647286.6
+      },
+      {
+        "item": "NULL_OVOID",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 101165.2
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_REDSTONE_LAMP",
+    "profit_per_hour": 28924256.79,
+    "crafting_savings": 1151487.0,
+    "fill_time": 0.1,
+    "sell_price": 1471704.6,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 320217.6,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_REDSTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1739.2
+      },
+      {
+        "item": "ENCHANTED_REDSTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1739.2
+      },
+      {
+        "item": "ENCHANTED_GLOWSTONE_DUST",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 3050.0
+      },
+      {
+        "item": "ENCHANTED_REDSTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1739.2
+      },
+      {
+        "item": "ENCHANTED_REDSTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1739.2
+      }
+    ]
+  },
+  {
+    "item": "FLAWLESS_SAPPHIRE_GEM",
+    "profit_per_hour": 27184852.8,
+    "crafting_savings": 161814.6,
+    "fill_time": 0.88,
+    "sell_price": 2324998.6,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 2163184.0,
+    "ingredients": [
+      {
+        "item": "FINE_SAPPHIRE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27039.8
+      },
+      {
+        "item": "FINE_SAPPHIRE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27039.8
+      },
+      {
+        "item": "FINE_SAPPHIRE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27039.8
+      },
+      {
+        "item": "FINE_SAPPHIRE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27039.8
+      },
+      {
+        "item": "FINE_SAPPHIRE_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 27039.8
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_RED_SAND",
+    "profit_per_hour": 26748597.96,
+    "crafting_savings": 1151.2,
+    "fill_time": 0.1,
+    "sell_price": 1519.2,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 368.0,
+    "ingredients": [
+      {
+        "item": "SAND-1",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.3
+      },
+      {
+        "item": "SAND-1",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.3
+      },
+      {
+        "item": "SAND-1",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.3
+      },
+      {
+        "item": "SAND-1",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.3
+      },
+      {
+        "item": "SAND-1",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 2.3
+      }
+    ]
+  },
+  {
+    "item": "MITHRIL_INFUSION",
+    "profit_per_hour": 25467459.87,
+    "crafting_savings": 460949.5,
+    "fill_time": 0.1,
+    "sell_price": 6364399.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 5903450.3,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "MAGMA_BUCKET",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Instabuy",
+        "cost_per_unit": 4968999.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      },
+      {
+        "item": "ENCHANTED_MITHRIL",
+        "count_per_item": 64.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1825.1
+      }
+    ]
+  },
+  {
+    "item": "SULPHURIC_COAL",
+    "profit_per_hour": 25229476.05,
+    "crafting_savings": 2925.82,
+    "fill_time": 0.1,
+    "sell_price": 10867.9,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 7942.07,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_COAL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1888.2
+      },
+      {
+        "item": "ENCHANTED_COAL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1888.2
+      },
+      {
+        "item": "ENCHANTED_SULPHUR",
+        "count_per_item": 0.25,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1557.1
+      },
+      {
+        "item": "ENCHANTED_COAL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1888.2
+      },
+      {
+        "item": "ENCHANTED_COAL",
+        "count_per_item": 1.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1888.2
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_BLAZE_ROD",
+    "profit_per_hour": 25185363.58,
+    "crafting_savings": 80906.0,
+    "fill_time": 0.28,
+    "sell_price": 1649994.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 1569088.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      },
+      {
+        "item": "ENCHANTED_BLAZE_POWDER",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 9806.8
+      }
+    ]
+  },
+  {
+    "item": "SOULFLOW",
+    "profit_per_hour": 24962267.37,
+    "crafting_savings": 3600.8,
+    "fill_time": 0.39,
+    "sell_price": 58992.8,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 55392.0,
+    "ingredients": [
+      {
+        "item": "RAW_SOULFLOW",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 346.2
+      },
+      {
+        "item": "RAW_SOULFLOW",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 346.2
+      },
+      {
+        "item": "RAW_SOULFLOW",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 346.2
+      },
+      {
+        "item": "RAW_SOULFLOW",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 346.2
+      },
+      {
+        "item": "RAW_SOULFLOW",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 346.2
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_TITANIUM",
+    "profit_per_hour": 24901757.57,
+    "crafting_savings": 1958.7,
+    "fill_time": 0.1,
+    "sell_price": 14646.7,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 12688.0,
+    "ingredients": [
+      {
+        "item": "TITANIUM_ORE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 79.3
+      },
+      {
+        "item": "TITANIUM_ORE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 79.3
+      },
+      {
+        "item": "TITANIUM_ORE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 79.3
+      },
+      {
+        "item": "TITANIUM_ORE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 79.3
+      },
+      {
+        "item": "TITANIUM_ORE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 79.3
+      }
+    ]
+  },
+  {
+    "item": "FINE_PERIDOT_GEM",
+    "profit_per_hour": 24807100.5,
+    "crafting_savings": 6223.0,
+    "fill_time": 0.1,
+    "sell_price": 43343.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 37120.0,
+    "ingredients": [
+      {
+        "item": "FLAWED_PERIDOT_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 464.0
+      },
+      {
+        "item": "FLAWED_PERIDOT_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 464.0
+      },
+      {
+        "item": "FLAWED_PERIDOT_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 464.0
+      },
+      {
+        "item": "FLAWED_PERIDOT_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 464.0
+      },
+      {
+        "item": "FLAWED_PERIDOT_GEM",
+        "count_per_item": 16.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 464.0
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_COBBLESTONE",
+    "profit_per_hour": 24804000.0,
+    "crafting_savings": 689.0,
+    "fill_time": 0.1,
+    "sell_price": 849.0,
+    "sell_method": "Bazaar Instabuy",
+    "crafting_cost": 160.0,
+    "ingredients": [
+      {
+        "item": "COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1.0
+      },
+      {
+        "item": "COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1.0
+      },
+      {
+        "item": "COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1.0
+      },
+      {
+        "item": "COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1.0
+      },
+      {
+        "item": "COBBLESTONE",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 1.0
+      }
+    ]
+  },
+  {
+    "item": "WHITE_GIFT",
+    "profit_per_hour": 24164182.14,
+    "crafting_savings": 3310.0,
+    "fill_time": 0.1,
+    "sell_price": 3310.0,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 0.0,
+    "ingredients": []
+  },
+  {
+    "item": "ENCHANTED_MELON_BLOCK",
+    "profit_per_hour": 23907718.29,
+    "crafting_savings": 1353.6,
+    "fill_time": 0.1,
+    "sell_price": 49529.6,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 48176.0,
+    "ingredients": [
+      {
+        "item": "ENCHANTED_MELON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 301.1
+      },
+      {
+        "item": "ENCHANTED_MELON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 301.1
+      },
+      {
+        "item": "ENCHANTED_MELON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 301.1
+      },
+      {
+        "item": "ENCHANTED_MELON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 301.1
+      },
+      {
+        "item": "ENCHANTED_MELON",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 301.1
+      }
+    ]
+  },
+  {
+    "item": "ENCHANTED_FLINT",
+    "profit_per_hour": 23443470.82,
+    "crafting_savings": 1050.2,
+    "fill_time": 0.1,
+    "sell_price": 5978.2,
+    "sell_method": "Bazaar Buy Order",
+    "crafting_cost": 4928.0,
+    "ingredients": [
+      {
+        "item": "FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 30.8
+      },
+      {
+        "item": "FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 30.8
+      },
+      {
+        "item": "FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 30.8
+      },
+      {
+        "item": "FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 30.8
+      },
+      {
+        "item": "FLINT",
+        "count_per_item": 32.0,
+        "buy_method": "Bazaar Buy Order",
+        "cost_per_unit": 30.8
+      }
+    ]
+  }
+]
