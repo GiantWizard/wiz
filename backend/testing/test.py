@@ -3,25 +3,33 @@ import requests
 from pathlib import Path
 from collections import Counter
 
-def load_recipes(directory="items"):
+def load_recipes(directories=["dependencies/items", "exports"]):
     recipes = {}
-    for file in Path(directory).glob('*.json'):
-        try:
-            with open(file, 'r') as f:
-                data = json.load(f)
-                if 'internalname' in data:
-                    if 'recipes' in data:
-                        # Filter out forge, katgrade, and trade recipes
-                        valid_recipes = [r for r in data['recipes'] 
-                                       if not r.get('type') in ['forge', 'katgrade', 'trade']]
-                        if valid_recipes:  # Only add if there are valid recipes
-                            recipes[data['internalname']] = valid_recipes
-                    elif 'recipe' in data:
-                        recipe = data['recipe']
-                        if not recipe.get('type') in ['forge', 'katgrade', 'trade']:
-                            recipes[data['internalname']] = [recipe]
-        except Exception as e:
-            print(f"Error with {file}: {e}")
+
+    for directory in directories:
+        path = Path(directory)
+        if not path.exists():
+            print(f"Warning: Directory '{directory}' does not exist. Skipping.")
+            continue
+
+        for file in path.glob('*.json'):
+            try:
+                with open(file, 'r') as f:
+                    data = json.load(f)
+                    if 'internalname' in data:
+                        if 'recipes' in data:
+                            # Filter out forge, katgrade, and trade recipes
+                            valid_recipes = [r for r in data['recipes'] 
+                                           if not r.get('type') in ['forge', 'katgrade', 'trade']]
+                            if valid_recipes:  # Only add if there are valid recipes
+                                recipes[data['internalname']] = valid_recipes
+                        elif 'recipe' in data:
+                            recipe = data['recipe']
+                            if not recipe.get('type') in ['forge', 'katgrade', 'trade']:
+                                recipes[data['internalname']] = [recipe]
+            except Exception as e:
+                print(f"Error reading {file}: {e}")
+    
     return recipes
 
 # Add to the bazaar price fetching to include fill time metrics
