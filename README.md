@@ -9,7 +9,7 @@ Started updating README.md.
 
 Now includes an engine for the craft code.
 
-Logic now factors in inventory cycles (how many times you need to fill your inventory or sell cycles/inventory space) and divides profit per hour by the exponential function $x^(\frac{x}{2240})$ where $x$ is the number of inventory cycles.
+Logic now factors in inventory cycles (how many times you need to fill your inventory or sell cycles/inventory space) and divides profit per hour by the exponential function $x^\frac{x}{2240}$ where $x$ is the number of inventory cycles.
 Ensures that high cycle high "profit" flips don't count (e.g. rough gemstones or enchanted items) as much as lower cycle similar profit flips.
 Cycle times are calculated by the sell cycles, which is how many times an item is crafted an hour.
 
