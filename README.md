@@ -27,3 +27,33 @@ TODO:
 Reconsider subitems based on crafted item with an efficiency score to reduce the inventory cycles (such as raw gemstones).
 Continue testing json exports for bugs.
 Don't forget to put new logic in the export engine!
+
+2/13/2025
+
+Key changes/fixes:
+
+Fixed several bugs with the website (still localhosted).
+Recipe tree displays correctly with step length.
+
+TODO:
+
+Update UI and make it more clean.
+Include more details in json file.
+Manage where exported files is being pushed/frontend is calling from.
+Put new logic in export engine.
+Factor in potential inventory cycles into calculations.
+
+2/15/2025
+
+Key changes/fixes:
+
+Started making UI, landing page made. 
+Solidified color scheme.
+
+TODO:
+
+*FIX LOGIC WHEN $x^\frac{x}{2240} && x < 1$
+Update buttons and functions, as well as the profit page.
+Manage export files.
+Update export engine.
+Factor in potential inventory cycles.
