@@ -52,7 +52,7 @@ Solidified color scheme.
 
 TODO:
 
-*FIX LOGIC WHEN $x^\frac{x}{2240} && x < 1$
+*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$
 Update buttons and functions, as well as the profit page.
 Manage export files.
 Update export engine.
