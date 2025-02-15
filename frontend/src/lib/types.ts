@@ -5,4 +5,4 @@ export interface BazaarItem {
   sell_price: number;
   crafting_cost: number;
   [key: string]: any; // For other properties
-} 
+}

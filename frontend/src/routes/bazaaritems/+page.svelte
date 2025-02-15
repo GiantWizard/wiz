@@ -1,5 +1,5 @@
 <script>
-  import BazaarProfitableItems from '$lib/components/BazaarProfitableItems.svelte';
+  import BazaarProfitableItems from '$lib/components/bazaarprofitableitems.svelte';
 </script>
 
 <BazaarProfitableItems />
