@@ -56,7 +56,7 @@
 
 {#if item}
   <!-- Main container -->
-  <div class="p-6 max-w-3xl mx-auto bg-darker rounded-lg shadow-lg">
+  <div class="p-6 max-w-4xl mx-auto bg-darker rounded-lg shadow-lg">
     <!-- Centered header info -->
     <div class="mb-6 text-center">
       <div class="text-3xl font-bold text-light font-inter mb-2">
@@ -113,42 +113,10 @@
       </div>
     </div>
 
-    <!-- Aggregated Recipe Section -->
-    <h3 class="text-2xl font-bold text-light mb-4">Recipe Tree</h3>
-
-    <!-- Tree container with vertical line -->
-    <div class="relative pl-6">
-      <div class="absolute border-l-2 border-accent h-full left-2 top-0"></div>
-      <div class="mb-4">
-        <div class="text-2xl font-semibold text-accent">
-          {toTitleCase(item.step_breakdown.item)}
-        </div>
-      </div>
-      <ul class="ml-8 space-y-3">
-        {#if item.ingredients_aggregated}
-          {#each Object.entries(item.ingredients_aggregated) as [ingName, ingData]}
-            <li class="flex flex-col">
-              <div class="flex items-center">
-                <!-- Item count -->
-                <span class="font-bold text-primary mr-2">{ingData.total_needed}x</span>
-
-                <!-- Image between the count and item name -->
-                <img
-                  src={"https://sky.shiiyu.moe/item/" + ingName}
-                  alt={ingName}
-                  class="w-6 h-6 mr-2 rounded-sm shadow-sm"
-                />
-
-                <!-- Item name -->
-                <span class="text-light font-inter">{toTitleCase(ingName)}</span>
-              </div>
-              <div class="text-sm text-gray-400 ml-8 mt-1">
-                {ingData.buy_method} &bull; {formatNumber(ingData.cost_per_unit)} each
-              </div>
-            </li>
-          {/each}
-        {/if}
-      </ul>
+    <!-- Recipe Tree Section -->
+    <div class="text-2xl font-bold text-light mb-4">Recipe Tree</div>
+    <div class="relative bg-darker-800 p-6 rounded-lg shadow-lg">
+      <RecipeTree tree={item.step_breakdown} />
     </div>
   </div>
 {:else}
