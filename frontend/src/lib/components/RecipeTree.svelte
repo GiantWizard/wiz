@@ -1,40 +1,58 @@
 <script>
-  import RecipeTree from './RecipeTree.svelte';
-  export let tree;
+  import { onMount } from 'svelte';
+
+  export let node;
+  
+  // Helper to convert strings like FINE_PERIDOT_GEM to "Fine Peridot Gem"
+  const toTitleCase = (str) => {
+    return str
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b(\w)/g, (char) => char.toUpperCase());
+  };
+
+  // Helper function to check if a node is "Not craftable" or lacks further ingredients
+  function isLeaf(sub) {
+    return sub?.note === 'Not craftable' || !sub?.ingredients;
+  }
+
+  // (Optional) If you need any other helpers, define them here
 </script>
 
-<style>
-  .node {
-    margin-left: 1rem;
-    border-left: 1px dashed #ccc;
-    padding-left: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-  .node-header {
-    font-weight: bold;
-  }
-  .node-note {
-    font-style: italic;
-    color: #6B7280;
-  }
-</style>
-
-<div class="node">
-  <div class="node-header">{tree.item.replace(/_/g, ' ')}</div>
-  {#if tree.note}
-    <div class="node-note">{tree.note}</div>
-  {/if}
-  {#if tree.ingredients && tree.ingredients.length > 0}
-    {#each tree.ingredients as ing}
-      <div class="node">
-        <div>
-          {ing.total_needed}x {ing.ingredient.replace(/_/g, ' ')} 
-          ({ing.buy_method} @ ⏣ {ing.cost_per_unit})
+{#if node && node.ingredients}
+  <ul class="pl-4 border-l border-gray-600">
+    {#each node.ingredients as ingr}
+      <li class="ml-4 my-2">
+        <!-- Show quantity + item name -->
+        <div class="flex items-center">
+          <span class="font-bold text-primary mr-2">{ingr.total_needed}x</span>
+          <span class="text-light font-inter">{toTitleCase(ingr.ingredient)}</span>
         </div>
-        {#if ing.sub_breakdown}
-          <RecipeTree tree={ing.sub_breakdown} />
+
+        <!-- If there's a sub_breakdown, recurse -->
+        {#if ingr.sub_breakdown}
+          {#if isLeaf(ingr.sub_breakdown)}
+            <!-- Show leaf info, e.g. "Not craftable" -->
+            {#if ingr.sub_breakdown.note === 'Not craftable'}
+              <div class="text-sm text-gray-400 ml-8">
+                Not craftable
+              </div>
+            {:else}
+              <!-- If there's a final cost or other info, show it here. -->
+              <div class="text-sm text-gray-400 ml-8">
+                Cost: {ingr.sub_breakdown.crafting_cost}
+              </div>
+            {/if}
+          {:else}
+            <!-- Recursively render deeper breakdown -->
+            <RecursiveBreakdown node={ingr.sub_breakdown} />
+          {/if}
         {/if}
-      </div>
+      </li>
     {/each}
-  {/if}
-</div>
+  </ul>
+{/if}
+
+<style>
+  /* Tailwind or additional styling here if desired */
+</style>
