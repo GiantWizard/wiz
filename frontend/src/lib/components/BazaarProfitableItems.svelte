@@ -20,23 +20,26 @@
 
   onMount(fetchBazaarData);
 
-  // Utility to convert strings to Title Case
-  const toTitleCase = (str) => {
-    return str
-      .split(' ')
+  // Convert a raw item identifier (with underscores) to Title Case (e.g., "HYPERION" → "Hyperion", "FLAWLESS_JASPER_GEM" → "Flawless Jasper Gem")
+  const toTitleCase = (str) =>
+    str
+      .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
-  };
 
-  // Format numbers more cleanly
-  const formatNumber = (num, decimals = 1) => {
-    if (num === null || num === undefined || isNaN(num)) return '0';
-    const formatted = num.toLocaleString('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-    return formatted.replace(/\.0$/, '');
-  };
+  // Abbreviate large numbers: 1,234 → 1.2K, 1,234,567 → 1.2M, etc.
+  function abbreviateNumber(value) {
+    if (!value || isNaN(value)) return '0';
+    const absValue = Math.abs(value);
+    if (absValue >= 1.0e9) {
+      return (value / 1.0e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    } else if (absValue >= 1.0e6) {
+      return (value / 1.0e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    } else if (absValue >= 1.0e3) {
+      return (value / 1.0e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return value.toString();
+  }
 
   // Compute percent flip as (crafting_savings / crafting_cost) * 100
   const percentFlip = (item) => {
@@ -46,7 +49,6 @@
 </script>
 
 <style>
-  /* Global body styling */
   :global(body) {
     margin: 0;
     background-color: #0B0B16; /* Near-black with purple undertones */
@@ -55,23 +57,22 @@
   }
 
   .container {
-    padding: 2rem;
+    padding: 1.5rem;
     max-width: 1400px;
     margin: 0 auto;
   }
 
-  /* Grid for the card layout */
+  /* Grid that can display up to 4 cards per row */
   .grid {
     display: grid;
-    gap: 2rem;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 
-  /* Airbnb-inspired card with space for an image */
   .card {
     background: #1a1a1a;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     text-decoration: none;
@@ -86,11 +87,6 @@
     box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
   }
 
-  /* Top bar placeholder (similar to "Nearest to you" in the example) */
-  .top-bar {
-    margin-bottom: 1rem;
-  }
-
   .image-wrapper {
     margin-bottom: 1rem;
   }
@@ -98,39 +94,61 @@
   .image-wrapper img {
     width: 100%;
     height: 10rem;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: 8px;
+  }
+
+  .item-info {
+    text-align: center;
+    margin-bottom: 1rem;
   }
 
   .item-name {
     margin-bottom: 0.25rem;
+    font-size: 1.1rem;
+    font-weight: 600;
   }
 
   .price {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #C8ACD6; /* Profit per hour color */
   }
 
-  /* Stats section (small pills) */
+  /* Stats layout: 3 rows, 2 stats per row */
   .stats {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.5rem;
   }
 
-  .stat-item {
-    background: #12121E;
-    padding: 0.3rem 0.6rem;
-    border-radius: 4px;
+  .stats-line {
     display: flex;
-    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
-  .stat-item .text-xs {
-    font-size: 0.75rem;
+  .stat {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0.4rem 0;
+    background: #12121E;
+    border-radius: 6px;
+    text-align: center;
   }
 
-  .stat-item .ml-1 {
-    margin-left: 0.25rem;
+  .stat-label {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-bottom: 0.2rem;
+  }
+
+  .stat-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #e5e7eb;
   }
 </style>
 
@@ -142,71 +160,52 @@
   {:else}
     <div class="grid">
       {#each items as item}
-        <!-- Each card links to its detailed page -->
         <a class="card" href={`/bazaaritems/${encodeURIComponent(item.item)}`}>
-          <!-- Top bar (placeholder) -->
-          <div class="top-bar flex justify-between items-center">
-            <span class="text-sm text-gray-400">200 m Nearest to you</span>
-            <button class="text-sm text-accent hover:opacity-80 transition-opacity">
-              Detail
-            </button>
-          </div>
-
-          <!-- Image placeholder -->
+          <!-- Load image using the raw item identifier from the JSON -->
           <div class="image-wrapper">
-            <img
-              src="/images/placeholder.png"
-              alt="Item Image"
+            <img 
+              src={`https://sky.shiiyu.moe/item/${item.item}`}
+              alt={toTitleCase(item.item)}
             />
           </div>
 
-          <!-- Item info -->
+          <!-- Centered item info -->
           <div class="item-info">
-            <div class="item-name text-lg font-semibold text-light">
-              {toTitleCase(item.item.replace(/_/g, ' '))}
-            </div>
-            <div class="price text-2xl font-bold text-accent">
-              ◆ {formatNumber(item.profit_per_hour)}/h
-            </div>
+            <div class="item-name">{toTitleCase(item.item)}</div>
+            <div class="price">{abbreviateNumber(item.profit_per_hour)}/h</div>
           </div>
 
-          <!-- Stats pills -->
+          <!-- Stats in 3 rows, 2 stats per row -->
           <div class="stats">
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">Craft Cost:</span>
-              <span class="ml-1 text-light font-medium">
-                ◆ {formatNumber(item.crafting_cost)}
-              </span>
+            <div class="stats-line">
+              <div class="stat">
+                <span class="stat-label">Craft Cost</span>
+                <span class="stat-value">{abbreviateNumber(item.crafting_cost)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Sell Price</span>
+                <span class="stat-value">{abbreviateNumber(item.sell_price)}</span>
+              </div>
             </div>
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">Sell Price:</span>
-              <span class="ml-1 text-light font-medium">
-                ◆ {formatNumber(item.sell_price)}
-              </span>
+            <div class="stats-line">
+              <div class="stat">
+                <span class="stat-label">Cycles/h</span>
+                <span class="stat-value">{abbreviateNumber(item.cycles_per_hour)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Max Depth</span>
+                <span class="stat-value">{item.longest_step_count}</span>
+              </div>
             </div>
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">Cycles/h:</span>
-              <span class="ml-1 text-light font-medium">
-                {formatNumber(item.cycles_per_hour)}
-              </span>
-            </div>
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">Max Depth:</span>
-              <span class="ml-1 text-light font-medium">
-                {item.longest_step_count}
-              </span>
-            </div>
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">Savings:</span>
-              <span class="ml-1 text-light font-medium">
-                ▲ {formatNumber(item.crafting_savings)}
-              </span>
-            </div>
-            <div class="stat-item">
-              <span class="text-xs text-gray-300">% Flip:</span>
-              <span class="ml-1 text-light font-medium">
-                {formatNumber(percentFlip(item))}%
-              </span>
+            <div class="stats-line">
+              <div class="stat">
+                <span class="stat-label">Savings</span>
+                <span class="stat-value">{abbreviateNumber(item.crafting_savings)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">% Flip</span>
+                <span class="stat-value">{(percentFlip(item)).toFixed(2)}%</span>
+              </div>
             </div>
           </div>
         </a>

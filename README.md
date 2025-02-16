@@ -57,3 +57,4 @@ Update buttons and functions, as well as the profit page.
 Manage export files.
 Update export engine.
 Factor in potential inventory cycles.
+Update description in landing.
