@@ -1,16 +1,24 @@
 <script>
+  import { onMount } from 'svelte';
+
+  // Props
+  export let depth = 0;
   export let tree;
   export let parentQuantity = 1;
   export let isTopLevel = true;
+  // We'll receive a reference to the parent's image from the parent component:
+  export let parentImageRef;
 
+  // For toggling sub-breakdown cost info
   let openDropdowns = {};
 
   function toggleDropdown(id) {
     openDropdowns[id] = !openDropdowns[id];
-    openDropdowns = openDropdowns; // trigger reactivity
+    // Force reactivity
+    openDropdowns = openDropdowns;
   }
 
-  // Helper to convert strings like FINE_PERIDOT_GEM to "Fine Peridot Gem"
+  // Converts "FINE_PERIDOT_GEM" -> "Fine Peridot Gem"
   function toTitleCase(str) {
     return str
       .replace(/_/g, ' ')
@@ -18,7 +26,7 @@
       .replace(/\b(\w)/g, (char) => char.toUpperCase());
   }
 
-  // Helper to format numbers
+  // Formats numbers with default 1 decimal place
   function formatNumber(num, decimals = 1) {
     if (num === null || num === undefined || isNaN(num)) return '0';
     const formatted = num.toLocaleString('en-US', {
@@ -28,114 +36,288 @@
     return formatted.replace(/\.0$/, '');
   }
 
-  // Helper to aggregate ingredients at the same level
+  // Aggregates identical ingredients at the same level
   function aggregateIngredients(ingredients) {
     const aggregated = {};
-    
     ingredients.forEach(ing => {
       const key = ing.ingredient;
       if (!aggregated[key]) {
-        aggregated[key] = {
-          ...ing,
-          total_needed: 0
-        };
+        aggregated[key] = { ...ing, total_needed: 0 };
       }
       aggregated[key].total_needed += ing.total_needed;
     });
-
     return Object.values(aggregated);
   }
+
+  // -----------------------------
+  // DYNAMIC POINTER COORDINATES
+  // -----------------------------
+
+  // We'll reference the container in which the pointer + child image live:
+  let containerRef;
+  // The child's image for this ingredient
+  let childImageRef;
+
+  // Pointer coordinates (relative to containerRef)
+  let pointerLeft = 0;
+  let pointerTop = 0;
+
+  let offsetX = 15;
+  let offsetY = -15;
+
+  // Calculates pointer position:
+  //  - x = parent's image center
+  //  - y = child's image center
+  // relative to containerRef
+  function updatePointer() {
+    if (parentImageRef && childImageRef && containerRef) {
+      const containerRect = containerRef.getBoundingClientRect();
+      const parentRect = parentImageRef.getBoundingClientRect();
+      const childRect = childImageRef.getBoundingClientRect();
+
+      // Parent's center (X)
+      const parentCenterX = (parentRect.left + parentRect.width / 2) - containerRect.left;
+      // Child's center (Y)
+      const childCenterY = (childRect.top + childRect.height / 2) - containerRect.top;
+
+      pointerLeft = parentCenterX + offsetX;
+      pointerTop = childCenterY + offsetY;
+    }
+  }
+
+  // On mount and on window resize, recalc pointer position
+  onMount(() => {
+    updatePointer();
+    window.addEventListener('resize', updatePointer);
+    return () => window.removeEventListener('resize', updatePointer);
+  });
 </script>
 
 <style>
-  .node {
-    margin-left: 1rem;
-    border-left: 1px dashed #ccc;
-    padding-left: 0.5rem;
-    margin-bottom: 0.5rem;
+  /* Basic pointer styling; note we do NOT set left/top here.
+     We'll set them inline, along with transform to center the pointer. */
+  .ingredient-pointer {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #C8ACD6;
+    /* example swirl pattern from your snippet */
+    --b: 3px;
+    --a: 90deg;
+    aspect-ratio: 1;
+    padding: var(--b);
+    --_g: /var(--b) var(--b) no-repeat radial-gradient(circle at 50% 50%, #000 97%, #0000);
+    --_h: /var(--b) var(--b) no-repeat linear-gradient(90deg, #000 100%, #0000);
+    mask: top var(--_g),
+      calc(50% + 50%*sin(var(--a)))
+      calc(50% - 50%*cos(var(--a))) var(--_g),
+      linear-gradient(#0000 0 0) content-box intersect,
+      conic-gradient(#000 var(--a),#0000 0),
+      right 0 top 50% var(--_h);
+    transform: rotate(180deg);
   }
-  .node-header {
-    font-weight: bold;
-  }
-  .node-note {
-    font-style: italic;
-    color: #6B7280;
+
+  /* We keep li.ingredient-item relatively positioned,
+     but the pointer is absolutely positioned inside containerRef instead. */
+  li.ingredient-item {
+    position: relative;
+    /* min-height if needed */
+    min-height: 2.25rem;
   }
 </style>
 
-<div class="pl-2">
-  <!-- Item header -->
+<div>
+  <!-- If it's top-level and has an item, show the "header" -->
   {#if tree.item && !tree.note && isTopLevel}
     <div class="mb-4">
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 ml-[-1.5rem]">
+        <!-- This is the "parent" image for top-level -->
         <img
+          bind:this={parentImageRef}
           src={"https://sky.shiiyu.moe/item/" + tree.item}
           alt={tree.item}
-          class="w-8 h-8 rounded-sm shadow-sm relative -left-3.5"
+          class="w-8 h-8 rounded-sm shadow-sm"
         />
-        <span class="text-2xl font-semibold text-light">{toTitleCase(tree.item)}</span>
+        <span class="text-2xl font-semibold text-light">
+          {toTitleCase(tree.item)}
+        </span>
       </div>
     </div>
   {/if}
 
-  <!-- Ingredients list -->
+  <!-- If there are ingredients, list them -->
   {#if tree.ingredients && tree.ingredients.length > 0}
-    <ul class="space-y-6">
-      {#each aggregateIngredients(tree.ingredients) as ing, i}
-        <li class="pl-4 border-l-2 border-accent" style="min-height: 2.25rem">
-          <div class="node-content">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <span class="text-xl font-bold text-bright">{formatNumber(ing.total_needed * parentQuantity)}x</span>
-                <img
-                  src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
-                  alt={ing.ingredient}
-                  class="w-8 h-8 rounded-sm shadow-sm"
-                />
-                <span class="text-xl text-light">{toTitleCase(ing.ingredient)}</span>
-              </div>
-              {#if ing.buy_method}
-                <div class="relative">
-                  <button 
-                    class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
-                    on:click={() => toggleDropdown(ing.ingredient + i)}
-                  >
-                    <span>{formatNumber(ing.cost_per_unit)} Each</span>
-                    <svg 
-                      class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {#if openDropdowns[ing.ingredient + i]}
-                    <div 
-                      class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10"
-                    >
-                      <span class="text-sm text-gray-400 whitespace-nowrap">
-                        {ing.buy_method}
+    {#if depth === 0}
+      <!-- Shift the entire group left by 20px at the second highest level -->
+      <div style="transform: translateX(-20px);">
+        <ul class="space-y-6">
+          {#each aggregateIngredients(tree.ingredients) as ing, i}
+            <li class="pl-8 ingredient-item">
+              <div bind:this={containerRef} style="position: relative;">
+                <div
+                  class="ingredient-pointer text-accent"
+                  style="
+                    left: {pointerLeft}px;
+                    top: {pointerTop}px;
+                    transform: translate(-50%, -50%) rotate(180deg);
+                  "
+                ></div>
+
+                <div class="node-content">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <img
+                        bind:this={childImageRef}
+                        src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
+                        alt={ing.ingredient}
+                        class="w-8 h-8 rounded-sm shadow-sm"
+                      />
+                      <span class="text-xl font-bold text-bright">
+                        {formatNumber(ing.total_needed * parentQuantity)}x
                       </span>
+                      <span class="text-xl text-light">
+                        {toTitleCase(ing.ingredient)}
+                      </span>
+                    </div>
+
+                    {#if ing.buy_method}
+                      <div class="relative">
+                        <button
+                          class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
+                          on:click={() => toggleDropdown(ing.ingredient + i)}
+                        >
+                          <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                          <svg
+                            class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </button>
+
+                        {#if openDropdowns[ing.ingredient + i]}
+                          <div
+                            class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10"
+                          >
+                            <span class="text-sm text-gray-400 whitespace-nowrap">
+                              {ing.buy_method}
+                            </span>
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+
+              {#if ing.sub_breakdown && !ing.sub_breakdown.note}
+                <div class="mt-2">
+                  <!-- Pass depth + 1 into the recursive call -->
+                  <svelte:self
+                    tree={ing.sub_breakdown}
+                    parentQuantity={ing.total_needed * parentQuantity}
+                    isTopLevel={false}
+                    parentImageRef={childImageRef}
+                    depth={depth + 1}
+                  />
+                </div>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {:else}
+      <!-- No transform wrapper on other depth levels -->
+      <ul class="space-y-6">
+        {#each aggregateIngredients(tree.ingredients) as ing, i}
+          <li class="pl-8 ingredient-item">
+            <div bind:this={containerRef} style="position: relative;">
+              <div
+                class="ingredient-pointer text-accent"
+                style="
+                  left: {pointerLeft}px;
+                  top: {pointerTop}px;
+                  transform: translate(-50%, -50%) rotate(180deg);
+                "
+              ></div>
+
+              <div class="node-content">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <img
+                      bind:this={childImageRef}
+                      src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
+                      alt={ing.ingredient}
+                      class="w-8 h-8 rounded-sm shadow-sm"
+                    />
+                    <span class="text-xl font-bold text-bright">
+                      {formatNumber(ing.total_needed * parentQuantity)}x
+                    </span>
+                    <span class="text-xl text-light">
+                      {toTitleCase(ing.ingredient)}
+                    </span>
+                  </div>
+
+                  {#if ing.buy_method}
+                    <div class="relative">
+                      <button
+                        class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
+                        on:click={() => toggleDropdown(ing.ingredient + i)}
+                      >
+                        <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                        <svg
+                          class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {#if openDropdowns[ing.ingredient + i]}
+                        <div
+                          class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10"
+                        >
+                          <span class="text-sm text-gray-400 whitespace-nowrap">
+                            {ing.buy_method}
+                          </span>
+                        </div>
+                      {/if}
                     </div>
                   {/if}
                 </div>
-              {/if}
+              </div>
             </div>
-          </div>
 
-          <!-- Recursively render sub-breakdowns -->
-          {#if ing.sub_breakdown && !ing.sub_breakdown.note}
-            <div class="mt-2">
-              <svelte:self 
-                tree={ing.sub_breakdown} 
-                parentQuantity={ing.total_needed * parentQuantity}
-                isTopLevel={false}
-              />
-            </div>
-          {/if}
-        </li>
-      {/each}
-    </ul>
+            {#if ing.sub_breakdown && !ing.sub_breakdown.note}
+              <div class="mt-2">
+                <svelte:self
+                  tree={ing.sub_breakdown}
+                  parentQuantity={ing.total_needed * parentQuantity}
+                  isTopLevel={false}
+                  parentImageRef={childImageRef}
+                  depth={depth + 1}
+                />
+              </div>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
   {/if}
+
 </div>
