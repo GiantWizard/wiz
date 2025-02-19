@@ -1,6 +1,7 @@
-<script context="module">
-  /** @type {import('./$types').PageLoad} */
-  export async function load({ params, fetch }) {
+<script context="module" lang="ts">
+  import type { PageLoad } from './$types';
+
+  export const load: PageLoad = async ({ params, fetch }) => {
     const decodedItem = decodeURIComponent(params.item);
     const res = await fetch('/top_40_bazaar_crafts.json');
     if (!res.ok) {
@@ -19,12 +20,16 @@
         item: foundItem
       }
     };
-  }
+  };
 </script>
 
-<script>
+
+<script lang="ts">
   // Helper to format numbers
-  const formatNumber = (num, decimals = 1) => {
+  const formatNumber = (
+    num: number | null | undefined,
+    decimals: number = 1
+  ): string => {
     if (num === null || num === undefined || isNaN(num)) return '0';
     const formatted = num.toLocaleString('en-US', {
       minimumFractionDigits: decimals,
@@ -34,23 +39,40 @@
   };
 
   // Helper to convert strings like FINE_JASPER_GEM to "Fine Jasper Gem"
-  const toTitleCase = (str) => {
+  const toTitleCase = (str: string): string => {
     return str
       .replace(/_/g, ' ')
       .toLowerCase()
-      .replace(/\b(\w)/g, (char) => char.toUpperCase());
+      .replace(/\b(\w)/g, (match: string, group1: string) => group1.toUpperCase());
   };
 
+  // Define an interface for the item data.
+  interface BazaarItem {
+    item: string;
+    profit_per_hour: number;
+    crafting_cost: number;
+    sell_price: number;
+    cycles_per_hour: number;
+    longest_step_count: number;
+    crafting_savings: number;
+    buy_fill_time: number;
+    sell_fill_time: number;
+    effective_cycle_time: number;
+    inventory_cycles: number;
+    step_breakdown: any; // You can refine this type if needed
+  }
+
   // Calculate percent flip
-  const percentFlip = (item) => {
+  const percentFlip = (item: BazaarItem): number => {
     if (!item.crafting_cost) return 0;
     return (item.crafting_savings / item.crafting_cost) * 100;
   };
 
   import RecipeTree from '$lib/components/RecipeTree.svelte';
 
-  /** @type {import('./$types').PageData} */
-  export let data;
+  // Declare that the page data contains an item of type BazaarItem
+  export let data: { item: BazaarItem };
+  let item: BazaarItem;
   $: item = data.item;
 </script>
 

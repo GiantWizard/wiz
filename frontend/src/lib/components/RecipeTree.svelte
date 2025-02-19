@@ -1,32 +1,48 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
 
-  // Props
-  export let depth = 0;
-  export let tree;
-  export let parentQuantity = 1;
-  export let isTopLevel = true;
-  export let parentImageRef; // parent's image reference
+  // --- Type Definitions ---
+  interface Tree {
+    item?: string;
+    note?: any;
+    ingredients?: Ingredient[];
+  }
+
+  interface Ingredient {
+    ingredient: string;
+    total_needed: number;
+    buy_method?: string;
+    cost_per_unit?: number;
+    sub_breakdown?: Tree;
+  }
+
+  // --- Props ---
+  export let depth: number = 0;
+  export let tree!: Tree;
+  export let parentQuantity: number = 1;
+  export let isTopLevel: boolean = true;
+  // Parent's image reference (if provided)
+  export let parentImageRef: HTMLImageElement | null = null;
 
   // Toggling sub-breakdown cost info
-  let openDropdowns = {};
+  let openDropdowns: Record<string, boolean> = {};
 
-  function toggleDropdown(id) {
+  function toggleDropdown(id: string): void {
     openDropdowns[id] = !openDropdowns[id];
     // Force reactivity
-    openDropdowns = openDropdowns;
+    openDropdowns = { ...openDropdowns };
   }
 
   // Converts "FINE_PERIDOT_GEM" -> "Fine Peridot Gem"
-  function toTitleCase(str) {
+  function toTitleCase(str: string): string {
     return str
       .replace(/_/g, ' ')
       .toLowerCase()
-      .replace(/\b(\w)/g, (char) => char.toUpperCase());
+      .replace(/\b(\w)/g, (_match, char) => char.toUpperCase());
   }
 
   // Formats numbers with default 1 decimal place
-  function formatNumber(num, decimals = 1) {
+  function formatNumber(num: number, decimals: number = 1): string {
     if (num === null || num === undefined || isNaN(num)) return '0';
     const formatted = num.toLocaleString('en-US', {
       minimumFractionDigits: decimals,
@@ -36,8 +52,8 @@
   }
 
   // Aggregates identical ingredients at the same level
-  function aggregateIngredients(ingredients) {
-    const aggregated = {};
+  function aggregateIngredients(ingredients: Ingredient[]): Ingredient[] {
+    const aggregated: Record<string, Ingredient> = {};
     ingredients.forEach((ing) => {
       const key = ing.ingredient;
       if (!aggregated[key]) {
@@ -51,29 +67,29 @@
   // -----------------------------
   // DYNAMIC POINTER & ACCENT
   // -----------------------------
-  let containerRef;
-  let childImageRef;
-  const pointerWidth = 34;
+  let containerRef: HTMLDivElement | null = null;
+  let childImageRef: HTMLImageElement | null = null;
+  const pointerWidth: number = 34;
 
   // Pointer coordinates
-  let pointerLeft = 0;
-  let pointerTop = 0;
-  const offsetX = 15;
-  const offsetY = -15;
+  let pointerLeft: number = 0;
+  let pointerTop: number = 0;
+  const offsetX: number = 15;
+  const offsetY: number = -15;
 
   // Accent line coordinates
-  let accentLeft = 0;
-  let accentTop = 0;
-  let accentWidth = pointerWidth;
-  let accentHeight = 0;
+  let accentLeft: number = 0;
+  let accentTop: number = 0;
+  let accentWidth: number = pointerWidth;
+  let accentHeight: number = 0;
 
-  function updatePointer() {
+  function updatePointer(): void {
     if (parentImageRef && childImageRef && containerRef) {
       const containerRect = containerRef.getBoundingClientRect();
       const parentRect = parentImageRef.getBoundingClientRect();
       const childRect = childImageRef.getBoundingClientRect();
 
-      // Parent center in container coords
+      // Parent center in container coordinates
       const parentCenterX = (parentRect.left + parentRect.width / 2) - containerRect.left;
       const parentCenterY = (parentRect.top + parentRect.height / 2) - containerRect.top;
 
@@ -104,7 +120,8 @@
     return () => window.removeEventListener('resize', updatePointer);
   });
 
-  // Compute aggregated ingredients once (to avoid duplicate calls)
+  // Declare the aggregatedIngredients variable before using it reactively
+  let aggregatedIngredients: Ingredient[] = [];
   $: aggregatedIngredients = tree.ingredients ? aggregateIngredients(tree.ingredients) : [];
 </script>
 
@@ -154,7 +171,7 @@
         <img
           bind:this={parentImageRef}
           src={"https://sky.shiiyu.moe/item/" + tree.item}
-          alt={tree.item}
+          alt={tree.item || 'item'}
           class="w-8 h-8 rounded-sm shadow-sm"
         />
         <span class="text-2xl font-semibold text-light">
@@ -219,7 +236,7 @@
                           class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
                           on:click={() => toggleDropdown(ing.ingredient + i)}
                         >
-                          <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                          <span>{formatNumber(ing.cost_per_unit || 0)} Each</span>
                           <svg
                             class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
                             fill="none"
@@ -315,7 +332,7 @@
                         class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
                         on:click={() => toggleDropdown(ing.ingredient + i)}
                       >
-                        <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                        <span>{formatNumber(ing.cost_per_unit || 0)} Each</span>
                         <svg
                           class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
                           fill="none"

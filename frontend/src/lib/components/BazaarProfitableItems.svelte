@@ -1,18 +1,35 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
 
-  let items = [];
-  let loading = true;
-  let error = null;
+  // Define the shape of a bazaar item
+  interface BazaarItem {
+    item: string;
+    profit_per_hour: number;
+    crafting_cost: number;
+    sell_price: number;
+    cycles_per_hour: number;
+    longest_step_count: number;
+    crafting_savings: number;
+  }
+
+  let items: BazaarItem[] = [];
+  let loading: boolean = true;
+  let error: string | null = null;
 
   // Fetch top bazaar crafts on mount
-  const fetchBazaarData = async () => {
+  const fetchBazaarData = async (): Promise<void> => {
     try {
       const response = await fetch('/top_40_bazaar_crafts.json');
-      if (!response.ok) throw new Error(`Bazaar Data Error: ${response.statusText}`);
-      items = await response.json();
-    } catch (err) {
-      error = `Bazaar Error: ${err.message}`;
+      if (!response.ok)
+        throw new Error(`Bazaar Data Error: ${response.statusText}`);
+      const data: BazaarItem[] = await response.json();
+      items = data;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        error = `Bazaar Error: ${err.message}`;
+      } else {
+        error = 'Bazaar Error: Unknown error';
+      }
     } finally {
       loading = false;
     }
@@ -20,29 +37,39 @@
 
   onMount(fetchBazaarData);
 
-  // Convert a raw item identifier (with underscores) to Title Case (e.g., "HYPERION" → "Hyperion", "FLAWLESS_JASPER_GEM" → "Flawless Jasper Gem")
-  const toTitleCase = (str) =>
+  // Convert a raw item identifier (with underscores) to Title Case
+  // e.g., "HYPERION" → "Hyperion", "FLAWLESS_JASPER_GEM" → "Flawless Jasper Gem"
+  const toTitleCase = (str: string): string =>
     str
       .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(
+        (word) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
       .join(' ');
 
   // Abbreviate large numbers: 1,234 → 1.2K, 1,234,567 → 1.2M, etc.
-  function abbreviateNumber(value) {
+  function abbreviateNumber(value: number): string {
     if (!value || isNaN(value)) return '0';
     const absValue = Math.abs(value);
     if (absValue >= 1.0e9) {
-      return (value / 1.0e9).toFixed(1).replace(/\.0$/, '') + 'B';
+      return (value / 1.0e9)
+        .toFixed(1)
+        .replace(/\.0$/, '') + 'B';
     } else if (absValue >= 1.0e6) {
-      return (value / 1.0e6).toFixed(1).replace(/\.0$/, '') + 'M';
+      return (value / 1.0e6)
+        .toFixed(1)
+        .replace(/\.0$/, '') + 'M';
     } else if (absValue >= 1.0e3) {
-      return (value / 1.0e3).toFixed(1).replace(/\.0$/, '') + 'K';
+      return (value / 1.0e3)
+        .toFixed(1)
+        .replace(/\.0$/, '') + 'K';
     }
     return value.toString();
   }
 
   // Compute percent flip as (crafting_savings / crafting_cost) * 100
-  const percentFlip = (item) => {
+  const percentFlip = (item: BazaarItem): number => {
     if (!item.crafting_cost) return 0;
     return (item.crafting_savings / item.crafting_cost) * 100;
   };
@@ -159,7 +186,7 @@
     <div>❌ {error}</div>
   {:else}
     <div class="grid">
-      {#each items as item}
+      {#each items as item (item.item)}
         <a class="card" href={`/bazaaritems/${encodeURIComponent(item.item)}`}>
           <!-- Load image using the raw item identifier from the JSON -->
           <div class="image-wrapper">
@@ -204,7 +231,7 @@
               </div>
               <div class="stat">
                 <span class="stat-label">% Flip</span>
-                <span class="stat-value">{(percentFlip(item)).toFixed(2)}%</span>
+                <span class="stat-value">{percentFlip(item).toFixed(2)}%</span>
               </div>
             </div>
           </div>
