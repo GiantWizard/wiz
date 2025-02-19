@@ -53,15 +53,15 @@
   // -----------------------------
   let containerRef;
   let childImageRef;
-  let pointerWidth = 34;
+  const pointerWidth = 34;
 
   // Pointer coordinates
   let pointerLeft = 0;
   let pointerTop = 0;
-  let offsetX = 15;
-  let offsetY = -15;
+  const offsetX = 15;
+  const offsetY = -15;
 
-  // Accent line
+  // Accent line coordinates
   let accentLeft = 0;
   let accentTop = 0;
   let accentWidth = pointerWidth;
@@ -82,14 +82,12 @@
       pointerLeft = parentCenterX + offsetX;
       pointerTop = childCenterY + offsetY;
 
-      // Accent line: from (parentCenterY - 8) down to pointerTop
-      accentLeft = parentCenterX-2;
+      // Accent line: from (parentCenterY + 18) down to pointerTop
+      accentLeft = parentCenterX - 2;
       accentWidth = pointerWidth / 10.5;
 
-      // Decide which is "top" and which is "bottom" so height is always positive
       const lineStart = parentCenterY + 18;
       const lineEnd = pointerTop;
-
       if (lineEnd >= lineStart) {
         accentTop = lineStart;
         accentHeight = lineEnd - lineStart;
@@ -105,6 +103,9 @@
     window.addEventListener('resize', updatePointer);
     return () => window.removeEventListener('resize', updatePointer);
   });
+
+  // Compute aggregated ingredients once (to avoid duplicate calls)
+  $: aggregatedIngredients = tree.ingredients ? aggregateIngredients(tree.ingredients) : [];
 </script>
 
 <style>
@@ -164,26 +165,28 @@
   {/if}
 
   <!-- List ingredients if present -->
-  {#if tree.ingredients && tree.ingredients.length > 0}
+  {#if aggregatedIngredients.length > 0}
     {#if depth === 0}
       <!-- Shift top-level group left by 20px -->
       <div style="transform: translateX(-20px) translateY(-5px);">
         <ul class="space-y-6">
-          {#each aggregateIngredients(tree.ingredients) as ing, i}
+          {#each aggregatedIngredients as ing, i}
             <li class="pl-8 ingredient-item">
               <div bind:this={containerRef} style="position: relative;">
-                <!-- Accent line -->
-                <div
-                  class="ingredient-accent"
-                  style="
-                    left: {accentLeft}px;
-                    top: {accentTop}px;
-                    width: {accentWidth}px;
-                    height: {accentHeight}px;
-                  "
-                ></div>
+                <!-- Render accent line only on the last (lowest) ingredient -->
+                {#if i === aggregatedIngredients.length - 1}
+                  <div
+                    class="ingredient-accent"
+                    style="
+                      left: {accentLeft}px;
+                      top: {accentTop}px;
+                      width: {accentWidth}px;
+                      height: {accentHeight}px;
+                    "
+                  ></div>
+                {/if}
 
-                <!-- Pointer -->
+                <!-- Pointer (each li still shows its own pointer) -->
                 <div
                   class="ingredient-pointer text-accent"
                   style="
@@ -265,21 +268,21 @@
     {:else}
       <!-- Deeper levels (no transform) -->
       <ul class="space-y-6">
-        {#each aggregateIngredients(tree.ingredients) as ing, i}
+        {#each aggregatedIngredients as ing, i}
           <li class="pl-8 ingredient-item">
             <div bind:this={containerRef} style="position: relative;">
-              <!-- Accent line -->
-              <div
-                class="ingredient-accent"
-                style="
-                  left: {accentLeft}px;
-                  top: {accentTop}px;
-                  width: {accentWidth}px;
-                  height: {accentHeight}px;
-                "
-              ></div>
+              {#if i === aggregatedIngredients.length - 1}
+                <div
+                  class="ingredient-accent"
+                  style="
+                    left: {accentLeft}px;
+                    top: {accentTop}px;
+                    width: {accentWidth}px;
+                    height: {accentHeight}px;
+                  "
+                ></div>
+              {/if}
 
-              <!-- Pointer -->
               <div
                 class="ingredient-pointer text-accent"
                 style="
