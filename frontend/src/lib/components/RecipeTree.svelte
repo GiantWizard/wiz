@@ -6,10 +6,9 @@
   export let tree;
   export let parentQuantity = 1;
   export let isTopLevel = true;
-  // We'll receive a reference to the parent's image from the parent component:
-  export let parentImageRef;
+  export let parentImageRef; // parent's image reference
 
-  // For toggling sub-breakdown cost info
+  // Toggling sub-breakdown cost info
   let openDropdowns = {};
 
   function toggleDropdown(id) {
@@ -39,7 +38,7 @@
   // Aggregates identical ingredients at the same level
   function aggregateIngredients(ingredients) {
     const aggregated = {};
-    ingredients.forEach(ing => {
+    ingredients.forEach((ing) => {
       const key = ing.ingredient;
       if (!aggregated[key]) {
         aggregated[key] = { ...ing, total_needed: 0 };
@@ -50,42 +49,57 @@
   }
 
   // -----------------------------
-  // DYNAMIC POINTER COORDINATES
+  // DYNAMIC POINTER & ACCENT
   // -----------------------------
-
-  // We'll reference the container in which the pointer + child image live:
   let containerRef;
-  // The child's image for this ingredient
   let childImageRef;
+  let pointerWidth = 34;
 
-  // Pointer coordinates (relative to containerRef)
+  // Pointer coordinates
   let pointerLeft = 0;
   let pointerTop = 0;
-
   let offsetX = 15;
   let offsetY = -15;
 
-  // Calculates pointer position:
-  //  - x = parent's image center
-  //  - y = child's image center
-  // relative to containerRef
+  // Accent line
+  let accentLeft = 0;
+  let accentTop = 0;
+  let accentWidth = pointerWidth;
+  let accentHeight = 0;
+
   function updatePointer() {
     if (parentImageRef && childImageRef && containerRef) {
       const containerRect = containerRef.getBoundingClientRect();
       const parentRect = parentImageRef.getBoundingClientRect();
       const childRect = childImageRef.getBoundingClientRect();
 
-      // Parent's center (X)
+      // Parent center in container coords
       const parentCenterX = (parentRect.left + parentRect.width / 2) - containerRect.left;
-      // Child's center (Y)
-      const childCenterY = (childRect.top + childRect.height / 2) - containerRect.top;
+      const parentCenterY = (parentRect.top + parentRect.height / 2) - containerRect.top;
 
+      // Pointer center (aligned with child's center + offset)
+      const childCenterY = (childRect.top + childRect.height / 2) - containerRect.top;
       pointerLeft = parentCenterX + offsetX;
       pointerTop = childCenterY + offsetY;
+
+      // Accent line: from (parentCenterY - 8) down to pointerTop
+      accentLeft = parentCenterX-2;
+      accentWidth = pointerWidth / 10.5;
+
+      // Decide which is "top" and which is "bottom" so height is always positive
+      const lineStart = parentCenterY + 18;
+      const lineEnd = pointerTop;
+
+      if (lineEnd >= lineStart) {
+        accentTop = lineStart;
+        accentHeight = lineEnd - lineStart;
+      } else {
+        accentTop = lineEnd;
+        accentHeight = lineStart - lineEnd;
+      }
     }
   }
 
-  // On mount and on window resize, recalc pointer position
   onMount(() => {
     updatePointer();
     window.addEventListener('resize', updatePointer);
@@ -94,15 +108,14 @@
 </script>
 
 <style>
-  /* Basic pointer styling; note we do NOT set left/top here.
-     We'll set them inline, along with transform to center the pointer. */
+  /* Pointer styling */
   .ingredient-pointer {
     position: absolute;
     width: 34px;
     height: 34px;
     border-radius: 50%;
     background: #C8ACD6;
-    /* example swirl pattern from your snippet */
+    /* swirl pattern example */
     --b: 3px;
     --a: 90deg;
     aspect-ratio: 1;
@@ -113,26 +126,30 @@
       calc(50% + 50%*sin(var(--a)))
       calc(50% - 50%*cos(var(--a))) var(--_g),
       linear-gradient(#0000 0 0) content-box intersect,
-      conic-gradient(#000 var(--a),#0000 0),
+      conic-gradient(#000 var(--a), #0000 0),
       right 0 top 50% var(--_h);
     transform: rotate(180deg);
+    z-index: 2; /* Ensure pointer is on top */
   }
 
-  /* We keep li.ingredient-item relatively positioned,
-     but the pointer is absolutely positioned inside containerRef instead. */
+  /* Solid accent line behind pointer, same color */
+  .ingredient-accent {
+    position: absolute;
+    background-color: #C8ACD6;
+    z-index: 1; /* behind pointer */
+  }
+
   li.ingredient-item {
     position: relative;
-    /* min-height if needed */
     min-height: 2.25rem;
   }
 </style>
 
 <div>
-  <!-- If it's top-level and has an item, show the "header" -->
+  <!-- If top-level item, show header -->
   {#if tree.item && !tree.note && isTopLevel}
     <div class="mb-4">
       <div class="flex items-center gap-2 ml-[-1.5rem]">
-        <!-- This is the "parent" image for top-level -->
         <img
           bind:this={parentImageRef}
           src={"https://sky.shiiyu.moe/item/" + tree.item}
@@ -146,15 +163,27 @@
     </div>
   {/if}
 
-  <!-- If there are ingredients, list them -->
+  <!-- List ingredients if present -->
   {#if tree.ingredients && tree.ingredients.length > 0}
     {#if depth === 0}
-      <!-- Shift the entire group left by 20px at the second highest level -->
-      <div style="transform: translateX(-20px);">
+      <!-- Shift top-level group left by 20px -->
+      <div style="transform: translateX(-20px) translateY(-5px);">
         <ul class="space-y-6">
           {#each aggregateIngredients(tree.ingredients) as ing, i}
             <li class="pl-8 ingredient-item">
               <div bind:this={containerRef} style="position: relative;">
+                <!-- Accent line -->
+                <div
+                  class="ingredient-accent"
+                  style="
+                    left: {accentLeft}px;
+                    top: {accentTop}px;
+                    width: {accentWidth}px;
+                    height: {accentHeight}px;
+                  "
+                ></div>
+
+                <!-- Pointer -->
                 <div
                   class="ingredient-pointer text-accent"
                   style="
@@ -220,7 +249,6 @@
 
               {#if ing.sub_breakdown && !ing.sub_breakdown.note}
                 <div class="mt-2">
-                  <!-- Pass depth + 1 into the recursive call -->
                   <svelte:self
                     tree={ing.sub_breakdown}
                     parentQuantity={ing.total_needed * parentQuantity}
@@ -235,11 +263,23 @@
         </ul>
       </div>
     {:else}
-      <!-- No transform wrapper on other depth levels -->
+      <!-- Deeper levels (no transform) -->
       <ul class="space-y-6">
         {#each aggregateIngredients(tree.ingredients) as ing, i}
           <li class="pl-8 ingredient-item">
             <div bind:this={containerRef} style="position: relative;">
+              <!-- Accent line -->
+              <div
+                class="ingredient-accent"
+                style="
+                  left: {accentLeft}px;
+                  top: {accentTop}px;
+                  width: {accentWidth}px;
+                  height: {accentHeight}px;
+                "
+              ></div>
+
+              <!-- Pointer -->
               <div
                 class="ingredient-pointer text-accent"
                 style="
@@ -319,5 +359,4 @@
       </ul>
     {/if}
   {/if}
-
 </div>
