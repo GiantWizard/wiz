@@ -1,51 +1,62 @@
 <script>
   import { onMount } from 'svelte';
   // Import icons from lucide-svelte
-  import { DollarSign, TrendingUp, Calendar, PieChart, BarChart2, AlertTriangle, Zap, Target } from 'lucide-svelte';
+  import {
+    DollarSign,
+    TrendingUp,
+    Calendar,
+    PieChart,
+    BarChart2,
+    AlertTriangle,
+    Zap,
+    Target,
+    PersonStanding
+
+  } from 'lucide-svelte';
 
   // Market Overview Data
   const marketData = [
-    { title: "Total Market Volume", value: "$1,250,000,000", icon: DollarSign },
-    { title: "Market Growth Rate", value: "15% Monthly", icon: TrendingUp },
-    { title: "Active Traders", value: "50,000+", icon: DollarSign },
+    { title: "Total Market Volume", value: "Large number here", icon: DollarSign },
+    { title: "Market Growth Rate", value: "Large percent here", icon: TrendingUp },
+    { title: "Active Traders", value: "Some amount of people", icon: PersonStanding },
   ];
 
   const upcomingEvents = [
-    { name: "Summer Festival", date: "June 15-20", expectedFlip: "+200% on seasonal items" },
-    { name: "New Dungeon Release", date: "July 5", expectedFlip: "+150% on high-tier weapons" },
-    { name: "Double XP Weekend", date: "August 1-2", expectedFlip: "+100% on XP boosters" },
+    { name: "Cool Event", date: "Some days ago", expectedFlip: "+100% on event items" },
+    { name: "Some Festival", date: "More days ago", expectedFlip: "+100% on festivities" },
+    { name: "Mayor election?!", date: "Even more days ago", expectedFlip: "+100% on mayor items" },
   ];
 
   // Features Data
   const features = [
     {
-      title: "Real-time Profit Tracking",
+      title: "Real-time Market Tracking",
       description:
-        "Monitor your earnings as they happen with our advanced real-time tracking system. Get instant updates on your profits, allowing you to make quick decisions and capitalize on market opportunities.",
+        "Monitor changes in the market as they happen with our advanced real-time tracking system. Get instant updates on profitable oppertunites, allowing you to make quick decisions and capitalize on market inefficiencies.",
       icon: TrendingUp,
     },
     {
-      title: "Comprehensive Market Analysis",
+      title: "Comprehensive Analysis",
       description:
         "Gain deep insights into market trends with our powerful analytical tools. Analyze historical data, identify patterns, and understand market dynamics to make informed trading decisions.",
       icon: PieChart,
     },
     {
-      title: "AI-Powered Price Predictions",
+      title: "Formula-Driven Forecasts",
       description:
-        "Leverage the power of artificial intelligence to forecast market trends. Our advanced AI algorithms analyze vast amounts of data to provide accurate price predictions, giving you a competitive edge in the bazaar.",
+        "Utilize our rigorously tested formulas to decipher market trends. Our carefully engineered calculations analyze extensive data, delivering dependable price forecasts that empower you with a competitive advantage in the bazaar..",
       icon: BarChart2,
     },
     {
       title: "Risk Management Alerts",
       description:
-        "Stay informed about potential market risks with our intelligent alert system. Receive timely notifications about market volatility, price fluctuations, and other factors that could impact your trading strategy.",
+        "Stay informed about potential market risks with our alert system. Receive clear, useful information about market volatility, price fluctuations, and other factors that could impact your trading strategy.",
       icon: AlertTriangle,
     },
     {
-      title: "Automated Trading Strategies",
+      title: "Customizable Strategies",
       description:
-        "Implement and test automated trading strategies based on your custom parameters. Our platform allows you to create, backtest, and deploy trading bots that can execute trades 24/7, maximizing your profit potential.",
+        "Implement and test automated trading strategies based on your custom parameters. Our platform allows you to micromanage your budget, time limitations and margins to maximize your profit potential.",
       icon: Zap,
     },
     {
@@ -59,25 +70,25 @@
   // News Data
   const newsItems = [
     {
-      title: "New Trading Algorithm Boosts Profits by 30%",
+      title: "Last Update",
       excerpt:
-        "Our latest AI-powered trading algorithm has shown remarkable results in recent tests, increasing profits by an average of 30% for beta testers.",
-      date: "May 15, 2023",
-      link: "/news/new-trading-algorithm",
+        "Title of update",
+        date: "Arbitrary date",
+        link: "https://hypixel.net",
     },
     {
-      title: "Upcoming Bazaar Economy Changes: What You Need to Know",
+      title: "Last Update",
       excerpt:
-        "Major changes are coming to the bazaar economy next month. Learn how these updates will affect your trading strategies and how to prepare.",
-      date: "May 10, 2023",
-      link: "/news/bazaar-economy-changes",
+        "Title of update",
+      date: "Arbitrary date",
+        link: "https://hypixel.net",
     },
     {
-      title: "Top 5 Most Profitable Items This Season",
+      title: "Last Update",
       excerpt:
-        "We've analyzed market data to identify the top 5 most profitable items for trading this season. Find out which items you should be focusing on.",
-      date: "May 5, 2023",
-      link: "/news/top-profitable-items",
+        "Title of update",
+      date: "Arbitrary date",
+      link: "https://hypixel.net",
     },
   ];
 </script>
@@ -85,8 +96,10 @@
 <!-- Fixed Header -->
 <header class="fixed top-0 left-0 right-0 z-50 bg-darker bg-opacity-90 backdrop-blur-sm">
   <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-    <!-- Changed to lowercase to match the hero section -->
+    <!-- Brand -->
     <div class="text-2xl font-bold text-accent lowercase">wiz</div>
+
+    <!-- Nav -->
     <nav>
       <ul class="flex space-x-6">
         <li>
@@ -105,14 +118,16 @@
 
 <main class="pt-20">
   <!-- Hero Section -->
-  <section class="pt-32 pb-24 px-4 bg-dark">
-    <div class="container mx-auto max-w-4xl text-center">
+  <section class="pt-32 pb-24 px-4 bg-dark text-center">
+    <div class="container mx-auto max-w-4xl">
       <h1 class="text-6xl font-bold mb-6 text-accent lowercase">wiz</h1>
-      <p class="text-xl mb-8 text-light opacity-80">
-        Harness the power of advanced analytics and AI-driven insights to dominate the bazaar market. Wiz transforms
-        complex trading data into actionable strategies, giving you the competitive edge in virtual economies.
+      <p class="text-xl mb-8 text-light opacity-80 leading-relaxed">
+        With the power of advanced analytics and a bit of magic, wiz transforms complex trading data into strategies you can use to gain a competetive edge in the Skyblock market.
       </p>
-      <a href="/get-started" class="inline-block px-8 py-4 bg-primary text-light rounded-md font-semibold hover:bg-secondary transition-colors">
+      <a
+        href="/get-started"
+        class="inline-block px-8 py-4 bg-primary text-light rounded-md font-semibold hover:bg-secondary transition-colors"
+      >
         Start Maximizing Profits
       </a>
     </div>
@@ -122,21 +137,30 @@
   <section class="py-24 px-4 bg-dark">
     <div class="container mx-auto max-w-6xl text-center">
       <h2 class="text-3xl font-bold mb-12 text-accent">Market Overview</h2>
+
+      <!-- Market Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
         {#each marketData as item}
           <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md">
-            <svelte:component this={item.icon} class="w-8 h-8 text-darker mb-4" />
+            <!-- Use a more visible color for icons -->
+            <svelte:component
+              this={item.icon}
+              class="w-10 h-10 mx-auto mb-4 text-accent"
+            />
             <h3 class="text-lg font-semibold mb-2 text-light">{item.title}</h3>
             <p class="text-2xl font-bold text-accent">{item.value}</p>
           </div>
         {/each}
       </div>
-      <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md">
-        <h3 class="text-2xl font-bold mb-6 text-accent">Upcoming Events & Flip Opportunities</h3>
+
+      <!-- Upcoming Events -->
+      <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md text-left max-w-3xl mx-auto">
+        <h3 class="text-2xl font-bold mb-6 text-accent text-center">Upcoming Events</h3>
         <ul class="space-y-4">
           {#each upcomingEvents as event}
             <li class="flex items-start space-x-4">
-              <Calendar class="w-6 h-6 text-darker flex-shrink-0 mt-1" />
+              <!-- Make the icon more visible -->
+              <Calendar class="w-6 h-6 text-accent flex-shrink-0 mt-1" />
               <div>
                 <h4 class="text-lg font-semibold text-light">{event.name}</h4>
                 <p class="text-sm text-light opacity-80">{event.date}</p>
@@ -156,9 +180,12 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
         {#each features as feature}
           <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md">
-            <svelte:component this={feature.icon} class="w-10 h-10 text-darker mb-4" />
+            <svelte:component
+              this={feature.icon}
+              class="w-10 h-10 mx-auto mb-4 text-accent"
+            />
             <h3 class="text-xl font-semibold mb-4 text-accent">{feature.title}</h3>
-            <p class="text-light opacity-80">{feature.description}</p>
+            <p class="text-light opacity-80 leading-relaxed">{feature.description}</p>
           </div>
         {/each}
       </div>
@@ -168,15 +195,15 @@
   <!-- News Section -->
   <section class="py-24 px-4 bg-dark">
     <div class="container mx-auto max-w-6xl text-center">
-      <h2 class="text-3xl font-bold mb-12 text-accent">Latest News</h2>
+      <h2 class="text-3xl font-bold mb-12 text-accent">Latest Updates</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
         {#each newsItems as item}
-          <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md">
+          <div class="bg-dark bg-opacity-70 p-6 rounded-lg border border-secondary/50 shadow-md text-left">
             <h3 class="text-xl font-semibold mb-4 text-accent">{item.title}</h3>
-            <p class="text-light opacity-80 mb-4">{item.excerpt}</p>
+            <p class="text-light opacity-80 mb-4 leading-relaxed">{item.excerpt}</p>
             <div class="flex justify-between items-center">
               <span class="text-sm text-light opacity-60">{item.date}</span>
-              <a href={item.link} class="text-darker hover:text-accent transition-colors">
+              <a href={item.link} class="text-accent hover:opacity-80 transition-colors">
                 Read More
               </a>
             </div>
@@ -190,12 +217,15 @@
   <footer class="py-12 px-4 bg-dark">
     <div class="container mx-auto max-w-6xl text-center">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Brand / About -->
         <div>
           <h3 class="text-xl font-bold text-accent mb-4 lowercase">wiz</h3>
-          <p class="text-light opacity-60">
-            Empowering bazaar traders with advanced analytics and AI-driven insights.
+          <p class="text-light opacity-60 leading-relaxed">
+            Empowering bazaar traders with advanced analytics and magic.
           </p>
         </div>
+
+        <!-- Quick Links -->
         <div>
           <h4 class="text-lg font-semibold text-accent mb-4">Quick Links</h4>
           <ul class="space-y-2">
@@ -205,15 +235,26 @@
             <li><a href="/pricing" class="text-light opacity-60 hover:opacity-100">Pricing</a></li>
           </ul>
         </div>
+
+        <!-- Contact -->
         <div>
           <h4 class="text-lg font-semibold text-accent mb-4">Contact Us</h4>
           <p class="text-light opacity-60 mb-2">Email: support@wiz.com</p>
           <p class="text-light opacity-60">Phone: (123) 456-7890</p>
         </div>
       </div>
+
       <div class="mt-8 pt-8 border-t border-secondary/50">
         <p class="text-light opacity-60">&copy; {new Date().getFullYear()} wiz. All rights reserved.</p>
       </div>
     </div>
   </footer>
 </main>
+
+<style>
+  /* 
+    Tailwind handles most of your layout and color styling. 
+    Add small overrides here if desired (e.g., custom transitions, 
+    fine-tuned spacing, etc.). 
+  */
+</style>

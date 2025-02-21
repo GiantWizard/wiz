@@ -52,9 +52,58 @@ Solidified color scheme.
 
 TODO:
 
-*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$
+*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
 Update buttons and functions, as well as the profit page.
 Manage export files.
 Update export engine.
 Factor in potential inventory cycles.
 Update description in landing.
+
+2/16/2025
+
+Key changes/fixes
+
+Improved item detailed view UI.
+Adding pointers to subitems in recipe tree.
+Shifting around direction and placement of information in recipe tree.
+
+TODO:
+
+*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
+Change pointers into arcs, main accent line should end at the last pointer.
+Swap position of multiplier and image.
+Standardize space between top level item and its image and subitems and their images/multipler.
+Manage export files.
+Update export engine.
+Factor in potential inventory cycles.
+Update description in landing.
+
+2/17/2025
+
+Fixed arc pointers in recipe tree.
+Swaped position of multiplier and image.
+Standardized space between top level item and its image and subitems and their images/multipler.
+
+TODO:
+
+*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
+Main accent line should end at the last pointer.
+Manage export files.
+Update export engine.
+Factor in potential inventory cycles.
+Update description in landing.
+
+2/18/2025
+
+Finished recipe tree component.
+Updated landing page.
+
+TODO:
+
+Add graphs for processing in recipe tree.
+Return more information from backend*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
+Main accent line should end at the last pointer.
+Manage export files.
+Update export engine.
+Factor in potential inventory cycles.
+Give basic bazaar overview of each item in /bazaari
