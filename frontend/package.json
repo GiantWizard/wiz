@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.0.6",
+		"chart.js": "^4.4.8",
 		"lucide-svelte": "^0.475.0"
 	}
 }
