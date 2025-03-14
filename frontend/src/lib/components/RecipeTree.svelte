@@ -1,33 +1,46 @@
-<script>
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import { onMount, afterUpdate, onDestroy } from 'svelte';
 
-  // Props
-  export let depth = 0;
-  export let tree;
-  export let parentQuantity = 1;
-  export let isTopLevel = true;
-  // We'll receive a reference to the parent's image from the parent component:
-  export let parentImageRef;
-
-  // For toggling sub-breakdown cost info
-  let openDropdowns = {};
-
-  function toggleDropdown(id) {
-    openDropdowns[id] = !openDropdowns[id];
-    // Force reactivity
-    openDropdowns = openDropdowns;
+  // --- Type Definitions ---
+  interface Tree {
+    item?: string;
+    note?: any;
+    ingredients?: Ingredient[];
   }
 
-  // Converts "FINE_PERIDOT_GEM" -> "Fine Peridot Gem"
-  function toTitleCase(str) {
+  interface Ingredient {
+    ingredient: string;
+    total_needed: number;
+    buy_method?: string;
+    cost_per_unit?: number;
+    sub_breakdown?: Tree;
+  }
+
+  // --- Props ---
+  export let depth: number = 0;
+  export let tree!: Tree;
+  export let parentQuantity: number = 1;
+  export let isTopLevel: boolean = true;
+  // Parent's image reference (if provided)
+  export let parentImageRef: HTMLImageElement | null = null;
+
+  // Toggling sub-breakdown cost info
+  let openDropdowns: Record<string, boolean> = {};
+  function toggleDropdown(id: string): void {
+    openDropdowns[id] = !openDropdowns[id];
+    // Force reactivity
+    openDropdowns = { ...openDropdowns };
+  }
+
+  // Utility functions
+  function toTitleCase(str: string): string {
     return str
       .replace(/_/g, ' ')
       .toLowerCase()
-      .replace(/\b(\w)/g, (char) => char.toUpperCase());
+      .replace(/\b(\w)/g, (_match, char) => char.toUpperCase());
   }
 
-  // Formats numbers with default 1 decimal place
-  function formatNumber(num, decimals = 1) {
+  function formatNumber(num: number, decimals: number = 1): string {
     if (num === null || num === undefined || isNaN(num)) return '0';
     const formatted = num.toLocaleString('en-US', {
       minimumFractionDigits: decimals,
@@ -36,10 +49,9 @@
     return formatted.replace(/\.0$/, '');
   }
 
-  // Aggregates identical ingredients at the same level
-  function aggregateIngredients(ingredients) {
-    const aggregated = {};
-    ingredients.forEach(ing => {
+  function aggregateIngredients(ingredients: Ingredient[]): Ingredient[] {
+    const aggregated: Record<string, Ingredient> = {};
+    ingredients.forEach((ing) => {
       const key = ing.ingredient;
       if (!aggregated[key]) {
         aggregated[key] = { ...ing, total_needed: 0 };
@@ -49,60 +61,119 @@
     return Object.values(aggregated);
   }
 
-  // -----------------------------
-  // DYNAMIC POINTER COORDINATES
-  // -----------------------------
+  // Reactive aggregated ingredients
+  let aggregatedIngredients: Ingredient[] = [];
+  $: aggregatedIngredients = tree.ingredients
+    ? aggregateIngredients(tree.ingredients)
+    : [];
 
-  // We'll reference the container in which the pointer + child image live:
-  let containerRef;
-  // The child's image for this ingredient
-  let childImageRef;
+  // --- POINTER LOGIC (inlined) ---
 
-  // Pointer coordinates (relative to containerRef)
-  let pointerLeft = 0;
-  let pointerTop = 0;
+  // Arrays to store per-ingredient DOM refs and computed values
+  let containerRefs: (HTMLDivElement | null)[] = [];
+  let childImageRefs: (HTMLImageElement | null)[] = [];
+  let pointerLeft: number[] = [];
+  let pointerTop: number[] = [];
+  let accentLeft: number[] = [];
+  let accentTop: number[] = [];
+  let accentWidth: number[] = [];
+  let accentHeight: number[] = [];
 
-  let offsetX = 15;
-  let offsetY = -15;
+  const offsetX = 15;
+  const offsetY = -15;
+  const defaultAccentWidth = 34 / 10.5;
 
-  // Calculates pointer position:
-  //  - x = parent's image center
-  //  - y = child's image center
-  // relative to containerRef
-  function updatePointer() {
-    if (parentImageRef && childImageRef && containerRef) {
-      const containerRect = containerRef.getBoundingClientRect();
-      const parentRect = parentImageRef.getBoundingClientRect();
-      const childRect = childImageRef.getBoundingClientRect();
+  // Computes pointer positions for the ingredient at index i
+  function updatePointer(i: number) {
+    if (!parentImageRef || !childImageRefs[i] || !containerRefs[i]) return;
 
-      // Parent's center (X)
-      const parentCenterX = (parentRect.left + parentRect.width / 2) - containerRect.left;
-      // Child's center (Y)
-      const childCenterY = (childRect.top + childRect.height / 2) - containerRect.top;
+    const containerRect = containerRefs[i]!.getBoundingClientRect();
+    const parentRect = parentImageRef.getBoundingClientRect();
+    const childRect = childImageRefs[i]!.getBoundingClientRect();
 
-      pointerLeft = parentCenterX + offsetX;
-      pointerTop = childCenterY + offsetY;
+    const parentCenterX =
+      (parentRect.left + parentRect.width / 2) - containerRect.left;
+    const parentCenterY =
+      (parentRect.top + parentRect.height / 2) - containerRect.top;
+    const childCenterY =
+      (childRect.top + childRect.height / 2) - containerRect.top;
+
+    pointerLeft[i] = parentCenterX + offsetX;
+    pointerTop[i] = childCenterY + offsetY;
+
+    accentLeft[i] = parentCenterX - 2;
+    const lineStart = parentCenterY + 18;
+    const lineEnd = pointerTop[i];
+    if (lineEnd >= lineStart) {
+      accentTop[i] = lineStart;
+      accentHeight[i] = lineEnd - lineStart;
+    } else {
+      accentTop[i] = lineEnd;
+      accentHeight[i] = lineStart - lineEnd;
     }
+    accentWidth[i] = defaultAccentWidth;
   }
 
-  // On mount and on window resize, recalc pointer position
+  // Update pointers for all ingredients
+  function updateAllPointers() {
+    aggregatedIngredients.forEach((_, i) => {
+      // small delay to let the DOM settle
+      setTimeout(() => updatePointer(i), 10);
+    });
+  }
+
   onMount(() => {
-    updatePointer();
-    window.addEventListener('resize', updatePointer);
-    return () => window.removeEventListener('resize', updatePointer);
+    updateAllPointers();
+    window.addEventListener('resize', updateAllPointers);
+    return () => {
+      window.removeEventListener('resize', updateAllPointers);
+    };
   });
+
+  afterUpdate(() => {
+    updateAllPointers();
+  });
+
+  // --- Custom actions to register DOM references ---
+
+  // Registers container div for ingredient at index "index"
+  function registerContainer(node: HTMLDivElement, index: number) {
+    containerRefs[index] = node;
+    return {
+      destroy() {
+        containerRefs[index] = null;
+      }
+    };
+  }
+
+  // Registers child image for ingredient at index "index"
+  function registerChildImage(node: HTMLImageElement, index: number) {
+    childImageRefs[index] = node;
+    return {
+      destroy() {
+        childImageRefs[index] = null;
+      }
+    };
+  }
 </script>
 
 <style>
-  /* Basic pointer styling; note we do NOT set left/top here.
-     We'll set them inline, along with transform to center the pointer. */
+  li.ingredient-item {
+    position: relative;
+    min-height: 2.25rem;
+  }
+
+  .pointer-container {
+    position: relative;
+  }
+
   .ingredient-pointer {
     position: absolute;
     width: 34px;
     height: 34px;
     border-radius: 50%;
     background: #C8ACD6;
-    /* example swirl pattern from your snippet */
+    /* swirl pattern example */
     --b: 3px;
     --a: 90deg;
     aspect-ratio: 1;
@@ -110,33 +181,31 @@
     --_g: /var(--b) var(--b) no-repeat radial-gradient(circle at 50% 50%, #000 97%, #0000);
     --_h: /var(--b) var(--b) no-repeat linear-gradient(90deg, #000 100%, #0000);
     mask: top var(--_g),
-      calc(50% + 50%*sin(var(--a)))
-      calc(50% - 50%*cos(var(--a))) var(--_g),
-      linear-gradient(#0000 0 0) content-box intersect,
-      conic-gradient(#000 var(--a),#0000 0),
-      right 0 top 50% var(--_h);
+          calc(50% + 50%*sin(var(--a)))
+          calc(50% - 50%*cos(var(--a))) var(--_g),
+          linear-gradient(#0000 0 0) content-box intersect,
+          conic-gradient(#000 var(--a), #0000 0),
+          right 0 top 50% var(--_h);
+    z-index: 2;
     transform: rotate(180deg);
   }
 
-  /* We keep li.ingredient-item relatively positioned,
-     but the pointer is absolutely positioned inside containerRef instead. */
-  li.ingredient-item {
-    position: relative;
-    /* min-height if needed */
-    min-height: 2.25rem;
+  .ingredient-accent {
+    position: absolute;
+    background-color: #C8ACD6;
+    z-index: 1;
   }
 </style>
 
 <div>
-  <!-- If it's top-level and has an item, show the "header" -->
+  <!-- Top-level header -->
   {#if tree.item && !tree.note && isTopLevel}
     <div class="mb-4">
       <div class="flex items-center gap-2 ml-[-1.5rem]">
-        <!-- This is the "parent" image for top-level -->
         <img
           bind:this={parentImageRef}
           src={"https://sky.shiiyu.moe/item/" + tree.item}
-          alt={tree.item}
+          alt={tree.item || 'item'}
           class="w-8 h-8 rounded-sm shadow-sm"
         />
         <span class="text-2xl font-semibold text-light">
@@ -146,29 +215,30 @@
     </div>
   {/if}
 
-  <!-- If there are ingredients, list them -->
-  {#if tree.ingredients && tree.ingredients.length > 0}
+  <!-- Render aggregated ingredients -->
+  {#if aggregatedIngredients.length > 0}
     {#if depth === 0}
-      <!-- Shift the entire group left by 20px at the second highest level -->
-      <div style="transform: translateX(-20px);">
+      <div style="transform: translateX(-20px) translateY(-5px);">
         <ul class="space-y-6">
-          {#each aggregateIngredients(tree.ingredients) as ing, i}
+          {#each aggregatedIngredients as ing, i}
             <li class="pl-8 ingredient-item">
-              <div bind:this={containerRef} style="position: relative;">
+              <div class="pointer-container" use:registerContainer={i}>
+                <!-- Accent line -->
                 <div
-                  class="ingredient-pointer text-accent"
-                  style="
-                    left: {pointerLeft}px;
-                    top: {pointerTop}px;
-                    transform: translate(-50%, -50%) rotate(180deg);
-                  "
+                  class="ingredient-accent"
+                  style="left: {accentLeft[i]}px; top: {accentTop[i]}px; width: {accentWidth[i]}px; height: {accentHeight[i]}px;"
+                ></div>
+                <!-- Pointer -->
+                <div
+                  class="ingredient-pointer"
+                  style="left: {pointerLeft[i]}px; top: {pointerTop[i]}px; transform: translate(-50%, -50%) rotate(180deg);"
                 ></div>
 
                 <div class="node-content">
                   <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                       <img
-                        bind:this={childImageRef}
+                        use:registerChildImage={i}
                         src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
                         alt={ing.ingredient}
                         class="w-8 h-8 rounded-sm shadow-sm"
@@ -180,14 +250,13 @@
                         {toTitleCase(ing.ingredient)}
                       </span>
                     </div>
-
                     {#if ing.buy_method}
                       <div class="relative">
                         <button
                           class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
                           on:click={() => toggleDropdown(ing.ingredient + i)}
                         >
-                          <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                          <span>{formatNumber(ing.cost_per_unit || 0)} Each</span>
                           <svg
                             class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
                             fill="none"
@@ -202,11 +271,8 @@
                             />
                           </svg>
                         </button>
-
                         {#if openDropdowns[ing.ingredient + i]}
-                          <div
-                            class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10"
-                          >
+                          <div class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10">
                             <span class="text-sm text-gray-400 whitespace-nowrap">
                               {ing.buy_method}
                             </span>
@@ -220,12 +286,12 @@
 
               {#if ing.sub_breakdown && !ing.sub_breakdown.note}
                 <div class="mt-2">
-                  <!-- Pass depth + 1 into the recursive call -->
+                  <!-- Recursive render; pass this ingredient’s image as the parent's ref -->
                   <svelte:self
                     tree={ing.sub_breakdown}
                     parentQuantity={ing.total_needed * parentQuantity}
                     isTopLevel={false}
-                    parentImageRef={childImageRef}
+                    parentImageRef={childImageRefs[i]}
                     depth={depth + 1}
                   />
                 </div>
@@ -235,25 +301,27 @@
         </ul>
       </div>
     {:else}
-      <!-- No transform wrapper on other depth levels -->
+      <!-- Deeper levels (no transform) -->
       <ul class="space-y-6">
-        {#each aggregateIngredients(tree.ingredients) as ing, i}
+        {#each aggregatedIngredients as ing, i}
           <li class="pl-8 ingredient-item">
-            <div bind:this={containerRef} style="position: relative;">
+            <div class="pointer-container" use:registerContainer={i}>
+              <!-- Accent line -->
               <div
-                class="ingredient-pointer text-accent"
-                style="
-                  left: {pointerLeft}px;
-                  top: {pointerTop}px;
-                  transform: translate(-50%, -50%) rotate(180deg);
-                "
+                class="ingredient-accent"
+                style="left: {accentLeft[i]}px; top: {accentTop[i]}px; width: {accentWidth[i]}px; height: {accentHeight[i]}px;"
+              ></div>
+              <!-- Pointer -->
+              <div
+                class="ingredient-pointer"
+                style="left: {pointerLeft[i]}px; top: {pointerTop[i]}px; transform: translate(-50%, -50%) rotate(180deg);"
               ></div>
 
               <div class="node-content">
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
                     <img
-                      bind:this={childImageRef}
+                      use:registerChildImage={i}
                       src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
                       alt={ing.ingredient}
                       class="w-8 h-8 rounded-sm shadow-sm"
@@ -265,14 +333,13 @@
                       {toTitleCase(ing.ingredient)}
                     </span>
                   </div>
-
                   {#if ing.buy_method}
                     <div class="relative">
                       <button
                         class="flex items-center gap-1 text-xl text-gray-400 hover:text-accent focus:outline-none"
                         on:click={() => toggleDropdown(ing.ingredient + i)}
                       >
-                        <span>{formatNumber(ing.cost_per_unit)} Each</span>
+                        <span>{formatNumber(ing.cost_per_unit || 0)} Each</span>
                         <svg
                           class="w-4 h-4 transform transition-transform {openDropdowns[ing.ingredient + i] ? 'rotate-180' : ''}"
                           fill="none"
@@ -287,11 +354,8 @@
                           />
                         </svg>
                       </button>
-
                       {#if openDropdowns[ing.ingredient + i]}
-                        <div
-                          class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10"
-                        >
+                        <div class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10">
                           <span class="text-sm text-gray-400 whitespace-nowrap">
                             {ing.buy_method}
                           </span>
@@ -309,7 +373,7 @@
                   tree={ing.sub_breakdown}
                   parentQuantity={ing.total_needed * parentQuantity}
                   isTopLevel={false}
-                  parentImageRef={childImageRef}
+                  parentImageRef={childImageRefs[i]}
                   depth={depth + 1}
                 />
               </div>
@@ -319,5 +383,4 @@
       </ul>
     {/if}
   {/if}
-
 </div>

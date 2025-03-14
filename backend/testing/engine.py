@@ -1,19 +1,15 @@
 import json
 import requests
 from pathlib import Path
-from collections import Counter
-import os
-
-# ------------------------------------------------------------------------------
-# Step 1: Data Loading and Price Fetching Functions
-# ------------------------------------------------------------------------------
+from collections import defaultdict
 
 def load_recipes(directory="dependencies/items"):
+    """Load recipes from JSON files in the specified directory."""
     recipes = {}
     path = Path(directory)
     if not path.exists():
         print(f"Warning: Directory '{directory}' does not exist. Skipping.")
-        return recipes  # Return empty dict if the folder is missing
+        return recipes
 
     for file in path.glob('*.json'):
         try:
@@ -21,9 +17,8 @@ def load_recipes(directory="dependencies/items"):
                 data = json.load(f)
                 if 'internalname' in data:
                     if 'recipes' in data:
-                        # Filter out forge, katgrade, and trade recipes
                         valid_recipes = [r for r in data['recipes'] 
-                                         if not r.get('type') in ['forge', 'katgrade', 'trade']]
+                                       if not r.get('type') in ['forge', 'katgrade', 'trade']]
                         if valid_recipes:
                             recipes[data['internalname']] = valid_recipes
                     elif 'recipe' in data:
@@ -32,10 +27,11 @@ def load_recipes(directory="dependencies/items"):
                             recipes[data['internalname']] = [recipe]
         except Exception as e:
             print(f"Error reading {file}: {e}")
-    
+
     return recipes
 
 def fetch_all_bazaar_prices():
+    """Fetch current prices from the Hypixel Bazaar API."""
     url = 'https://api.hypixel.net/skyblock/bazaar'
     response = requests.get(url).json()
     if "products" not in response:
@@ -43,371 +39,228 @@ def fetch_all_bazaar_prices():
 
     prices = {}
     for item_id, details in response["products"].items():
-        # Get highest buy price from buy_summary
         buy_summary = details.get("buy_summary", [])
         buy_price = buy_summary[0]["pricePerUnit"] if buy_summary else None
 
-        # Get lowest sell price from sell_summary
         sell_summary = details.get("sell_summary", [])
         sell_price = sell_summary[0]["pricePerUnit"] if sell_summary else None
 
-        # Get moving week data from quick_status (needed for calculations)
         quick_status = details.get("quick_status", {})
         hourly_instasells = quick_status.get("sellMovingWeek", 0) / 168
         hourly_instabuys = quick_status.get("buyMovingWeek", 0) / 168
 
-        # Calculate fill time in seconds (based on hourly rates)
-        fill_time = 3600 / max(hourly_instabuys, hourly_instasells) if max(hourly_instabuys, hourly_instasells) > 0 else float('inf')
-
         if buy_price and sell_price:
-            if hourly_instabuys > hourly_instasells or buy_price > sell_price * hourly_instasells / (hourly_instabuys + 1e-6):
-                prices[item_id] = {
-                    "price": buy_price,
-                    "method": "Instabuy",
-                    "hourly_instabuys": hourly_instabuys,
-                    "hourly_instasells": hourly_instasells,
-                    "fill_time": fill_time
-                }
-            else:
-                prices[item_id] = {
-                    "price": sell_price,
-                    "method": "Buy Order",
-                    "hourly_instabuys": hourly_instabuys,
-                    "hourly_instasells": hourly_instasells,
-                    "fill_time": fill_time
-                }
-    
+            prices[item_id] = {
+                "buy_price": buy_price,
+                "sell_price": sell_price,
+                "hourly_instasells": hourly_instasells,
+                "hourly_instabuys": hourly_instabuys
+            }
+
     return prices
 
-def fetch_lbin_prices():
-    return requests.get("http://moulberry.codes/lowestbin.json").json()
-
-def calculate_recipe_fill_time(recipe, bazaar_prices):
-    """Calculate the time it would take to fill all components of a recipe"""
-    max_fill_time = 0
-    for item, count in recipe.items():
-        bazaar_item = item.replace('-', ':')
-        if bazaar_item in bazaar_prices:
-            max_fill_time = max(max_fill_time, bazaar_prices[bazaar_item]['fill_time'])
-    return max_fill_time
-
-def calculate_bin_tax(price: float) -> float:
-    """Calculate BIN tax correctly with separate listing and collection fees."""
-    if price < 1_000_000:
-        return price  # No tax for amounts below 1M
-    
-    # BIN listing fee
-    if price >= 100_000_000:
-        bin_fee = price * 0.025  # 2.5% listing fee
-    elif price >= 10_000_000:
-        bin_fee = price * 0.02  # 2% listing fee
-    else:
-        bin_fee = price * 0.01  # 1% listing fee
-
-    # Collection tax (1% capped at 1M minimum collection)
-    collection_tax = min(price * 0.01, price - 1_000_000)
-
-    final_amount = price - (bin_fee + collection_tax)
-    
-    return final_amount
-
-def is_base_item(item_name, recipes):
-    if item_name not in recipes:
-        return True
-    
-    for recipe in recipes[item_name]:
-        unique_ingredients = set()
-        for pos in ['A1','A2','A3','B1','B2','B3','C1','C2','C3']:
-            if pos in recipe and recipe[pos]:
-                unique_ingredients.add(recipe[pos].split(':')[0])
-                
-        if len(unique_ingredients) == 1:
-            ingredient = unique_ingredients.pop()
-            if ingredient in recipes:
-                for ing_recipe in recipes[ingredient]:
-                    for pos in ['A1','A2','A3','B1','B2','B3','C1','C2','C3']:
-                        if pos in ing_recipe and ing_recipe[pos]:
-                            if ing_recipe[pos].split(':')[0] == item_name:
-                                return True
-    return False
-
-def get_full_recipe(item_name, recipes):
-    if item_name not in recipes or is_base_item(item_name, recipes):
-        return {item_name: 1}
-    
-    recipe = next((r for r in recipes[item_name] if r.get('count', 1) == 1), recipes[item_name][0])
-    
-    result = Counter()
-    for pos in ['A1','A2','A3','B1','B2','B3','C1','C2','C3']:
+def is_valid_recipe(recipe, item_name):
+    """
+    Check if a recipe is valid for an item (not circular).
+    A recipe is invalid if the item appears in its own ingredients.
+    """
+    for pos in ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
         if pos in recipe and recipe[pos]:
-            ingredient, count = recipe[pos].split(':')
-            sub_ingredients = get_full_recipe(ingredient, recipes)
-            for sub_item, sub_count in sub_ingredients.items():
-                result[sub_item] += sub_count * int(count)
-    return result
+            parts = recipe[pos].split(':')
+            ing_item = parts[0]
+            if ing_item == item_name:
+                return False
+    return True
 
-def get_optimal_recipe(item_name, recipes, bazaar_prices, auction_prices, visited=None):
+def get_recipe_tree(item_name, recipes, visited=None, max_depth=20):
+    """
+    Recursively builds a recipe tree for an item, with protection against circular dependencies.
+    """
     if visited is None:
         visited = set()
+    
+    # Check for circular dependencies
     if item_name in visited:
-        # Circular dependency detected, treat as base item
-        return {item_name: 1}
+        return {
+            "item": item_name,
+            "is_circular": True,
+            "ingredients": []
+        }
+    
+    # Add item to visited set
     visited = visited.copy()
     visited.add(item_name)
-
-    def get_item_price_and_fill_time(item):
-        bazaar_item = item.replace('-', ':')
-        if bazaar_item in bazaar_prices:
-            return bazaar_prices[bazaar_item]['price'], bazaar_prices[bazaar_item]['fill_time'], True
-        elif item in auction_prices:
-            return auction_prices[item], 0, True  # Auction items are assumed instant
-        return float('inf'), float('inf'), False
-
-    if item_name not in recipes:
-        return {item_name: 1}
-
-    direct_price, direct_fill_time, has_direct_price = get_item_price_and_fill_time(item_name)
-    recipe = recipes[item_name][0]
+    
+    # If item doesn't have a recipe or we've reached max depth
+    if item_name not in recipes or max_depth <= 0:
+        return {
+            "item": item_name,
+            "is_base": True,
+            "ingredients": []
+        }
+    
+    # Filter out recipes where the item is part of its own recipe (circular)
+    valid_recipes = [r for r in recipes[item_name] if is_valid_recipe(r, item_name)]
+    
+    if not valid_recipes:
+        return {
+            "item": item_name,
+            "is_base": True,
+            "ingredients": []
+        }
+    
+    # Get the first valid recipe for this item
+    recipe = valid_recipes[0]
     output_count = recipe.get('count', 1)
     
-    total_cost = 0
-    has_all_prices = True
-    optimal_ingredients = Counter()
+    result = {
+        "item": item_name,
+        "output_count": output_count,
+        "ingredients": []
+    }
     
-    for pos in ['A1','A2','A3','B1','B2','B3','C1','C2','C3']:
-        if pos in recipe and recipe[pos]:
-            item, count = recipe[pos].split(':')
-            count = int(count)
-            
-            sub_recipe = get_optimal_recipe(item, recipes, bazaar_prices, auction_prices, visited)
-            
-            ingredient_cost = 0
-            for sub_item, sub_count in sub_recipe.items():
-                price, fill_time, has_price = get_item_price_and_fill_time(sub_item)
-                if has_price:
-                    ingredient_cost += price * sub_count * count
-                else:
-                    has_all_prices = False
-                    
-            total_cost += ingredient_cost
-            
-            for sub_item, sub_count in sub_recipe.items():
-                optimal_ingredients[sub_item] += sub_count * count
-
-    crafting_cost_per_item = total_cost / output_count if has_all_prices else float('inf')
-    
-    if has_direct_price and has_all_prices:
-        if crafting_cost_per_item >= direct_price:
-            return {item_name: 1}
-    
-    return {item: count/output_count for item, count in optimal_ingredients.items()}
-
-# ------------------------------------------------------------------------------
-# Step 2b: Sell Fill Time Calculation (New Helper Function)
-# ------------------------------------------------------------------------------
-
-def calculate_sell_fill_time(required_count: float, weekly_rate: float) -> float:
-    """
-    Calculate the fill time using the formula:
-        fill_time = required_count * (604800 / weekly_rate)
-    where 604800 is the number of seconds in a week.
-    """
-    if weekly_rate <= 0:
-        return float('inf')
-    return required_count * (604800 / weekly_rate)
-
-# ------------------------------------------------------------------------------
-# Step 2: Crafting Details Function (Price & Fill Time Logic)
-# ------------------------------------------------------------------------------
-
-def get_crafting_details(item_name, recipes, bazaar_prices, auction_prices):
-    """
-    Return a dict of crafting details for an item if crafting is profitable.
-    Otherwise, return None.
-    The overall sell-side fill time is computed via calculate_sell_fill_time():
-      sell_fill_time = output_count * (604800 / weekly_rate)
-    """
-    if item_name not in recipes:
-        return None
-
-    recipe = recipes[item_name][0]
-    output_count = recipe.get('count', 1)
-    
-    total_cost = 0
-    ingredients = []
-    
-    # Process recipe ingredients
-    for pos in ['A1','A2','A3','B1','B2','B3','C1','C2','C3']:
+    # Process all recipe slots and gather ingredients
+    ingredient_counts = defaultdict(int)
+    for pos in ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
         if pos in recipe and recipe[pos]:
             parts = recipe[pos].split(':')
             ing_item = parts[0]
             count = int(parts[1]) if len(parts) > 1 else 1
+            ingredient_counts[ing_item] += count
+    
+    # Add each unique ingredient with total count
+    for ing_item, total_count in ingredient_counts.items():
+        # Only recurse if we're not at max depth
+        if max_depth > 1:
+            sub_tree = get_recipe_tree(ing_item, recipes, visited, max_depth - 1)
+        else:
+            sub_tree = {"item": ing_item, "is_base": True, "ingredients": []}
             
-            bazaar_item = ing_item.replace('-', ':')
-            buy_method = "Not Available"
-            cost_per_unit = 0
-            individual_fill_time = 0
-            weekly_rate = None
+        result["ingredients"].append({
+            "item": ing_item,
+            "count": total_count,
+            "sub_recipe": sub_tree
+        })
+    
+    return result
+
+def flatten_recipe(recipe_tree):
+    """Flatten a recipe into basic ingredient counts, handling circular dependencies."""
+    result = defaultdict(int)
+    
+    def process_ingredient(tree, multiplier=1):
+        # Skip circular dependencies
+        if tree.get("is_circular", False):
+            result[tree["item"]] += multiplier
+            return
+        
+        # Process base items (no recipe or max depth reached)
+        if tree.get("is_base", False) or not tree.get("ingredients"):
+            result[tree["item"]] += multiplier
+            return
+        
+        # Process ingredients recursively
+        for ing in tree["ingredients"]:
+            item = ing["item"]
+            count = ing["count"]
+            sub_recipe = ing["sub_recipe"]
             
-            if bazaar_item in bazaar_prices:
-                bp = bazaar_prices[bazaar_item]
-                cost_per_unit = bp['price']
-                buy_method = f"Bazaar {bp['method']}"
-                if bp['method'] == "Buy Order":
-                    weekly_rate = bp['hourly_instasells'] * 168
-                    # Use the total count (as given in the recipe) for fill time calculation
-                    ingredient_required = count
-                    individual_fill_time = calculate_sell_fill_time(ingredient_required, weekly_rate)
-                else:  # Instabuy is considered instant
-                    individual_fill_time = 0
-            elif ing_item in auction_prices:
-                cost_per_unit = auction_prices[ing_item]
-                buy_method = "AH BIN (before tax)"
-                individual_fill_time = 0
+            # If sub_recipe has ingredients, process them
+            if sub_recipe.get("ingredients") and not sub_recipe.get("is_circular", False) and not sub_recipe.get("is_base", False):
+                output_count = sub_recipe.get("output_count", 1)
+                new_multiplier = multiplier * count / output_count
+                process_ingredient(sub_recipe, new_multiplier)
             else:
-                return None
-                    
-            total_cost += cost_per_unit * count
-            ingredients.append({
-                "item": ing_item,
-                "total_needed": count,         
-                "per_item": count / output_count,
-                "buy_method": buy_method,
-                "cost_per_unit": cost_per_unit,
-                "fill_time": individual_fill_time,
-                "weekly_rate": weekly_rate
-            })
+                # Base item or circular dependency
+                result[item] += multiplier * count
     
-    # The original overall_buy_fill_time is no longer used for the summary
-    # (we now aggregate total fill times per ingredient in the query function)
-    
-    sell_price = None
-    sell_method = None
-    hourly_volume = None
-    bazaar_item = item_name.replace('-', ':')
-    sell_fill_time = 0
-    weekly_instabuys = None
-    weekly_instasells = None
+    process_ingredient(recipe_tree)
+    return dict(result)
 
-    if bazaar_item in bazaar_prices:
-        bp = bazaar_prices[bazaar_item]
-        sell_price = bp['price']
-        sell_method = f"Bazaar {bp['method']}"
-        if bp['method'] == "Buy Order":
-            weekly_sell_rate = bp['hourly_instasells'] * 168
-            hourly_volume = bp['hourly_instasells']
-            weekly_instasells = weekly_sell_rate
-        else:  # Instabuy
-            weekly_sell_rate = bp['hourly_instabuys'] * 168
-            hourly_volume = bp['hourly_instabuys']
-            weekly_instabuys = weekly_sell_rate
-
-        sell_fill_time = calculate_sell_fill_time(output_count, weekly_sell_rate)
-    elif item_name in auction_prices:
-        raw_price = auction_prices[item_name]
-        sell_price = calculate_bin_tax(raw_price)
-        sell_method = "AH BIN (after tax)"
-        hourly_volume = float('inf')
-        sell_fill_time = 0
+def format_price(price):
+    """Format price for display."""
+    if price >= 1000000000:
+        return f"{price/1000000000:.2f}B coins"
+    elif price >= 1000000:
+        return f"{price/1000000:.2f}M coins"
+    elif price >= 1000:
+        return f"{price/1000:.2f}K coins"
     else:
-        return None
-    
-    crafting_cost_per_item = total_cost / output_count
-    crafting_savings = sell_price - crafting_cost_per_item
-    if crafting_savings <= 0:
-        return None
+        return f"{price:.2f} coins"
 
-    base_profit_per_hour = (3600 / (sell_fill_time)) * crafting_savings if sell_fill_time > 0 else 0
-    max_possible_profit = crafting_savings * hourly_volume
-    profit_per_hour = min(base_profit_per_hour, max_possible_profit)
+def print_flattened_recipe_with_prices(flattened_recipe, bazaar_prices):
+    """Print a flattened recipe with prices from bazaar data."""
+    total_cost = 0
     
-    return {
-        'item': item_name,
-        'profit_per_hour': round(profit_per_hour, 2),
-        'crafting_savings': round(crafting_savings, 2),
-        'sell_fill_time': round(sell_fill_time, 7),
-        'weekly_instabuys': weekly_instabuys,
-        'weekly_instasells': weekly_instasells,
-        'sell_price': round(sell_price, 2),
-        'sell_method': sell_method,
-        'crafting_cost': round(crafting_cost_per_item, 2),
-        'ingredients': ingredients
-    }
-
-# ------------------------------------------------------------------------------
-# Step 3: Query Function (Aggregates Ingredients & Displays Fill Times and Weekly Data)
-# ------------------------------------------------------------------------------
-
-def query_recipe(item_name, recipes, bazaar_prices, auction_prices):
-    details = get_crafting_details(item_name, recipes, bazaar_prices, auction_prices)
-    
-    if details is None:
-        print(f"\nNo crafting details available for '{item_name}'.")
-        bazaar_item = item_name.replace('-', ':')
-        if bazaar_item in bazaar_prices:
-            bp = bazaar_prices[bazaar_item]
-            print(f"Direct Purchase: {item_name} @ {bp['price']:,.1f} coins ({bp['method']})")
-        elif item_name in auction_prices:
-            raw_price = auction_prices[item_name]
-            print(f"Direct Purchase: {item_name} @ {raw_price:,.1f} coins (AH BIN, after tax: {calculate_bin_tax(raw_price):,.1f})")
+    print("\nIngredients with prices:")
+    for item, count in sorted(flattened_recipe.items()):
+        price_info = bazaar_prices.get(item, {})
+        buy_price = price_info.get("buy_price", 0)
+        
+        item_total = buy_price * count
+        total_cost += item_total
+        
+        if count % 1 == 0:  # If it's a whole number
+            count_display = int(count)
         else:
-            print(f"No price data available for '{item_name}'.")
-        return
-
-    # Aggregate ingredient data to compute total fill times per ingredient
-    aggregated = {}
-    for ing in details['ingredients']:
-        key = ing['item']
-        if key not in aggregated:
-            aggregated[key] = {
-                "total_needed": 0,
-                "per_item": ing['per_item'],
-                "buy_method": ing['buy_method'],
-                "cost_per_unit": ing['cost_per_unit'],
-                "weekly_rate": ing.get("weekly_rate")
-            }
-        aggregated[key]["total_needed"] += ing['total_needed']
+            count_display = f"{count:.2f}"
+            
+        price_display = format_price(buy_price)
+        total_display = format_price(item_total)
+        
+        print(f"• {item} x{count_display} - {price_display} each = {total_display}")
     
-    # Calculate total fill time for each aggregated ingredient
-    for item, data in aggregated.items():
-        if data["weekly_rate"] is not None and data["weekly_rate"] > 0:
-            data["total_fill_time"] = data["total_needed"] * (604800 / data["weekly_rate"])
-        else:
-            data["total_fill_time"] = 0
-    
-    # For an overall ingredient fill time, we take the maximum total fill time among ingredients.
-    overall_aggregated_fill_time = max((data["total_fill_time"] for data in aggregated.values()), default=0)
+    print(f"\nEstimated total cost: {format_price(total_cost)}")
+    return total_cost
 
-    print(f"\nCrafting Details for '{details['item']}':")
-    print(f"  Sell Price       : {details['sell_price']:,.1f} coins via {details['sell_method']}")
-    print(f"  Crafting Cost    : {details['crafting_cost']:,.1f} coins")
-    print(f"  Crafting Savings : {details['crafting_savings']:,.1f} coins")
-    if details.get('weekly_instabuys') is not None:
-        print(f"  Instabuys per Week: {details['weekly_instabuys']:.1f}")
-    elif details.get('weekly_instasells') is not None:
-        print(f"  Instasells per Week: {details['weekly_instasells']:.1f}")
-    # Use overall_aggregated_fill_time instead of details['buy_fill_time']
-    print(f"  Time to Make Sale: {overall_aggregated_fill_time:.2f}s to fill ingredient orders, {details['sell_fill_time']:.7f}s sell order fill")
-    print(f"  Profit per Hour  : {details['profit_per_hour']:,.1f} coins (Effective Cycle Time: {overall_aggregated_fill_time + details['sell_fill_time']:.2f}s)")
+def query_recipe_with_prices(item_name, recipes, bazaar_prices, depth=3):
+    """
+    Query and display a recipe with bazaar prices for the specified item.
     
-    print("  Ingredients:")
-    for item, data in aggregated.items():
-        print(f"    - {item}: {data['per_item']:.1f} per final item (total {data['total_needed']:.0f}), {data['buy_method']} @ {data['cost_per_unit']:,.1f} coins each, total fill time: {data['total_fill_time']:.1f} seconds")
-
-# ------------------------------------------------------------------------------
-# Step 4: Main Routine (User Query)
-# ------------------------------------------------------------------------------
+    Args:
+        item_name (str): The name of the item to query
+        recipes (dict): Dictionary of all available recipes
+        bazaar_prices (dict): Dictionary of bazaar prices
+        depth (int): Maximum recursion depth for recipe calculation
+    """
+    print(f"\nRecipe for: {item_name}")
+    
+    if item_name not in recipes:
+        print(f"No recipe found for {item_name}")
+        return {}
+    
+    # Filter out recipes where the item is in its own recipe (circular)
+    valid_recipes = [r for r in recipes[item_name] if is_valid_recipe(r, item_name)]
+    
+    if not valid_recipes:
+        print(f"No valid recipe found for {item_name} (may be circular)")
+        return {}
+    
+    # Get direct price from bazaar if available
+    if item_name in bazaar_prices:
+        direct_price = bazaar_prices[item_name].get("buy_price", 0)
+        print(f"Direct purchase price: {format_price(direct_price)}")
+    
+    recipe_tree = get_recipe_tree(item_name, recipes, max_depth=depth)
+    flattened = flatten_recipe(recipe_tree)
+    total_cost = print_flattened_recipe_with_prices(flattened, bazaar_prices)
+    
+    # Compare with direct purchase if available
+    if item_name in bazaar_prices:
+        direct_price = bazaar_prices[item_name].get("buy_price", 0)
+        if direct_price > 0:
+            savings = direct_price - total_cost
+            if savings > 0:
+                print(f"\nSavings by crafting: {format_price(savings)} ({(savings/direct_price)*100:.2f}%)")
+            else:
+                print(f"\nCheaper to buy directly by: {format_price(-savings)} ({(-savings/direct_price)*100:.2f}%)")
+    
+    return flattened
 
 if __name__ == "__main__":
     recipes = load_recipes("dependencies/items")
     bazaar_prices = fetch_all_bazaar_prices()
-    auction_prices = fetch_lbin_prices()
     
-    print("Welcome to the Skyblock Crafting Query Tool!")
-    print("Type the item name you want to query (or 'exit' to quit).")
-    while True:
-        item = input("\nEnter item name: ").strip()
-        if item.lower() in ["exit", "quit"]:
-            print("Exiting the query tool. Goodbye!")
-            break
-        query_recipe(item, recipes, bazaar_prices, auction_prices)
+    # Example usage
+    item_to_query = input("Enter item name to query: ")
+    flattened_recipe = query_recipe_with_prices(item_to_query, recipes, bazaar_prices, depth=3)

@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+
+[variables]
+RUST_LOG = "info"
+RUSTFLAGS = "-C target-feature=+crt-static"

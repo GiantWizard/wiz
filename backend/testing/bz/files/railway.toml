@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+buildCommand = "go build -o bazaar-tracker main.go"
+
+[deploy]
+startCommand = "./start.sh"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+
+[deploy.healthcheck]
+path = "/"
+interval = 10
+timeout = 5
+retries = 5

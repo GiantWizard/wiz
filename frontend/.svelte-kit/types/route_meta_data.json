@@ -1,0 +1,7 @@
+{
+	"/": [],
+	"/bazaaritems": [],
+	"/bazaaritems/[item]": [
+		"src/routes/bazaaritems/[item]/+page.ts"
+	]
+}

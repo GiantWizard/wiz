@@ -1,0 +1,13 @@
+[package]
+name = "rust-railway-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.6.18"
+tokio = { version = "1.28.2", features = ["full"] }
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = "1.0.96"
+chrono = "0.4.26"
+# Use reqwest with rustls instead of OpenSSL
+reqwest = { version = "0.11.18", features = ["json", "rustls-tls"], default-features = false }
