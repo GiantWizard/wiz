@@ -1,5 +1,9 @@
 <script lang="ts">
+<<<<<<< HEAD
   import { onMount, afterUpdate, onDestroy } from 'svelte';
+=======
+  import { onMount } from 'svelte';
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
 
   // --- Type Definitions ---
   interface Tree {
@@ -26,13 +30,21 @@
 
   // Toggling sub-breakdown cost info
   let openDropdowns: Record<string, boolean> = {};
+<<<<<<< HEAD
+=======
+
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   function toggleDropdown(id: string): void {
     openDropdowns[id] = !openDropdowns[id];
     // Force reactivity
     openDropdowns = { ...openDropdowns };
   }
 
+<<<<<<< HEAD
   // Utility functions
+=======
+  // Converts "FINE_PERIDOT_GEM" -> "Fine Peridot Gem"
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   function toTitleCase(str: string): string {
     return str
       .replace(/_/g, ' ')
@@ -40,6 +52,10 @@
       .replace(/\b(\w)/g, (_match, char) => char.toUpperCase());
   }
 
+<<<<<<< HEAD
+=======
+  // Formats numbers with default 1 decimal place
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   function formatNumber(num: number, decimals: number = 1): string {
     if (num === null || num === undefined || isNaN(num)) return '0';
     const formatted = num.toLocaleString('en-US', {
@@ -49,6 +65,10 @@
     return formatted.replace(/\.0$/, '');
   }
 
+<<<<<<< HEAD
+=======
+  // Aggregates identical ingredients at the same level
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   function aggregateIngredients(ingredients: Ingredient[]): Ingredient[] {
     const aggregated: Record<string, Ingredient> = {};
     ingredients.forEach((ing) => {
@@ -61,6 +81,7 @@
     return Object.values(aggregated);
   }
 
+<<<<<<< HEAD
   // Reactive aggregated ingredients
   let aggregatedIngredients: Ingredient[] = [];
   $: aggregatedIngredients = tree.ingredients
@@ -110,6 +131,55 @@
     } else {
       accentTop[i] = lineEnd;
       accentHeight[i] = lineStart - lineEnd;
+=======
+  // -----------------------------
+  // DYNAMIC POINTER & ACCENT
+  // -----------------------------
+  let containerRef: HTMLDivElement | null = null;
+  let childImageRef: HTMLImageElement | null = null;
+  const pointerWidth: number = 34;
+
+  // Pointer coordinates
+  let pointerLeft: number = 0;
+  let pointerTop: number = 0;
+  const offsetX: number = 15;
+  const offsetY: number = -15;
+
+  // Accent line coordinates
+  let accentLeft: number = 0;
+  let accentTop: number = 0;
+  let accentWidth: number = pointerWidth;
+  let accentHeight: number = 0;
+
+  function updatePointer(): void {
+    if (parentImageRef && childImageRef && containerRef) {
+      const containerRect = containerRef.getBoundingClientRect();
+      const parentRect = parentImageRef.getBoundingClientRect();
+      const childRect = childImageRef.getBoundingClientRect();
+
+      // Parent center in container coordinates
+      const parentCenterX = (parentRect.left + parentRect.width / 2) - containerRect.left;
+      const parentCenterY = (parentRect.top + parentRect.height / 2) - containerRect.top;
+
+      // Pointer center (aligned with child's center + offset)
+      const childCenterY = (childRect.top + childRect.height / 2) - containerRect.top;
+      pointerLeft = parentCenterX + offsetX;
+      pointerTop = childCenterY + offsetY;
+
+      // Accent line: from (parentCenterY + 18) down to pointerTop
+      accentLeft = parentCenterX - 2;
+      accentWidth = pointerWidth / 10.5;
+
+      const lineStart = parentCenterY + 18;
+      const lineEnd = pointerTop;
+      if (lineEnd >= lineStart) {
+        accentTop = lineStart;
+        accentHeight = lineEnd - lineStart;
+      } else {
+        accentTop = lineEnd;
+        accentHeight = lineStart - lineEnd;
+      }
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
     }
     accentWidth[i] = defaultAccentWidth;
   }
@@ -134,6 +204,7 @@
     updateAllPointers();
   });
 
+<<<<<<< HEAD
   // --- Custom actions to register DOM references ---
 
   // Registers container div for ingredient at index "index"
@@ -167,6 +238,15 @@
     position: relative;
   }
 
+=======
+  // Declare the aggregatedIngredients variable before using it reactively
+  let aggregatedIngredients: Ingredient[] = [];
+  $: aggregatedIngredients = tree.ingredients ? aggregateIngredients(tree.ingredients) : [];
+</script>
+
+<style>
+  /* Pointer styling */
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   .ingredient-pointer {
     position: absolute;
     width: 34px;
@@ -181,24 +261,50 @@
     --_g: /var(--b) var(--b) no-repeat radial-gradient(circle at 50% 50%, #000 97%, #0000);
     --_h: /var(--b) var(--b) no-repeat linear-gradient(90deg, #000 100%, #0000);
     mask: top var(--_g),
+<<<<<<< HEAD
           calc(50% + 50%*sin(var(--a)))
           calc(50% - 50%*cos(var(--a))) var(--_g),
           linear-gradient(#0000 0 0) content-box intersect,
           conic-gradient(#000 var(--a), #0000 0),
           right 0 top 50% var(--_h);
     z-index: 2;
+=======
+      calc(50% + 50%*sin(var(--a)))
+      calc(50% - 50%*cos(var(--a))) var(--_g),
+      linear-gradient(#0000 0 0) content-box intersect,
+      conic-gradient(#000 var(--a), #0000 0),
+      right 0 top 50% var(--_h);
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
     transform: rotate(180deg);
+    z-index: 2; /* Ensure pointer is on top */
   }
 
+  /* Solid accent line behind pointer, same color */
+  .ingredient-accent {
+    position: absolute;
+    background-color: #C8ACD6;
+    z-index: 1; /* behind pointer */
+  }
+
+<<<<<<< HEAD
   .ingredient-accent {
     position: absolute;
     background-color: #C8ACD6;
     z-index: 1;
+=======
+  li.ingredient-item {
+    position: relative;
+    min-height: 2.25rem;
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   }
 </style>
 
 <div>
+<<<<<<< HEAD
   <!-- Top-level header -->
+=======
+  <!-- If top-level item, show header -->
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
   {#if tree.item && !tree.note && isTopLevel}
     <div class="mb-4">
       <div class="flex items-center gap-2 ml-[-1.5rem]">
@@ -215,15 +321,40 @@
     </div>
   {/if}
 
+<<<<<<< HEAD
   <!-- Render aggregated ingredients -->
   {#if aggregatedIngredients.length > 0}
     {#if depth === 0}
+=======
+  <!-- List ingredients if present -->
+  {#if aggregatedIngredients.length > 0}
+    {#if depth === 0}
+      <!-- Shift top-level group left by 20px -->
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
       <div style="transform: translateX(-20px) translateY(-5px);">
         <ul class="space-y-6">
           {#each aggregatedIngredients as ing, i}
             <li class="pl-8 ingredient-item">
+<<<<<<< HEAD
               <div class="pointer-container" use:registerContainer={i}>
                 <!-- Accent line -->
+=======
+              <div bind:this={containerRef} style="position: relative;">
+                <!-- Render accent line only on the last (lowest) ingredient -->
+                {#if i === aggregatedIngredients.length - 1}
+                  <div
+                    class="ingredient-accent"
+                    style="
+                      left: {accentLeft}px;
+                      top: {accentTop}px;
+                      width: {accentWidth}px;
+                      height: {accentHeight}px;
+                    "
+                  ></div>
+                {/if}
+
+                <!-- Pointer (each li still shows its own pointer) -->
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
                 <div
                   class="ingredient-accent"
                   style="left: {accentLeft[i]}px; top: {accentTop[i]}px; width: {accentWidth[i]}px; height: {accentHeight[i]}px;"
@@ -286,7 +417,10 @@
 
               {#if ing.sub_breakdown && !ing.sub_breakdown.note}
                 <div class="mt-2">
+<<<<<<< HEAD
                   <!-- Recursive render; pass this ingredient’s image as the parent's ref -->
+=======
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
                   <svelte:self
                     tree={ing.sub_breakdown}
                     parentQuantity={ing.total_needed * parentQuantity}
@@ -305,8 +439,24 @@
       <ul class="space-y-6">
         {#each aggregatedIngredients as ing, i}
           <li class="pl-8 ingredient-item">
+<<<<<<< HEAD
             <div class="pointer-container" use:registerContainer={i}>
               <!-- Accent line -->
+=======
+            <div bind:this={containerRef} style="position: relative;">
+              {#if i === aggregatedIngredients.length - 1}
+                <div
+                  class="ingredient-accent"
+                  style="
+                    left: {accentLeft}px;
+                    top: {accentTop}px;
+                    width: {accentWidth}px;
+                    height: {accentHeight}px;
+                  "
+                ></div>
+              {/if}
+
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
               <div
                 class="ingredient-accent"
                 style="left: {accentLeft[i]}px; top: {accentTop[i]}px; width: {accentWidth[i]}px; height: {accentHeight[i]}px;"

@@ -61,7 +61,11 @@ Update description in landing.
 
 2/16/2025
 
+<<<<<<< HEAD
 Key changes/fixes:
+=======
+Key changes/fixes
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
 
 Improved item detailed view UI.
 Adding pointers to subitems in recipe tree.
@@ -80,8 +84,11 @@ Update description in landing.
 
 2/17/2025
 
+<<<<<<< HEAD
 Key changes/fixes:
 
+=======
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
 Fixed arc pointers in recipe tree.
 Swaped position of multiplier and image.
 Standardized space between top level item and its image and subitems and their images/multipler.
@@ -97,19 +104,27 @@ Update description in landing.
 
 2/18/2025
 
+<<<<<<< HEAD
 Key changes/fixes:
 
+=======
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
 Finished recipe tree component.
 Updated landing page.
 
 TODO:
 
 Add graphs for processing in recipe tree.
+<<<<<<< HEAD
 *FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
+=======
+Return more information from backend*FIX LOGIC WHEN $x^\frac{x}{2240}, x < 1$.
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee
 Main accent line should end at the last pointer.
 Manage export files.
 Update export engine.
 Factor in potential inventory cycles.
+<<<<<<< HEAD
 
 2/22/2025
 
@@ -126,3 +141,6 @@ Manage export files.
 Update export engine.
 Factor in potential inventory cycles.
 Organize graphs.
+=======
+Give basic bazaar overview of each item in /bazaari
+>>>>>>> fce51939aafc78a464aa367c4a5df48dc99280ee

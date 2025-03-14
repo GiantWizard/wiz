@@ -1,8 +1,5 @@
-# Ignore everything by default
 **
-
-# Allow only essential files:
 !Cargo.toml
 !Cargo.lock
 !railway.toml
-!src/main.rs
+!src/**
