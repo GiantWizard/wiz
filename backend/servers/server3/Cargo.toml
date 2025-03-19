@@ -1,0 +1,13 @@
+[package]
+name = "server3"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.6"
+chrono = "0.4"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+
+[deploy]
+startCommand = "python3 install_megacmd.py"

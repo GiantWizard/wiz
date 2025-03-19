@@ -1,0 +1,8 @@
+[project]
+name = "server3"
+
+[build]
+command = "cargo build --release"
+
+[deploy]
+startCommand = "python3 install_megacmd.py"

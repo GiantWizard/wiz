@@ -1,0 +1,12 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cargo build --release"
+
+[deploy]
+startCommand = "/app/mega_exporter"
+restartPolicyType = "on_failure"
+
+[variables]
+RUST_LOG = "info"
+MEGA_EMAIL = "${MEGA_EMAIL}"
+MEGA_PASSWORD = "${MEGA_PASSWORD}"
