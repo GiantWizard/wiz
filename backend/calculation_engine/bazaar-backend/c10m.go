@@ -236,9 +236,7 @@ func getBestC10M(
 
 	if calcErr != nil {
 		dlog("  [%s] Error during C10M calculation: %v", itemID, calcErr)
-		if err == nil {
-			err = calcErr
-		} // Preserve the first error encountered
+		err = calcErr // Preserve the first error encountered
 		// Fall through to comparison logic, Inf values will be handled
 	}
 

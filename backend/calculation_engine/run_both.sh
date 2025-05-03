@@ -4,77 +4,58 @@
 BACKEND_DIR="bazaar-backend"
 FRONTEND_DIR="bazaar-frontend"
 
-# === Script Logic ===
+# === Helpers ===
+log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"; }
+die() { echo "ERROR: $1"; exit 1; }
 
-# Function to print messages
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
-}
-
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# --- Start Backend ---
-log "Navigating to backend directory: '$BACKEND_DIR'"
-cd "$BACKEND_DIR" || { echo "ERROR: Could not cd into '$BACKEND_DIR'"; exit 1; }
-
-log "Starting Go backend server in the background..."
-# Start the Go process in its own process group (using setsid if available, or just &)
-# Using setsid ensures kill -- targets the whole group. Fallback to just & if setsid isn't common on macOS.
-# UPDATE: 'kill -- -PID' on macOS should target the process group created by '&' itself.
-go run . &
-BACKEND_PID=$! # Get the Process ID (PID) of the background Go process
-log "Go backend started with PID: $BACKEND_PID"
-
-cd .. # Go back to the script's directory
-log "Navigated back to parent directory."
-
-
-# --- Cleanup Function ---
-# This function will be called when the script exits or receives signals
+# === Cleanup ===
 cleanup() {
-    log "Received exit signal. Cleaning up..."
-    log "Attempting to stop Go backend (PID: $BACKEND_PID)..."
-
-    # Try killing the process group associated with the PID
-    # The '--' prevents kill from interpreting a negative PID as a signal number
-    # Adding 'pgid' option to ps to verify the process group later if needed
-    if ps -p $BACKEND_PID -o pgid= | grep -q '[0-9]'; then # Check if process exists
-        kill -- -$BACKEND_PID 2>/dev/null
-        EXIT_STATUS=$?
-        if [ $EXIT_STATUS -eq 0 ]; then
-            log "Sent kill signal to process group $BACKEND_PID."
-            # Optional: wait a moment for cleanup
-            sleep 1
-        else
-            # If killing group failed, try killing just the PID directly
-            log "Killing process group failed (status $EXIT_STATUS). Trying PID directly..."
-            kill $BACKEND_PID 2>/dev/null || log "Process $BACKEND_PID might have already stopped."
-        fi
-    else
-      log "Go process $BACKEND_PID not found."
+    log "Cleaning up…"
+    if [ -n "$FRONTEND_PID" ] && ps -p $FRONTEND_PID &>/dev/null; then
+        log " ➔ Stopping frontend (PID $FRONTEND_PID)"
+        kill $FRONTEND_PID || true
     fi
-    log "Cleanup finished."
+    if [ -n "$BACKEND_PID" ] && ps -p $BACKEND_PID &>/dev/null; then
+        log " ➔ Stopping backend (PID $BACKEND_PID)"
+        if command -v setsid &>/dev/null; then
+            kill -- -$BACKEND_PID 2>/dev/null || kill $BACKEND_PID || true
+        else
+            kill $BACKEND_PID || true
+        fi
+    fi
+    log "Done."
 }
-
-# --- Trap Signals ---
-# Execute the 'cleanup' function when the script receives:
-# EXIT: Normal script termination
-# SIGINT: Interrupt signal (usually Ctrl+C)
-# SIGTERM: Termination signal
 trap cleanup EXIT SIGINT SIGTERM
 
+# --- Start Backend ---
+log "👉 Starting Go backend…"
+pushd "$BACKEND_DIR" >/dev/null
 
-# --- Start Frontend ---
-log "Navigating to frontend directory: '$FRONTEND_DIR'"
-cd "$FRONTEND_DIR" || { echo "ERROR: Could not cd into '$FRONTEND_DIR'"; exit 1; }
+if command -v setsid &>/dev/null; then
+    setsid go run . &
+else
+    go run . &
+fi
+BACKEND_PID=$!
+popd >/dev/null
+log "   Backend PID: $BACKEND_PID"
 
-log "Starting SvelteKit frontend dev server (foreground)..."
-# Run the Svelte dev server in the foreground.
-# This command will block until it's terminated (e.g., by Ctrl+C).
-npm run dev
+# --- Prepare & Start Frontend ---
+pushd "$FRONTEND_DIR" >/dev/null
 
-# --- Script End ---
-# When 'npm run dev' finishes (e.g., user presses Ctrl+C), the script reaches its end.
-# The 'trap cleanup EXIT' ensures the cleanup function runs automatically here too.
-log "Frontend process finished. Script exiting."
+# Only install if package.json exists and node_modules is missing
+if [ -f package.json ] && [ ! -d node_modules ]; then
+    log "➔ Installing frontend dependencies…"
+    npm install
+fi
+
+log "👉 Starting Svelte frontend…"
+npm run dev &
+FRONTEND_PID=$!
+popd >/dev/null
+log "   Frontend PID: $FRONTEND_PID"
+
+# --- Wait for Both ---
+wait $BACKEND_PID $FRONTEND_PID

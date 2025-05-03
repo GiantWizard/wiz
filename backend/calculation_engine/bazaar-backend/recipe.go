@@ -290,9 +290,7 @@ func expandItem(
 			subIngredients, errExpand := expandItem(ingName, totalIngAmtNeeded, currentPath, apiResp, metricsMap, itemFilesDir)
 			if errExpand != nil {
 				dlog("ERROR: Critical error sub-expanding '%s' for '%s': %v.", ingName, itemName, errExpand)
-				if firstExpansionError == nil {
-					firstExpansionError = fmt.Errorf("failed expanding ingredient '%s' for '%s': %w", ingName, itemName, errExpand)
-				}
+				firstExpansionError = fmt.Errorf("failed expanding ingredient '%s' for '%s': %w", ingName, itemName, errExpand)
 				// Propagate critical error immediately
 				return nil, firstExpansionError
 			}
