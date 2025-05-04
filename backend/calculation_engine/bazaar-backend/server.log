@@ -1,3 +1,0 @@
-2025/05/03 12:14:27 ERROR: fetch API GET (https://api.hypixel.net/v2/skyblock/bazaar): Get "https://api.hypixel.net/v2/skyblock/bazaar": EOF
-2025/05/03 12:14:27 WARNING: Failed to fetch Bazaar API data: fetch API GET (https://api.hypixel.net/v2/skyblock/bazaar): Get "https://api.hypixel.net/v2/skyblock/bazaar": EOF
-2025/05/03 12:14:27 ▶ Listening on :8080

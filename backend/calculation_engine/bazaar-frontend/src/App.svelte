@@ -1,172 +1,176 @@
+<!-- This is NOT a complete HTML file, but shows the Svelte component changes -->
+<!-- Apply these changes inside your actual .svelte file -->
+
 <script>
   import { onMount } from 'svelte';
 
-  let item = 'DIAMOND';
-  let qty = 1;
+  let item = 'DIAMOND'; // Default item
+  let qty = 1;          // Default quantity
   let result = null;
   let error = null;
+  let loading = false;
 
   async function calculate() {
-    console.log('🔍 calculate()', { item, qty });
     error = null;
     result = null;
-
-    // MUST call /api/fill so Vite will proxy to Go
-    const params = new URLSearchParams({ item, qty: String(qty) });
+    loading = true; // Indicate loading state
+    const params = new URLSearchParams({ item: item.toUpperCase().trim(), qty: String(qty) });
     try {
+      console.log(`Fetching: /api/fill?${params}`); // Log API call
       const res = await fetch(`/api/fill?${params}`);
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+          const errorText = await res.text();
+          console.error(`API Error ${res.status}: ${errorText}`);
+          throw new Error(`API Error ${res.status}: ${errorText || res.statusText}`);
+      }
       result = await res.json();
+      console.log("API Result:", result); // Log successful result
     } catch (e) {
-      error = e.message;
+      console.error("Fetch/Calculation Error:", e);
+      error = e.message || 'An unknown error occurred.';
+    } finally {
+      loading = false; // Turn off loading state
     }
   }
 
+  // Calculate on initial mount
   onMount(calculate);
+
+  // Re-calculate when button clicked
+  function handleClick() {
+      if (!loading) { // Prevent multiple clicks while loading
+          calculate();
+      }
+  }
+
+  // Helper to format numbers, handling potential NaN/Infinity from Go backend
+  function formatNum(num, digits = 2) {
+      if (num === null || num === undefined || isNaN(num)) return 'N/A';
+      if (!isFinite(num)) return num > 0 ? 'Infinite' : '-Infinite';
+      return num.toFixed(digits);
+  }
+
+  function formatTime(num) {
+       if (num === null || num === undefined || isNaN(num)) return 'N/A';
+       if (!isFinite(num)) return num > 0 ? 'Infinite' : 'N/A (-Inf)'; // Assuming negative inf time isn't logical
+       if (num < 0) return 'N/A (<0)';
+       if (num === 0) return '0.0s';
+       if (num < 60) return num.toFixed(1) + 's';
+       let mins = num / 60;
+       if (mins < 60) return mins.toFixed(1) + 'm';
+       let hours = mins / 60;
+       if (hours < 24) return hours.toFixed(1) + 'h';
+       let days = hours / 24;
+       return days.toFixed(1) + 'd';
+  }
 </script>
 
 <main>
   <h1>Bazaar Fill‑Time Dashboard</h1>
 
   <div class="controls">
-    <label>
-      Item ID:
-      <input bind:value={item} placeholder="e.g. DIAMOND" />
+    <label>Item ID:
+      <input bind:value={item} placeholder="e.g. DIAMOND" disabled={loading} />
     </label>
-    <label>
-      Quantity:
-      <input type="number" min="0" bind:value={qty} />
+    <label>Quantity:
+      <input type="number" min="1" step="1" bind:value={qty} disabled={loading} />
     </label>
-    <button on:click={calculate}>Calculate</button>
+    <button on:click={handleClick} disabled={loading}>
+      {#if loading}Calculating...{:else}Calculate{/if}
+    </button>
   </div>
 
   {#if error}
     <p class="error">Error: {error}</p>
-  {:else if result}
-    <div class="results">
-      <h2>Recipe Breakdown</h2>
+  {/if}
+
+  {#if result && !error}
+      {#if result.recipe && result.recipe.length > 0}
+      <div class="results">
+      <h2>Recipe Breakdown for {qty} x {item}</h2>
       <div class="scroll">
-        <table>
+          <table>
           <thead>
-            <tr>
-              <th>Item</th>
-              <th>Quantity</th>
-              <th>Instasell Fill (s)</th>
-              <th>Buy‑Order Fill (s)</th>
-              <th>RR</th>
-            </tr>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Cost/Unit</th>
+                <th>Total Cost</th>
+                <th>Cost Src</th> <!-- <<< MODIFICATION: Added Header -->
+                <th>InstaSell Time</th>
+                <th>Buy Order Time</th>
+                <th>RR</th>
+              </tr>
           </thead>
           <tbody>
-            {#each result.recipe as ing}
+              {#each result.recipe as ing}
               <tr>
-                <td>{ing.name}</td>
-                <td>{ing.qty}</td>
-                <td>{ing.instasell_fill_time.toFixed(2)}</td>
-                <td>{ing.buy_order_fill_time.toFixed(2)}</td>
-                <td>{ing.rr}</td>
+                  <td>{ing.name}</td>
+                  <td>{formatNum(ing.qty, 0)}</td>
+                  <td>{formatNum(ing.cost_per_unit, 2)}</td>
+                  <td>{formatNum(ing.total_cost, 2)}</td>
+                  <td>{ing.price_source}</td> <!-- <<< MODIFICATION: Added Data Cell -->
+                  <td>{formatTime(ing.instasell_fill_time)}</td>
+                  <td>{formatTime(ing.buy_order_fill_time)}</td>
+                  <td>{formatNum(ing.rr, 2)}</td>
               </tr>
-            {/each}
+              {/each}
           </tbody>
-        </table>
+          </table>
       </div>
-      <div class="summary">
-        <p><strong>Slowest ingredient:</strong> {result.slowest_ingredient} (x{result.slowest_ingredient_qty})</p>
-        <p><strong>Total fill time:</strong> {result.slowest_fill_time.toFixed(2)} s</p>
+
+      <!-- Profit and Fill Time Summary sections remain the same -->
+      <div class="summary-section">
+          <h3>Profit Summary</h3>
+          <p><strong>Total Base Cost:</strong> {formatNum(result.total_base_cost, 2)}</p>
+          <p><strong>Est. Sell Price (Unit):</strong> {formatNum(result.top_sell_price, 2)}</p>
+          <p><strong>Est. Total Revenue:</strong> {formatNum(result.total_revenue, 2)}</p>
+          <p><strong>Est. Profit per Unit:</strong> {formatNum(result.profit_per_unit, 2)}</p>
+          <p><strong>Est. Total Profit:</strong> {formatNum(result.total_profit, 2)}</p>
       </div>
-    </div>
+
+      <div class="summary-section">
+          <h3>Fill Time Summary</h3>
+           {#if result.slowest_ingredient}
+               <p><strong>Slowest Ingredient (Buy Order):</strong> {result.slowest_ingredient} (x{formatNum(result.slowest_ingredient_qty, 0)})</p>
+               <p><strong>Est. Total Buy Order Fill Time:</strong> {formatTime(result.slowest_fill_time)}</p>
+           {:else if result.recipe.length > 0}
+               <p>Est. Total Buy Order Fill Time: 0.0s (or N/A if inputs invalid)</p>
+           {/if}
+      </div>
+      </div>
+      {:else}
+          <p>No recipe breakdown available for {item}. It might be a base item or expansion failed.</p>
+      {/if}
+  {:else if !loading && !error}
+      <p>No results yet.</p>
   {/if}
 </main>
 
 <style>
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    background: #121212;
-    color: #e0e0e0;
-    font-family: sans-serif;
-  }
-
-  main {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 1.5rem;
-    background: #1e1e1e;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-  }
-
-  h1, h2 {
-    text-align: center;
-    color: #ffffff;
-  }
-
-  .controls {
-    display: grid;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.9rem;
-  }
-
-  input {
-    padding: 0.5rem;
-    border: 1px solid #555;
-    border-radius: 4px;
-    background: #2a2a2a;
-    color: #fff;
-    font-size: 1rem;
-  }
-
-  button {
-    padding: 0.6rem 1.2rem;
-    background: #0070f3;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  button:hover {
-    background: #005bb5;
-  }
-
-  .results .scroll {
-    overflow-x: auto;
-    margin-bottom: 1rem;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th, td {
-    padding: 0.75rem;
-    border: 1px solid #444;
-    text-align: left;
-  }
-
-  th {
-    background: #2c2c2c;
-  }
-
-  tr:nth-child(even) {
-    background: #1a1a1a;
-  }
-
-  .summary p {
-    font-size: 1rem;
-    margin: 0.5rem 0;
-  }
-
-  .error {
-    color: #ff5555;
-    font-weight: bold;
-    text-align: center;
-  }
+  /* Styles remain the same as before */
+  main { max-width: 950px; margin: 2rem auto; padding: 1.5rem; background: #1e1e1e; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+  h1, h2, h3 { text-align: center; color: #fff; margin-bottom: 1rem;}
+  h2 { margin-top: 2rem; }
+  h3 { margin-top: 1.5rem; border-bottom: 1px solid #444; padding-bottom: 0.5rem;}
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; align-items: end; }
+  label { display: flex; flex-direction: column; font-size: 0.9rem; color: #bbb;}
+  input { padding: 0.6rem; border: 1px solid #555; border-radius: 4px; background: #2a2a2a; color: #fff; font-size: 1rem; margin-top: 0.25rem; }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  button { padding: 0.7rem 1.2rem; background: #0070f3; color: #fff; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+  button:hover:not(:disabled) { background: #005bb5; }
+  button:disabled { background: #555; cursor: not-allowed; }
+  .results { margin-top: 2rem; }
+  .scroll { overflow-x: auto; margin-bottom: 1rem; border: 1px solid #333; border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.75rem 1rem; border: 1px solid #444; text-align: left; white-space: nowrap; }
+  thead th { background: #2c2c2c; position: sticky; top: 0; z-index: 1; }
+  tbody tr:nth-child(even) { background: #242424; }
+  tbody tr:hover { background: #303030; }
+  .summary-section { background: #2a2a2a; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 4px; border: 1px solid #333; }
+  .summary-section p { margin: 0.4rem 0; font-size: 1rem; }
+  .summary-section strong { color: #ccc; min-width: 150px; display: inline-block;}
+  .error { color: #ff6b6b; font-weight: bold; text-align: center; background: #442222; padding: 1rem; border-radius: 4px; border: 1px solid #ff6b6b; }
 </style>
