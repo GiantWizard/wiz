@@ -36,19 +36,19 @@ type Ingredient struct {
 	RR               float64 `json:"rr"`                  // From C10M/fill time calc context, sanitized
 }
 
-// <<< MODIFICATION: Added TopLevelInstasellTime to FillResponse >>>
+// <<< MODIFICATION: Added TopLevelInstasellTime; REMOVED TopLevelSellOrderTime >>>
 type FillResponse struct {
 	Recipe                []Ingredient `json:"recipe"` // This will be sorted alphabetically
 	SlowestIngredient     string       `json:"slowest_ingredient"`
 	SlowestIngredientQty  float64      `json:"slowest_ingredient_qty"`
-	SlowestFillTime       float64      `json:"slowest_fill_time"`         // Slowest Buy Order Time (Sanitized)
-	TopLevelInstasellTime float64      `json:"top_level_instasell_time"`  // <<< ADDED: Instasell for final item (Sanitized) >>>
-	TopLevelSellOrderTime float64      `json:"top_level_sell_order_time"` // Sell order for final item (Sanitized)
-	TotalBaseCost         float64      `json:"total_base_cost"`           // Sum of simple associated costs (Sanitized)
-	TopSellPrice          float64      `json:"top_sell_price"`            // Instasell price of final item (Sanitized)
-	TotalRevenue          float64      `json:"total_revenue"`             // topSell * qty (Sanitized)
-	ProfitPerUnit         float64      `json:"profit_per_unit"`           // Based on simple associated costs (Sanitized)
-	TotalProfit           float64      `json:"total_profit"`              // Based on simple associated costs (Sanitized)
+	SlowestFillTime       float64      `json:"slowest_fill_time"`        // Slowest Buy Order Time (Sanitized)
+	TopLevelInstasellTime float64      `json:"top_level_instasell_time"` // <<< ADDED: Instasell for final item (Sanitized) >>>
+	// TopLevelSellOrderTime float64      `json:"top_level_sell_order_time"` // <<< REMOVED >>>
+	TotalBaseCost float64 `json:"total_base_cost"` // Sum of simple associated costs (Sanitized)
+	TopSellPrice  float64 `json:"top_sell_price"`  // Instasell price of final item (Sanitized)
+	TotalRevenue  float64 `json:"total_revenue"`   // topSell * qty (Sanitized)
+	ProfitPerUnit float64 `json:"profit_per_unit"` // Based on simple associated costs (Sanitized)
+	TotalProfit   float64 `json:"total_profit"`    // Based on simple associated costs (Sanitized)
 }
 
 // --- Entry point ---
@@ -84,43 +84,9 @@ func sanitizeFloat(f float64) float64 {
 	return f
 }
 
-// --- ADDED: calculateSellOrderFillTime function ---
-// (Include necessary struct definitions like ProductMetrics if not elsewhere)
-// Estimates the time to fill a SELL order (placed by user) using metrics data.
-func calculateSellOrderFillTime(itemID string, quantity float64, metricsData ProductMetrics) (fillTime float64, err error) {
-	normalizedItemID := BAZAAR_ID(itemID)                                                                     // Assumes BAZAAR_ID defined elsewhere
-	dlog("Calculating Sell Order Fill Time for %.1f x %s using provided metrics", quantity, normalizedItemID) // Assumes dlog defined elsewhere
-	fillTime = math.NaN()
-	if quantity <= 0 {
-		dlog("  [%s] Qty <= 0, returning 0 time.", normalizedItemID)
-		return 0, nil
-	}
-	pm := metricsData
-	dlog("  [%s] Using Metrics: SellSize=%.2f, SellFreq=%.2f, OrderSize=%.2f, OrderFreq=%.2f", normalizedItemID, pm.SellSize, pm.SellFrequency, pm.OrderSize, pm.OrderFrequency)
-	osz := math.Max(0, pm.OrderSize)
-	of := math.Max(0, pm.OrderFrequency)
-	demandRate := osz * of
-	dlog("  [%s] Demand Rate: %.4f items/unit_time", normalizedItemID, demandRate)
-	if demandRate <= 0 {
-		dlog("  [%s] Demand Rate is 0. Sell order fill time considered Infinite.", normalizedItemID)
-		fillTime = math.Inf(1)
-		err = fmt.Errorf("demand rate <= 0 for %s", normalizedItemID)
-	} else {
-		fillTime = quantity / demandRate
-		dlog("  [%s] Est. Sell Order Fill Time = Qty / DemandRate = %.1f / %.4f = %.4f seconds", normalizedItemID, quantity, demandRate, fillTime)
-	}
-	if math.IsNaN(fillTime) || math.IsInf(fillTime, -1) || fillTime < 0 {
-		dlog("  [%s] WARN: Final sell order fill time validation failed (%.4f). Setting to Inf.", normalizedItemID, fillTime)
-		fillTime = math.Inf(1)
-		if err == nil {
-			err = fmt.Errorf("invalid sell order time for %s", normalizedItemID)
-		}
-	}
-	dlog("  [%s] Returning Sell Order Fill Time: %.4f seconds", normalizedItemID, fillTime)
-	return fillTime, err
-}
+// <<< REMOVED: calculateSellOrderFillTime function definition >>>
 
-// ── Handler (Moved Instasell to Summary) ─────────────────────────────────────
+// ── Handler (Reverted to remove Top-Level Sell Order Time calculation) ───────
 func fillHandler(w http.ResponseWriter, r *http.Request) {
 	handlerID := fmt.Sprintf("[%d]", time.Now().UnixNano())
 	log.Printf("%s Handler Start: %s %s", handlerID, r.Method, r.URL.String())
@@ -134,7 +100,7 @@ func fillHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s Error: Missing item", handlerID)
 		return
 	}
-	item := BAZAAR_ID(itemQuery) // Assumes BAZAAR_ID defined in utils.go
+	item := BAZAAR_ID(itemQuery) // Assumes BAZAAR_ID defined elsewhere
 	qty, err := strconv.ParseFloat(qtyStr, 64)
 	if err != nil || qty <= 0 {
 		http.Error(w, "invalid qty parameter", http.StatusBadRequest)
@@ -232,8 +198,6 @@ func fillHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("%s     Buy Order Fill Time: %.2f", handlerID, buyTime)
 
-		// <<< REMOVED: Instasell calculation for individual ingredients >>>
-
 		// Prepare Ingredient for Slice (without Instasell time)
 		costPerUnitSimple := math.NaN()
 		if amt > 0 && !math.IsNaN(assocCost) {
@@ -279,14 +243,15 @@ func fillHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Recipe = ingredientResults
 	log.Printf("%s Sorted results.", handlerID)
 
-	// --- Calculate Top-Level Data (Profit, Instasell Time, Sell Order Time) ---
-	log.Printf("%s Calculating top-level profit & times for %s...", handlerID, item)
-	topProd, topApiOk := getProductData(currentApiResp, item)          // Assumes getProductData defined below or utils.go
-	topMetrics, topMetricsOk := safeGetMetricsData(metricsCache, item) // Assumes safeGetMetricsData from utils.go
+	// --- Calculate Top-Level Data (Profit, Instasell Time ONLY) --- // <<< MODIFIED COMMENT
+	log.Printf("%s Calculating top-level profit & instasell time for %s...", handlerID, item) // <<< MODIFIED LOG
+	topProd, topApiOk := getProductData(currentApiResp, item)                                 // Assumes getProductData defined below or utils.go
+	// Removed topMetrics lookup as it's no longer needed here
+	// topMetrics, topMetricsOk := safeGetMetricsData(metricsCache, item)
 
 	var topSell float64 = math.NaN()
 	var topLevelInstaSellTime float64 = math.NaN()
-	var topLevelSellOrderTime float64 = math.NaN() // Variable for top-level sell order time
+	// var topLevelSellOrderTime float64 = math.NaN() // <<< REMOVED >>>
 
 	if !topApiOk {
 		log.Printf("%s WARN: API data missing for top item %s.", handlerID, item)
@@ -315,20 +280,9 @@ func fillHandler(w http.ResponseWriter, r *http.Request) {
 			processingErrorOccurred = true
 		}
 	}
-	// Calculate Top-Level Sell Order Time (needs metrics)
-	if !topMetricsOk {
-		log.Printf("%s WARN: Metrics missing for top item %s. Cannot calculate sell order time.", handlerID, item)
-		processingErrorOccurred = true
-	} else {
-		var sellOrderErr error
-		topLevelSellOrderTime, sellOrderErr = calculateSellOrderFillTime(item, qty, topMetrics) // Call function defined above
-		if sellOrderErr != nil || math.IsNaN(topLevelSellOrderTime) || math.IsInf(topLevelSellOrderTime, 0) || topLevelSellOrderTime < 0 {
-			log.Printf("%s     WARN: Invalid top-level sell order time for %s (T=%.2f, E=%v). Set NaN.", handlerID, item, topLevelSellOrderTime, sellOrderErr)
-			topLevelSellOrderTime = math.NaN()
-			processingErrorOccurred = true
-		}
-	}
-	log.Printf("%s Top Sell Price: %.2f | Top Instasell Time: %.2f | Top Sell Order Time: %.2f", handlerID, topSell, topLevelInstaSellTime, topLevelSellOrderTime)
+	// <<< REMOVED: Calculation for Top-Level Sell Order Time >>>
+
+	log.Printf("%s Top Sell Price: %.2f | Top Instasell Time: %.2f", handlerID, topSell, topLevelInstaSellTime) // <<< MODIFIED LOG
 
 	totalRevCalc, profitUnitSimpleCalc, totalProfitSimpleCalc := math.NaN(), math.NaN(), math.NaN()
 	if !math.IsNaN(sumSimpleCost) && !math.IsNaN(topSell) && qty > 0 {
@@ -346,7 +300,7 @@ func fillHandler(w http.ResponseWriter, r *http.Request) {
 	resp.SlowestIngredient = slowestIngredientName
 	resp.SlowestIngredientQty = slowestIngredientQty
 	resp.TopLevelInstasellTime = sanitizeFloat(topLevelInstaSellTime)
-	resp.TopLevelSellOrderTime = sanitizeFloat(topLevelSellOrderTime) // <<< Assign sanitized sell order time >>>
+	// resp.TopLevelSellOrderTime = sanitizeFloat(topLevelSellOrderTime) // <<< REMOVED >>>
 	resp.TotalBaseCost = sanitizeFloat(sumSimpleCost)
 	resp.TopSellPrice = sanitizeFloat(topSell)
 	resp.TotalRevenue = sanitizeFloat(totalRevCalc)
@@ -412,4 +366,4 @@ func getProductData(api *HypixelAPIResponse, id string) (HypixelProduct, bool) {
 }
 
 // Note: This file still assumes other functions and types are defined elsewhere in 'package main'.
-// Added calculateSellOrderFillTime function definition.
+// Removed calculateSellOrderFillTime function definition.
