@@ -1,6 +1,4 @@
-<!-- This is NOT a complete HTML file, but shows the Svelte component changes -->
-<!-- Apply these changes inside your actual .svelte file -->
-
+<!-- This is conceptual Svelte code - Place this logic in your actual App.svelte file -->
 <script>
   import { onMount } from 'svelte';
 
@@ -14,9 +12,11 @@
     error = null;
     result = null;
     loading = true; // Indicate loading state
-    const params = new URLSearchParams({ item: item.toUpperCase().trim(), qty: String(qty) });
+    const normalizedItem = item.toUpperCase().trim();
+    if (!normalizedItem) { error = "Item ID cannot be empty."; loading = false; return; }
+    const params = new URLSearchParams({ item: normalizedItem, qty: String(qty) });
     try {
-      console.log(`Fetching: /api/fill?${params}`); // Log API call
+      console.log(`Fetching: /api/fill?${params}`);
       const res = await fetch(`/api/fill?${params}`);
       if (!res.ok) {
           const errorText = await res.text();
@@ -24,7 +24,7 @@
           throw new Error(`API Error ${res.status}: ${errorText || res.statusText}`);
       }
       result = await res.json();
-      console.log("API Result:", result); // Log successful result
+      console.log("API Result:", result);
     } catch (e) {
       console.error("Fetch/Calculation Error:", e);
       error = e.message || 'An unknown error occurred.';
@@ -33,28 +33,28 @@
     }
   }
 
-  // Calculate on initial mount
   onMount(calculate);
 
-  // Re-calculate when button clicked
-  function handleClick() {
-      if (!loading) { // Prevent multiple clicks while loading
-          calculate();
-      }
-  }
+  function handleClick() { if (!loading) { calculate(); } }
 
-  // Helper to format numbers, handling potential NaN/Infinity from Go backend
   function formatNum(num, digits = 2) {
       if (num === null || num === undefined || isNaN(num)) return 'N/A';
       if (!isFinite(num)) return num > 0 ? 'Infinite' : '-Infinite';
-      return num.toFixed(digits);
+      // Use sanitizeFloat(0.0) on backend, so check for 0 if it means N/A
+      // Or check for null directly if using interface{} -> null mapping
+      // Sticking with sanitizeFloat(0.0) means 0 is ambiguous, but simpler JSON
+      return Number(num).toFixed(digits);
   }
 
   function formatTime(num) {
        if (num === null || num === undefined || isNaN(num)) return 'N/A';
-       if (!isFinite(num)) return num > 0 ? 'Infinite' : 'N/A (-Inf)'; // Assuming negative inf time isn't logical
+       // Use sanitizeFloat(0.0) on backend, 0 now means NaN/Inf or actual zero.
+       // Cannot distinguish here easily without backend sending null.
+       // Displaying 0.0s might be acceptable compromise.
+       if (!isFinite(num)) return num > 0 ? 'Infinite' : 'N/A (-Inf)';
        if (num < 0) return 'N/A (<0)';
-       if (num === 0) return '0.0s';
+       if (num === 0) return '0.0s'; // Could mean actual 0 or NaN/Inf from backend
+       if (num < 1) return num.toFixed(2) + 's';
        if (num < 60) return num.toFixed(1) + 's';
        let mins = num / 60;
        if (mins < 60) return mins.toFixed(1) + 'm';
@@ -70,10 +70,10 @@
 
   <div class="controls">
     <label>Item ID:
-      <input bind:value={item} placeholder="e.g. DIAMOND" disabled={loading} />
+      <input bind:value={item} placeholder="e.g. DIAMOND" disabled={loading} on:keyup={(e) => e.key === 'Enter' && handleClick()} />
     </label>
     <label>Quantity:
-      <input type="number" min="1" step="1" bind:value={qty} disabled={loading} />
+      <input type="number" min="1" step="1" bind:value={qty} disabled={loading} on:keyup={(e) => e.key === 'Enter' && handleClick()} />
     </label>
     <button on:click={handleClick} disabled={loading}>
       {#if loading}Calculating...{:else}Calculate{/if}
@@ -87,7 +87,7 @@
   {#if result && !error}
       {#if result.recipe && result.recipe.length > 0}
       <div class="results">
-      <h2>Recipe Breakdown for {qty} x {item}</h2>
+      <h2>Recipe Breakdown for {qty} x {item.toUpperCase().trim()}</h2>
       <div class="scroll">
           <table>
           <thead>
@@ -96,8 +96,8 @@
                 <th>Qty</th>
                 <th>Cost/Unit</th>
                 <th>Total Cost</th>
-                <th>Cost Src</th> <!-- <<< MODIFICATION: Added Header -->
-                <th>InstaSell Time</th>
+                <th>Cost Src</th>
+                <!-- <<< MODIFICATION: Removed Instasell Time Header >>> -->
                 <th>Buy Order Time</th>
                 <th>RR</th>
               </tr>
@@ -109,8 +109,8 @@
                   <td>{formatNum(ing.qty, 0)}</td>
                   <td>{formatNum(ing.cost_per_unit, 2)}</td>
                   <td>{formatNum(ing.total_cost, 2)}</td>
-                  <td>{ing.price_source}</td> <!-- <<< MODIFICATION: Added Data Cell -->
-                  <td>{formatTime(ing.instasell_fill_time)}</td>
+                  <td>{ing.price_source}</td>
+                  <!-- <<< MODIFICATION: Removed Instasell Time Cell >>> -->
                   <td>{formatTime(ing.buy_order_fill_time)}</td>
                   <td>{formatNum(ing.rr, 2)}</td>
               </tr>
@@ -119,7 +119,6 @@
           </table>
       </div>
 
-      <!-- Profit and Fill Time Summary sections remain the same -->
       <div class="summary-section">
           <h3>Profit Summary</h3>
           <p><strong>Total Base Cost:</strong> {formatNum(result.total_base_cost, 2)}</p>
@@ -134,16 +133,19 @@
            {#if result.slowest_ingredient}
                <p><strong>Slowest Ingredient (Buy Order):</strong> {result.slowest_ingredient} (x{formatNum(result.slowest_ingredient_qty, 0)})</p>
                <p><strong>Est. Total Buy Order Fill Time:</strong> {formatTime(result.slowest_fill_time)}</p>
-           {:else if result.recipe.length > 0}
-               <p>Est. Total Buy Order Fill Time: 0.0s (or N/A if inputs invalid)</p>
+            {:else if result.recipe.length > 0}
+                 <p>Est. Total Buy Order Fill Time: 0.0s (or N/A)</p>
            {/if}
+           <!-- <<< MODIFICATION: Added Top-Level Times >>> -->
+           <p><strong>Est. Top-Level Instasell Time:</strong> {formatTime(result.top_level_instasell_time)}</p>
+           <p><strong>Est. Top-Level Sell Order Time:</strong> {formatTime(result.top_level_sell_order_time)}</p>
       </div>
       </div>
       {:else}
-          <p>No recipe breakdown available for {item}. It might be a base item or expansion failed.</p>
+          <p>No recipe breakdown available for {item.toUpperCase().trim()}. It might be a base item or expansion failed.</p>
       {/if}
   {:else if !loading && !error}
-      <p>No results yet.</p>
+      <p>Enter an Item ID and Quantity.</p>
   {/if}
 </main>
 
