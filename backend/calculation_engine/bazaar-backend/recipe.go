@@ -1,16 +1,17 @@
+// recipe.go
 package main
 
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
-// --- Recipe Structs ---
+// --- Recipe Structs (Defined here) ---
 // Ensure these match the structure in your item JSON files
 type Recipe struct {
 	Type  string `json:"type"` // Optional type identifier
@@ -41,136 +42,97 @@ type SingleRecipe struct {
 
 // Item represents the structure of your item JSON files
 type Item struct {
-	ItemID  string       `json:"itemid"`  // Or another field representing the canonical ID
+	ItemID  string       `json:"itemid"`  // Field representing the canonical ID in JSON
 	Recipe  SingleRecipe `json:"recipe"`  // Primary recipe object
 	Recipes []Recipe     `json:"recipes"` // Array for alternative recipes
 	// Add other fields present in your JSONs if needed (DisplayName, Lore, etc.)
 }
 
 // ItemStep is used for cycle detection during recursive expansion
+// Needs to be accessible (e.g., defined here or globally if needed)
 type ItemStep struct {
 	name     string // Should store the NORMALIZED item ID
 	quantity float64
 }
 
-// aggregateCells reads recipe cells ("ITEM_ID:AMOUNT" or "ITEM_ID")
-// and returns a map of NORMALIZED ingredient IDs to their total amounts.
-func aggregateCells(cells map[string]string) (map[string]float64, error) {
-	positions := []string{"A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"}
-	ingredients := make(map[string]float64)
-	var firstError error
-
-	for _, pos := range positions {
-		cell := strings.TrimSpace(cells[pos])
-		if cell == "" {
-			continue
-		}
-
-		parts := strings.SplitN(cell, ":", 2)
-		// Normalize the ingredient ID right after extracting it
-		ing := BAZAAR_ID(strings.TrimSpace(parts[0])) // Assumes BAZAAR_ID (which uses NormalizeItemID) is defined elsewhere
-		if ing == "" {
-			continue // Skip empty ingredient names
-		}
-
-		amt := 1.0 // Default amount is 1
-		if len(parts) == 2 {
-			amtStr := strings.TrimSpace(parts[1])
-			parsedAmt, err := strconv.ParseFloat(amtStr, 64)
-			if err != nil || parsedAmt <= 0 {
-				// Log error but maybe continue with default amount? Or return error?
-				// Let's log and continue with 1.0 for now, but store the first error.
-				dlog("WARN: Invalid amount '%s' for ingredient '%s' in cell '%s'. Using 1.0. Error: %v", amtStr, ing, pos, err) // Assumes dlog is defined elsewhere
-				amt = 1.0
-				if firstError == nil { // Store only the first parsing error
-					firstError = fmt.Errorf("invalid amount '%s' for ingredient '%s'", amtStr, ing)
-				}
-			} else {
-				amt = parsedAmt
-			}
-		}
-		ingredients[ing] += amt
-	}
-	// Return the map and the first error encountered during amount parsing (if any)
-	return ingredients, firstError
-}
-
-// isInPath checks if a NORMALIZED item name is already in the current expansion path.
-func isInPath(itemName string, path []ItemStep) bool {
-	normalizedItemName := BAZAAR_ID(itemName) // Ensure comparison ID is normalized
-	for _, step := range path {
-		// Path should already contain normalized names
-		if step.name == normalizedItemName {
-			return true
-		}
-	}
-	return false
-}
-
-// expandItem recursively expands an item into its base ingredients based on C10M cost,
-// automatically detecting cycles and forcing expansion for non-Bazaar items with recipes.
-// Returns a map of base ingredient IDs to their total required quantity, and any error.
-// Assumes all dependent functions (BAZAAR_ID, dlog, getBestC10M, etc.) and structs are defined externally.
-func expandItem(
-	itemName string,
-	quantity float64,
-	path []ItemStep,
+// --- Recursive Helper Function ---
+// expandItemRecursive performs the recursive part of the expansion.
+// It handles ingredient decisions based on getBestC10M, force-expands non-bazaar items,
+// and prunes cycles back to the original top-level item.
+// Assumes BAZAAR_ID, isInPath, aggregateCells are defined in utils.go
+// Assumes getBestC10M is defined in c10m.go
+func expandItemRecursive(
+	itemName string, // The item being crafted in this step
+	quantity float64, // Quantity needed
+	path []ItemStep, // Current path for cycle detection
+	originalTopLevelItemID string, // Normalized ID of the initial item request
 	apiResp *HypixelAPIResponse,
 	metricsMap map[string]ProductMetrics,
 	itemFilesDir string,
-) (map[string]float64, error) {
+) (map[string]float64, error) { // Returns base map or critical error
 
-	itemName = BAZAAR_ID(itemName) // Normalize ID at the beginning
-	dlog("Expanding %.2f x %s (Cost-Based), Path: %v", quantity, itemName, path)
+	itemNameNorm := BAZAAR_ID(itemName)
+	dlog("  -> Recursive: Expanding %.2f x %s, Path: %v, TopLevel: %s", quantity, itemNameNorm, path, originalTopLevelItemID)
 	finalIngredients := make(map[string]float64)
 
-	// --- Cycle Detection ---
-	if isInPath(itemName, path) { // isInPath uses normalized name
-		dlog("  Cycle detected for '%s'. Stopping expansion at this branch. Treating as base.", itemName)
-		finalIngredients[itemName] = quantity // Add the item itself as a requirement
-		return finalIngredients, nil
+	// --- Cycle Detection (Handles Top-Level Pruning) ---
+	if isInPath(itemNameNorm, path) { // Assumes isInPath in utils.go
+		if itemNameNorm == originalTopLevelItemID {
+			// CYCLE BACK TO TOP LEVEL
+			dlog("  <- Recursive: Cycle detected back to TOP LEVEL item '%s'. Pruning branch.", itemNameNorm)
+			return make(map[string]float64), nil // Return empty map, prune this path
+		} else {
+			// CYCLE TO INTERMEDIATE ITEM
+			dlog("  <- Recursive: Cycle detected to intermediate item '%s'. Treating as base for this branch.", itemNameNorm)
+			finalIngredients[itemNameNorm] = quantity // Add intermediate item as base for this path
+			return finalIngredients, nil
+		}
+	}
+	// --- End Cycle Detection ---
+
+	// Create new path slice for this recursion level
+	currentPath := append([]ItemStep{}, path...) // Copy path
+	currentPath = append(currentPath, ItemStep{name: itemNameNorm, quantity: quantity})
+
+	// --- Load Recipe ---
+	filePath := filepath.Join(itemFilesDir, itemNameNorm+".json")
+	recipeFileExists := false
+	if _, err := os.Stat(filePath); err == nil {
+		recipeFileExists = true
+	} else if !os.IsNotExist(err) {
+		// Filesystem error checking recipe is critical
+		return nil, fmt.Errorf("Recursive checking recipe file '%s': %w", filePath, err)
 	}
 
-	// Add current item (normalized) to the path *before* recursive calls
-	currentPath := append(path, ItemStep{name: itemName, quantity: quantity})
-
-	// --- Check for recipe file ---
-	filePath := filepath.Join(itemFilesDir, itemName+".json") // Use normalized name
-	recipeFileExists := true
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		dlog("  No recipe file found for '%s'. Treating as base ingredient.", itemName)
-		recipeFileExists = false
-	} else if err != nil {
-		return nil, fmt.Errorf("error checking recipe file '%s': %w", filePath, err) // Propagate FS error
-	}
-
-	// If no recipe file exists, it's a base ingredient for this path.
 	if !recipeFileExists {
-		finalIngredients[itemName] = quantity
+		// If no recipe file, treat this item as a base ingredient for the parent caller
+		dlog("  <- Recursive: No recipe for '%s'. Treating as base.", itemNameNorm)
+		finalIngredients[itemNameNorm] = quantity
 		return finalIngredients, nil
 	}
 
-	// --- Recipe file exists, read and parse it ---
+	// --- Read/Parse Recipe ---
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading recipe file '%s': %w", filePath, err)
-	} // Propagate FS error
-
-	var item Item // Assumes Item struct defined elsewhere
+		// Filesystem error reading file is critical
+		return nil, fmt.Errorf("Recursive reading recipe file '%s': %w", filePath, err)
+	}
+	var item Item // Uses struct defined in this file
 	if err := json.Unmarshal(data, &item); err != nil {
-		// Treat as base if JSON is invalid, log warning
-		dlog("WARN: Failed JSON parse for '%s'. Treating as base. Error: %v", itemName, err)
-		finalIngredients[itemName] = quantity
-		return finalIngredients, nil // Don't propagate JSON error, just treat as base
+		// If JSON is invalid, treat as base, but log warning
+		dlog("  <- Recursive: Failed JSON parse for '%s'. Treating as base. Error: %v", itemNameNorm, err)
+		finalIngredients[itemNameNorm] = quantity
+		return finalIngredients, nil // Not critical, but can't proceed down this path
 	}
 
-	// --- Determine which recipe to use AND check if recipe has content ---
+	// --- Select Recipe and Aggregate Ingredients ---
 	var chosenRecipeCells map[string]string
 	var craftedAmount float64 = 1.0
 	recipeContentExists := false
-	// Logic to select recipe (prefer 'recipes' array, fallback to 'recipe')
+	// Recipe selection logic (use first valid from recipes array, fallback to recipe object)
 	if len(item.Recipes) > 0 {
 		firstRecipe := item.Recipes[0]
+		// Check if the first recipe has any actual content
 		tempCells := map[string]string{"A1": firstRecipe.A1, "A2": firstRecipe.A2, "A3": firstRecipe.A3, "B1": firstRecipe.B1, "B2": firstRecipe.B2, "B3": firstRecipe.B3, "C1": firstRecipe.C1, "C2": firstRecipe.C2, "C3": firstRecipe.C3}
 		hasContent := false
 		for _, v := range tempCells {
@@ -183,132 +145,165 @@ func expandItem(
 			chosenRecipeCells = tempCells
 			if firstRecipe.Count > 0 {
 				craftedAmount = float64(firstRecipe.Count)
-			}
+			} else {
+				craftedAmount = 1.0
+			} // Default to 1 if count missing/zero
 			recipeContentExists = true
-			dlog("  Using 'recipes' array[0] for '%s'.", itemName)
 		}
 	}
+	// Fallback to the single recipe object if recipes array was empty or first entry had no content
 	if !recipeContentExists && (item.Recipe.A1 != "" || item.Recipe.A2 != "" || item.Recipe.A3 != "" || item.Recipe.B1 != "" || item.Recipe.B2 != "" || item.Recipe.B3 != "" || item.Recipe.C1 != "" || item.Recipe.C2 != "" || item.Recipe.C3 != "") {
 		chosenRecipeCells = map[string]string{"A1": item.Recipe.A1, "A2": item.Recipe.A2, "A3": item.Recipe.A3, "B1": item.Recipe.B1, "B2": item.Recipe.B2, "B3": item.Recipe.B3, "C1": item.Recipe.C1, "C2": item.Recipe.C2, "C3": item.Recipe.C3}
 		if item.Recipe.Count > 0 {
 			craftedAmount = float64(item.Recipe.Count)
-		}
+		} else {
+			craftedAmount = 1.0
+		} // Default to 1
 		recipeContentExists = true
-		dlog("  Using 'recipe' object for '%s'.", itemName)
 	}
 
-	// If recipe file exists but has no actual recipe content, treat as base
 	if !recipeContentExists {
-		dlog("  Recipe file '%s' has no usable recipe content. Treating as base.", itemName)
-		finalIngredients[itemName] = quantity
+		// If file exists but has no usable recipe content
+		dlog("  <- Recursive: No recipe content for '%s'. Treating as base.", itemNameNorm)
+		finalIngredients[itemNameNorm] = quantity
 		return finalIngredients, nil
 	}
 
-	// --- Aggregate ingredients (already normalized by aggregateCells) ---
-	ingredientsInOneCraft, aggErr := aggregateCells(chosenRecipeCells)
+	ingredientsInOneCraft, aggErr := aggregateCells(chosenRecipeCells) // Assumes aggregateCells in utils.go
 	if aggErr != nil {
-		// If ingredient amounts are invalid in the JSON
-		dlog("WARN: Error parsing ingredient amounts for '%s': %v. Treating as base.", itemName, aggErr)
-		finalIngredients[itemName] = quantity
-		return finalIngredients, nil // Treat as base, don't propagate cell format error
+		// Treat as base if ingredient amounts are invalid
+		dlog("  <- Recursive: Error parsing ingredients for '%s': %v. Treating as base.", itemNameNorm, aggErr)
+		finalIngredients[itemNameNorm] = quantity
+		return finalIngredients, nil
 	}
 	if len(ingredientsInOneCraft) == 0 {
-		dlog("  Recipe for '%s' yields zero ingredients. Treating as base.", itemName)
-		finalIngredients[itemName] = quantity
+		// Treat as base if recipe yields nothing
+		dlog("  <- Recursive: Recipe for '%s' yields zero ingredients. Treating as base.", itemNameNorm)
+		finalIngredients[itemNameNorm] = quantity
 		return finalIngredients, nil
 	}
 
-	// --- Cost Comparison & Forced Expansion Logic ---
-	dlog("  Performing cost comparison/expansion check for '%s'...", itemName)
-
-	// Cost to buy the target item directly
-	costToBuy, buyMethod, _, _, errBuy := getBestC10M(itemName, quantity, apiResp, metricsMap) // Assumes getBestC10M defined externally
-	isApiNotFoundError := false
-	if errBuy != nil && strings.Contains(errBuy.Error(), "API data not found") { // Check specific error message
-		isApiNotFoundError = true
-		dlog("    Item '%s' not found in Bazaar API data.", itemName)
-	}
-	// Only log the generic errBuy if it wasn't the specific API not found error we already handled
-	otherErrorBuy := errBuy
-	if isApiNotFoundError {
-		otherErrorBuy = nil
-	}
-	dlog("    Cost to buy %.2f x %s: %s (%s) (API Not Found: %v, Other Error: %v)", quantity, itemName, formatCost(costToBuy), buyMethod, isApiNotFoundError, otherErrorBuy) // Assumes formatCost defined elsewhere
-
-	// Calculate total Best C10M cost to craft (if possible)
-	totalCraftCost := 0.0
-	canCalculateCraftCost := true
+	// --- Process Ingredients ---
 	numCraftsNeeded := math.Ceil(quantity / craftedAmount)
-	dlog("    Need %.0f crafts.", numCraftsNeeded)
+	dlog("  Recursive: Need %.0f crafts for %s.", numCraftsNeeded, itemNameNorm)
 
-	for ingName, ingAmtPerCraft := range ingredientsInOneCraft { // ingName is already normalized from aggregateCells
+	for ingName, ingAmtPerCraft := range ingredientsInOneCraft {
 		totalIngAmtNeeded := ingAmtPerCraft * numCraftsNeeded
-		ingCost, ingMethod, _, _, errIng := getBestC10M(ingName, totalIngAmtNeeded, apiResp, metricsMap)
-		dlog("      Cost of ingredient %.2f x %s: %s (%s) (Error: %v)", totalIngAmtNeeded, ingName, formatCost(ingCost), ingMethod, errIng)
-		if errIng != nil || math.IsInf(ingCost, 1) || math.IsNaN(ingCost) {
-			dlog("      Cannot determine valid cost for ingredient '%s'.", ingName)
-			canCalculateCraftCost = false
-		} else if canCalculateCraftCost { // Only add if no failure *yet* in this loop
-			totalCraftCost += ingCost
+		if totalIngAmtNeeded <= 0 {
+			continue
 		}
-	}
-	dlog("    Total finite craft cost components sum: %.2f", totalCraftCost)
+		ingNameNorm := BAZAAR_ID(ingName) // Normalize ingredient name
+		dlog("    Recursive: Processing Ingredient: %.2f x %s", totalIngAmtNeeded, ingNameNorm)
 
-	// --- Decision Logic ---
-	expandDecision := false
-	// Condition 1: Force expansion if item not on Bazaar BUT has a recipe
-	// We already established recipeContentExists is true to reach here.
-	if isApiNotFoundError {
-		dlog("    Decision: Item '%s' not on Bazaar but has recipe. FORCING expansion.", itemName)
-		expandDecision = true
-	} else {
-		// Condition 2: Normal cost comparison if item IS on Bazaar
-		if !canCalculateCraftCost {
-			dlog("    Decision: Cannot calc finite craft cost. NOT expanding '%s'.", itemName)
-			expandDecision = false
-		} else if math.IsInf(costToBuy, 1) || math.IsNaN(costToBuy) {
-			// Buy cost is Inf/NaN (and not due to API error), and craft cost IS finite. Expand.
-			dlog("    Decision: Buy cost Inf/NaN. Expanding '%s' (Craft Cost: %.2f).", itemName, totalCraftCost)
-			expandDecision = true
-		} else if totalCraftCost < costToBuy {
-			dlog("    Decision: Craft cost (%.2f) < Buy cost (%.2f). Expanding '%s'.", totalCraftCost, costToBuy, itemName)
-			expandDecision = true
+		// --- C10M Check & Forced Expansion Logic for the INGREDIENT ---
+		ingCost, ingMethod, _, _, errIng := getBestC10M(ingNameNorm, totalIngAmtNeeded, apiResp, metricsMap) // Assumes getBestC10M in c10m.go
+		dlog("      Recursive: Ingredient C10M Check (%s): Cost=%.2f, Method=%s, Err=%v", ingNameNorm, ingCost, ingMethod, errIng)
+
+		expandIngredient := false // Default: Buy/Base
+		isApiNotFoundError := false
+		if errIng != nil && strings.Contains(errIng.Error(), "API data not found") {
+			isApiNotFoundError = true
+		}
+
+		// Decision Logic: Expand if Primary is best OR if not on Bazaar but recipe exists
+		if isApiNotFoundError {
+			// Check if recipe exists for this non-bazaar ingredient
+			ingFilePath := filepath.Join(itemFilesDir, ingNameNorm+".json")
+			if _, statErr := os.Stat(ingFilePath); statErr == nil {
+				// Recipe exists, force expansion attempt
+				expandIngredient = true
+				dlog("      Recursive: Decision for %s: FORCE EXPAND (Not on Bazaar, recipe exists)", ingNameNorm)
+			} else if os.IsNotExist(statErr) {
+				// Not on Bazaar AND no recipe file -> Treat as base
+				expandIngredient = false
+				dlog("      Recursive: Decision for %s: TREAT AS BASE (Not on Bazaar, no recipe)", ingNameNorm)
+				log.Printf("WARN (Recursive): Ingredient '%s' is not on Bazaar and has no recipe file. Path impossible if needed.", ingNameNorm)
+			} else {
+				// Filesystem error checking recipe -> Treat as base, log error
+				expandIngredient = false
+				log.Printf("ERROR (Recursive): FS error checking recipe for non-bazaar '%s': %v. Treating as base.", ingNameNorm, statErr)
+			}
+		} else if errIng == nil && ingMethod == "Primary" && !math.IsInf(ingCost, 0) && !math.IsNaN(ingCost) && ingCost >= 0 {
+			// Standard case: Primary is best and valid cost
+			expandIngredient = true
+			dlog("      Recursive: Decision for %s: EXPAND (Primary C10M best)", ingNameNorm)
 		} else {
-			dlog("    Decision: Craft cost (%.2f) >= Buy cost (%.2f). NOT expanding '%s'.", totalCraftCost, costToBuy, itemName)
-			expandDecision = false
+			// All other cases: Buy or Treat as Base
+			expandIngredient = false
+			dlog("      Recursive: Decision for %s: BUY/BASE (Method: %s, Valid Cost: %v, Err: %v)", ingNameNorm, ingMethod, !math.IsInf(ingCost, 0) && !math.IsNaN(ingCost) && ingCost >= 0, errIng)
 		}
-	}
+		// --- End Ingredient Decision Logic ---
 
-	// --- Process based on decision ---
-	if expandDecision {
-		dlog("  Expanding ingredients for '%s'...", itemName)
-		var firstExpansionError error
-		for ingName, ingAmtPerCraft := range ingredientsInOneCraft { // ingName is already normalized
-			totalIngAmtNeeded := ingAmtPerCraft * numCraftsNeeded
-			dlog("    Recursively expanding %.2f x %s", totalIngAmtNeeded, ingName)
-			// Recursive call uses currentPath
-			subIngredients, errExpand := expandItem(ingName, totalIngAmtNeeded, currentPath, apiResp, metricsMap, itemFilesDir)
+		// --- Process Ingredient based on decision ---
+		if !expandIngredient {
+			// Add ingredient to the current map
+			currentAmt := finalIngredients[ingNameNorm]
+			finalIngredients[ingNameNorm] += totalIngAmtNeeded
+			dlog("      Recursive: Adding to final map: %s -> %.2f + %.2f = %.2f", ingNameNorm, currentAmt, totalIngAmtNeeded, finalIngredients[ingNameNorm])
+		} else {
+			// Recursively expand the ingredient
+			dlog("      Recursive: Calling recursive helper for %.2f x %s...", totalIngAmtNeeded, ingNameNorm)
+			// Pass the originalTopLevelItemID down the recursive call unchanged
+			subIngredients, errExpand := expandItemRecursive(ingNameNorm, totalIngAmtNeeded, currentPath, originalTopLevelItemID, apiResp, metricsMap, itemFilesDir)
 			if errExpand != nil {
-				dlog("ERROR: Critical error sub-expanding '%s' for '%s': %v.", ingName, itemName, errExpand)
-				firstExpansionError = fmt.Errorf("failed expanding ingredient '%s' for '%s': %w", ingName, itemName, errExpand)
-				// Propagate critical error immediately
-				return nil, firstExpansionError
+				// If a sub-expansion fails critically, propagate the error up
+				dlog("ERROR: Recursive: Critical error sub-expanding '%s': %v. Aborting branch.", ingNameNorm, errExpand)
+				return nil, fmt.Errorf("failed recursive expansion for ingredient '%s': %w", ingNameNorm, errExpand)
 			}
-			// Add results from sub-expansion
-			for subName, subAmt := range subIngredients {
-				finalIngredients[subName] += subAmt
-				dlog("      Aggregated %.2f x %s from %s expansion", subAmt, subName, ingName)
+
+			// Merge results from the sub-expansion into the current finalIngredients map
+			dlog("      Recursive: Merging results from %s expansion:", ingNameNorm)
+			for subName, subAmt := range subIngredients { // subIngredients will be EMPTY if the sub-call hit a top-level cycle
+				subNameNorm := BAZAAR_ID(subName) // Ensure key is normalized
+				currentAmt := finalIngredients[subNameNorm]
+				finalIngredients[subNameNorm] += subAmt // Add the amount from the sub-expansion
+				dlog("        - %s: %.2f + %.2f = %.2f", subNameNorm, currentAmt, subAmt, finalIngredients[subNameNorm])
 			}
 		}
-		// If loop completed without critical errors
-		return finalIngredients, nil
-	} else {
-		// Not expanding this item
-		dlog("  Adding %.2f x %s to final ingredients (not expanding).", quantity, itemName)
-		finalIngredients[itemName] = quantity
-		return finalIngredients, nil
-	}
+	} // End ingredient loop
+
+	dlog("  <- Recursive: Exiting for %s. Returning map: %+v", itemNameNorm, finalIngredients)
+	return finalIngredients, nil // Success
 }
 
-// NOTE: This file assumes BAZAAR_ID, dlog, formatCost, getBestC10M,
-// and structs HypixelAPIResponse, ProductMetrics are defined externally.
+// --- Main Expansion Function for this File ---
+// This is the entry point called by expansion.go.
+// It checks if the top-level item has a recipe and then calls the recursive helper.
+func ExpandItem(
+	itemName string,
+	quantity float64,
+	apiResp *HypixelAPIResponse,
+	metricsMap map[string]ProductMetrics,
+	itemFilesDir string,
+) (map[string]float64, error) { // Returns base map or critical error
+
+	itemNameNorm := BAZAAR_ID(itemName) // Normalize the top-level item ID
+	dlog("-> ExpandItem called for %.2f x %s", quantity, itemNameNorm)
+
+	// Check for recipe existence first for the top-level item.
+	filePath := filepath.Join(itemFilesDir, itemNameNorm+".json")
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// If the top-level item has NO recipe, it *is* the base ingredient.
+		dlog("<- ExpandItem: No recipe file for '%s'. Cannot expand. Returning item as base.", itemNameNorm)
+		// Return the item itself as the only base ingredient.
+		return map[string]float64{itemNameNorm: quantity}, nil
+	} else if err != nil {
+		// Filesystem error checking the recipe file is critical.
+		return nil, fmt.Errorf("ExpandItem checking recipe file '%s': %w", filePath, err)
+	}
+
+	// Recipe exists, call the recursive helper to start the expansion process.
+	// Pass itemNameNorm as the originalTopLevelItemID. Start with an empty path.
+	dlog("   ExpandItem: Recipe found. Calling recursive helper for %s...", itemNameNorm)
+	baseMap, errRec := expandItemRecursive(itemNameNorm, quantity, nil, itemNameNorm, apiResp, metricsMap, itemFilesDir)
+
+	if errRec != nil {
+		log.Printf("ERROR (ExpandItem): Recursive helper failed for %s: %v", itemNameNorm, errRec)
+		// Propagate critical error from recursion.
+		return nil, fmt.Errorf("recursive expansion failed within ExpandItem: %w", errRec)
+	}
+
+	// Recursion completed (successfully or hit non-critical bases/cycles)
+	dlog("<- ExpandItem: Expansion call for %s complete. Final map: %+v", itemNameNorm, baseMap)
+	return baseMap, nil // Return the final map of base ingredients
+}

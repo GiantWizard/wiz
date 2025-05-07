@@ -1,41 +1,36 @@
-// c10m.go
-
 package main
 
 import (
 	"fmt"
-	"math"
+	"math" // Needed for Ceil, Max, IsInf, IsNaN
+	// "log" // Only needed if adding extra logging inside
 )
 
-// calculateC10M computes primary and secondary C10M values using pre-fetched data.
-// ... (calculateC10M function remains the same) ...
-func calculateC10M(
+// calculateC10MInternal - calculates both primary and secondary C10M values.
+// This version takes pre-fetched prices and metrics.
+// Assumes dlog is defined in utils.go
+func calculateC10MInternal(
 	prodID string,
 	qty float64,
-	productData HypixelProduct, // Use the combined struct
-	metricsData ProductMetrics, // Use the metrics struct
-) (c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment float64, err error) {
+	sellP float64, // Now takes prices directly
+	buyP float64, // Now takes prices directly
+	pm ProductMetrics, // Takes the single metrics struct
+) (c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment float64, err error) { // Added error return
 
-	dlog("Calculating C10M for %.2f x %s", qty, prodID)
+	dlog("  [Internal C10M Calc] For %.2f x %s", qty, prodID)
+	// Input validation
 	if qty <= 0 {
 		err = fmt.Errorf("quantity must be positive (got %.2f)", qty)
+		// Return NaNs for costs/metrics if qty is invalid
 		return math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN(), err
 	}
-
-	if len(productData.SellSummary) == 0 || len(productData.BuySummary) == 0 {
-		err = fmt.Errorf("API data for '%s' missing sell_summary or buy_summary", prodID)
-		return math.Inf(1), math.Inf(1), math.NaN(), math.NaN(), math.NaN(), math.NaN(), err
-	}
-	sellP := productData.SellSummary[0].PricePerUnit // Buy order price (user sells to this)
-	buyP := productData.BuySummary[0].PricePerUnit   // Instabuy price (user buys at this)
-
 	if sellP <= 0 || buyP <= 0 {
-		err = fmt.Errorf("invalid (non-positive) API price for '%s' (sP: %.2f, bP: %.2f)", prodID, sellP, buyP)
+		err = fmt.Errorf("invalid (non-positive) API price provided (sP: %.2f, bP: %.2f)", sellP, buyP)
+		// Return Infs for costs if prices are invalid
 		return math.Inf(1), math.Inf(1), math.NaN(), math.NaN(), math.NaN(), math.NaN(), err
 	}
 
-	pm := metricsData
-
+	// 2) Clamp Metrics & Calculate Rates / Delta Ratio
 	s_s := math.Max(0, pm.SellSize)
 	s_f := math.Max(0, pm.SellFrequency)
 	o_f := math.Max(0, pm.OrderFrequency)
@@ -43,116 +38,141 @@ func calculateC10M(
 
 	supplyRate := s_s * s_f
 	demandRate := o_s * o_f
-	dlog("  [%s] Rates: Supply=%.4f (ss:%.2f * sf:%.2f), Demand=%.4f (os:%.2f * of:%.2f)", prodID, supplyRate, s_s, s_f, demandRate, o_s, o_f)
+	dlog("    Rates: Supply=%.4f (ss:%.2f * sf:%.2f), Demand=%.4f (os:%.2f * of:%.2f)", supplyRate, s_s, s_f, demandRate, o_s, o_f)
 
 	if demandRate <= 0 {
 		if supplyRate <= 0 {
-			DeltaRatio = 1.0
+			DeltaRatio = 1.0 // No activity
 		} else {
-			DeltaRatio = math.Inf(1)
+			DeltaRatio = math.Inf(1) // Infinite supply relative to demand
 		}
 	} else {
 		DeltaRatio = supplyRate / demandRate
 	}
-	dlog("  [%s] DeltaRatio (SR/DR): %.4f", prodID, DeltaRatio)
+	dlog("    DeltaRatio (SR/DR): %.4f", DeltaRatio)
 
-	base := qty * sellP
-	dlog("  [%s] Base Cost (qty * sellP): %.2f", prodID, base)
+	// 3) Calculate IF, RR, Adjustment, and Primary C10M based on DeltaRatio
+	base := qty * sellP // Calculate base cost once (cost if sell order filled instantly)
+	dlog("    Base Cost (qty * sellP): %.2f", base)
 
 	if DeltaRatio > 1.0 {
-		dlog("  [%s] DeltaRatio > 1.0: Using simplified logic.", prodID)
-		IF = math.Inf(1)
-		RR = 1.0
-		adjustment = 0.0
+		// Supply exceeds demand, order likely fills quickly. C10M is just the base cost.
+		dlog("    DeltaRatio > 1.0: Simplified logic.")
+		IF = math.Inf(1) // Effectively infinite fill rate from supply side
+		RR = 1.0         // Only one 'round' needed
+		adjustment = 0.0 // No adjustment needed
 		c10mPrimary = base
-		dlog("  [%s] Set IF=Inf, RR=1.0, Adjustment=0.0", prodID)
-		dlog("  [%s] Primary C10M = base = %.2f", prodID, c10mPrimary)
+		dlog("    Primary C10M = base = %.2f", c10mPrimary)
 	} else {
-		dlog("  [%s] DeltaRatio <= 1.0: Using full IF/RR logic.", prodID)
-		if o_f <= 0 {
-			IF = 0
-			dlog("  [%s] IF Calc: OF <= 0. IF = 0.", prodID)
+		// Demand meets or exceeds supply. Use the more complex IF/RR logic.
+		dlog("    DeltaRatio <= 1.0: Full IF/RR logic.")
+		// Calculate IF (InstaFill equivalent based on relative frequencies)
+		if o_f <= 0 { // Avoid division by zero if order frequency is zero
+			IF = 0 // Cannot fill if no orders are placed/filled
+			dlog("    IF Calc: OF <= 0. IF = 0.")
 		} else {
-			IF = s_s * (s_f / o_f)
-			dlog("  [%s] IF Calc: ss*(sf/of) = %.4f*(%.4f/%.4f) = %.4f", prodID, s_s, s_f, o_f, IF)
+			IF = s_s * (s_f / o_f) // Items supplied per order cycle
+			dlog("    IF Calc: ss*(sf/of) = %.4f*(%.4f/%.4f) = %.4f", s_s, s_f, o_f, IF)
 		}
-		if IF < 0 {
+		if IF < 0 { // Ensure IF is not negative
 			IF = 0
 		}
-		dlog("  [%s] Final Calculated IF: %.4f", prodID, IF)
+		dlog("    Final Calculated IF: %.4f", IF)
 
-		if IF <= 0 {
+		// Calculate RR (Refill Rounds needed)
+		if IF <= 0 { // Cannot fill if IF is zero
 			if supplyRate <= 0 {
-				RR = math.Inf(1)
-				dlog("  [%s] RR Calc: IF=0, SR=0 -> RR=Inf.", prodID)
+				RR = math.Inf(1) // Infinite rounds if no supply at all
+				dlog("    RR Calc: IF=0, SR=0 -> RR=Inf.")
 			} else {
-				RR = 1.0
-				dlog("  [%s] RR Calc: IF <= 0, SR>0 -> RR = 1.0", prodID)
+				// Supply exists but orders don't match frequency (IF=0 because o_f=0)
+				// Or supply size is zero? This case is ambiguous.
+				// Let's assume if IF is 0 but supply rate > 0, it still takes infinite rounds
+				// because the mechanism (orders) isn't there.
+				RR = math.Inf(1)
+				dlog("    RR Calc: IF <= 0 but SR > 0 -> RR=Inf (mechanism missing).")
+				// Previous logic set RR=1.0 here, which seems incorrect. Infinite seems better.
 			}
 		} else {
-			RR = math.Ceil(qty / IF)
-			dlog("  [%s] RR Calc: IF > 0. RR = Ceil(%.2f/%.4f) = %.2f", prodID, qty, IF, RR)
+			RR = math.Ceil(qty / IF) // Rounds needed = total qty / qty per round (IF)
+			dlog("    RR Calc: IF > 0. RR = Ceil(%.2f/%.4f) = %.2f", qty, IF, RR)
 		}
-		if RR < 1 && !math.IsInf(RR, 1) {
+		// Validate RR
+		if RR < 1 && !math.IsInf(RR, 1) { // RR must be at least 1 if not infinite
 			RR = 1.0
 		}
-		if math.IsNaN(RR) {
+		if math.IsNaN(RR) { // Should not happen with checks above, but safeguard
 			RR = math.Inf(1)
 		}
-		dlog("  [%s] Final RR for this branch: %.2f", prodID, RR)
+		dlog("    Final RR: %.2f", RR)
 
+		// Calculate Primary C10M using RR
 		if math.IsInf(RR, 1) {
-			dlog("  [%s] RR is Infinite, Primary C10M is Infinite.", prodID)
+			// If infinite rounds are needed, cost is infinite
+			dlog("    RR is Infinite, Primary C10M is Infinite.")
 			c10mPrimary = math.Inf(1)
-			adjustment = 0.0
+			adjustment = 0.0 // Adjustment doesn't apply
 		} else {
-			if RR <= 1.0 {
-				adjustment = 0.0
-				dlog("  [%s] Adj: RR <= 1.0 -> adj = 0.0", prodID)
+			// Finite rounds needed, calculate adjustment factor
+			if RR <= 1.0 { // Should only be RR=1.0 after validation
+				adjustment = 0.0 // No adjustment for single round
+				dlog("    Adj: RR <= 1.0 -> adj = 0.0")
 			} else {
-				adjustment = 1.0 - 1.0/RR
-				dlog("  [%s] Adj: 1.0-1.0/%.2f = %.4f", prodID, RR, adjustment)
+				adjustment = 1.0 - (1.0 / RR) // Adjustment factor based on rounds
+				dlog("    Adj: 1.0 - 1.0/%.2f = %.4f", RR, adjustment)
 			}
+
+			// Calculate extra cost component (related to partial fills over rounds)
 			var extra float64 = 0.0
-			if adjustment > 0 {
-				RRint := int(RR)
-				sumK := float64(RRint*(RRint+1)) / 2.0
+			if adjustment > 0 { // Only calculate if adjustment applies (RR > 1)
+				// This formula seems complex and possibly specific to Hypixel's model.
+				// It involves sum of integers up to RR.
+				RRint := int(RR)                       // Use integer RR for summation
+				sumK := float64(RRint*(RRint+1)) / 2.0 // Sum of 1 to RRint
 				extra = sellP * (qty*RR - IF*sumK)
-				if extra < 0 {
-					dlog("  [%s] WARN: Negative Extra Cost (%.2f). Clamping.", prodID, extra)
+				if extra < 0 { // Ensure extra cost isn't negative
+					dlog("    WARN: Negative Extra Cost (%.2f). Clamping to 0.", extra)
 					extra = 0
 				}
-				dlog("  [%s] Extra Cost: sellP*(qty*RR - IF*sumK(RR=%d)) = %.2f", prodID, RRint, extra)
+				dlog("    Extra Cost: sellP*(qty*RR - IF*sumK(RR=%d)) = %.2f", RRint, extra)
 			} else {
-				dlog("  [%s] Extra Cost: Skipped (adj=0).", prodID)
+				dlog("    Extra Cost: Skipped (adj=0).")
 			}
+			// Final Primary C10M
 			c10mPrimary = base + adjustment*extra
-			if math.IsInf(c10mPrimary, 1) {
-				dlog("  [%s] Primary C10M calculation resulted in Inf.", prodID)
+			if math.IsInf(c10mPrimary, 0) || math.IsNaN(c10mPrimary) {
+				dlog("    Primary C10M calculation resulted in Inf/NaN.")
+				c10mPrimary = math.Inf(1) // Ensure infinite if calculation fails
+			} else if c10mPrimary < 0 {
+				dlog("    WARN: Primary C10M calculation resulted in negative (%.2f). Setting to Inf.", c10mPrimary)
+				c10mPrimary = math.Inf(1) // Cost cannot be negative
 			} else {
-				dlog("  [%s] Primary C10M: base+adj*extra=%.2f+%.4f*%.2f=%.2f", prodID, base, adjustment, extra, c10mPrimary)
+				dlog("    Primary C10M: base + adj*extra = %.2f + %.4f*%.2f = %.2f", base, adjustment, extra, c10mPrimary)
 			}
 		}
 	}
 
+	// 4) Calculate Secondary C10M (Instabuy cost)
 	c10mSecondary = qty * buyP
-	dlog("  [%s] Secondary C10M (Instabuy) = qty * buyP = %.2f * %.2f = %.2f", prodID, qty, buyP, c10mSecondary)
+	dlog("    Secondary C10M (Instabuy) = qty * buyP = %.2f * %.2f = %.2f", qty, buyP, c10mSecondary)
 
-	if math.IsNaN(c10mPrimary) || math.IsInf(c10mPrimary, -1) || c10mPrimary < 0 {
-		dlog("  [%s] Primary C10M validation failed (%.2f), setting to Inf.", prodID, c10mPrimary)
-		c10mPrimary = math.Inf(1)
-	}
+	// 5) Final Validation on Secondary C10M
 	if math.IsNaN(c10mSecondary) || math.IsInf(c10mSecondary, -1) || c10mSecondary < 0 {
-		dlog("  [%s] Secondary C10M validation failed (%.2f), setting to Inf.", prodID, c10mSecondary)
+		dlog("    Secondary C10M validation failed (%.2f), setting to Inf.", c10mSecondary)
 		c10mSecondary = math.Inf(1)
 	}
-	dlog("  [%s] Returning C10M: Prim=%.2f, Sec=%.2f, IF=%.4f, RR=%.2f, Delta=%.4f, Adj=%.4f",
-		prodID, c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment)
-	return c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment, nil
+
+	dlog("  [Internal C10M Calc] Returning: Prim=%.2f, Sec=%.2f, IF=%.4f, RR=%.2f, Delta=%.4f, Adj=%.4f",
+		c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment)
+
+	// err is already set if input validation failed, otherwise it's nil
+	return // Returns named variables including the calculated values and err
 }
 
 // getBestC10M calculates both C10M values and returns the better one AND its associated simple cost.
-// Returns: bestCost, method ("Primary", "Secondary", "N/A"), associatedCost, calculated RR, error
+// Returns: bestCost, method ("Primary", "Secondary", "N/A"), associatedCost, calculated RR for Primary path, error
+// Assumes safeGetProductData, safeGetMetricsData, BAZAAR_ID defined in utils.go
+// Assumes calculateC10MInternal defined above
 func getBestC10M(
 	itemID string,
 	quantity float64,
@@ -160,26 +180,31 @@ func getBestC10M(
 	metricsMap map[string]ProductMetrics,
 ) (bestCost float64, bestMethod string, associatedCost float64, rrValue float64, err error) {
 
-	dlog("Getting Best C10M for %.2f x %s", quantity, itemID)
+	itemIDNorm := BAZAAR_ID(itemID) // Normalize ID
+	dlog("Getting Best C10M for %.2f x %s", quantity, itemIDNorm)
+
+	// Initialize return values
 	bestCost = math.Inf(1)
 	bestMethod = "N/A"
-	associatedCost = math.NaN() // Initialize associated cost
-	rrValue = math.NaN()        // Initialize RR
+	associatedCost = math.NaN()
+	rrValue = math.NaN() // RR specifically relates to the primary calculation path
 
 	if quantity <= 0 {
-		err = fmt.Errorf("quantity must be positive")
-		return 0, "N/A", 0, 0, err // Or NaN? Let's return 0s for cost/RR on invalid qty.
+		err = fmt.Errorf("quantity must be positive (got %.2f)", quantity)
+		return 0, "N/A", 0, 0, err // Return 0s for cost/RR on invalid qty.
 	}
 
-	// Get data from caches
-	productData, apiOk := safeGetProductData(apiResp, itemID)        // Assumes defined in utils.go
-	metricsData, metricsOk := safeGetMetricsData(metricsMap, itemID) // Assumes defined in utils.go
+	// Get data from caches using helper functions
+	productData, apiOk := safeGetProductData(apiResp, itemIDNorm)        // Assumes defined in utils.go
+	metricsData, metricsOk := safeGetMetricsData(metricsMap, itemIDNorm) // Assumes defined in utils.go
 
-	var sellP, buyP float64 = math.NaN(), math.NaN() // Store prices for associated cost calc
+	var sellP, buyP float64 = math.NaN(), math.NaN() // Store prices for associated cost calc and C10MInternal
 
+	// --- Validate API Data & Prices ---
 	if !apiOk {
-		dlog("  [%s] API data not found.", itemID)
-		err = fmt.Errorf("API data not found for %s", itemID)
+		dlog("  [%s] API data not found.", itemIDNorm)
+		err = fmt.Errorf("API data not found for %s", itemIDNorm)
+		// Cannot calculate either C10M without API prices
 		return math.Inf(1), "N/A", math.NaN(), math.NaN(), err
 	} else {
 		// Extract prices if API data exists
@@ -190,220 +215,110 @@ func getBestC10M(
 			buyP = productData.BuySummary[0].PricePerUnit
 		}
 		// Check if prices are valid *after* extraction
-		if sellP <= 0 || buyP <= 0 {
-			dlog("  [%s] Invalid prices from API (sP: %.2f, bP: %.2f)", itemID, sellP, buyP)
-			// If prices are invalid, C10M can't be calculated correctly anyway
-			err = fmt.Errorf("invalid API prices for %s", itemID)
+		if sellP <= 0 || buyP <= 0 || math.IsNaN(sellP) || math.IsNaN(buyP) {
+			errMsg := fmt.Sprintf("invalid prices from API (sP: %.2f, bP: %.2f)", sellP, buyP)
+			dlog("  [%s] %s", itemIDNorm, errMsg)
+			err = fmt.Errorf(errMsg+" for %s", itemIDNorm)
+			// Cannot calculate either C10M with invalid prices
 			return math.Inf(1), "N/A", math.NaN(), math.NaN(), err
 		}
-		dlog("  [%s] Prices - SellP: %.2f, BuyP: %.2f", itemID, sellP, buyP)
+		dlog("  [%s] Prices - SellP: %.2f, BuyP: %.2f", itemIDNorm, sellP, buyP)
 	}
 
+	// --- Validate Metrics Data ---
 	if !metricsOk {
-		dlog("  [%s] Metrics data not found. Primary C10M calculation skipped.", itemID)
-		// We can still calculate Secondary C10M and its associated cost if prices are valid
-		if buyP > 0 { // Check validity again just in case
-			bestCost = quantity * buyP
-			bestMethod = "Secondary"
-			associatedCost = bestCost // For secondary, C10M cost and associated cost are the same
-			// RR is N/A as primary calc was skipped
-			if math.IsNaN(bestCost) || bestCost < 0 || math.IsInf(bestCost, 0) { // Validation
-				err = fmt.Errorf("secondary C10M calculation failed for %s despite missing metrics", itemID)
-				return math.Inf(1), "N/A", math.NaN(), math.NaN(), err
-			}
-			dlog("  [%s] Using Secondary C10M (%.2f) due to missing metrics.", itemID, bestCost)
-			// Return error indicating partial calculation
-			err = fmt.Errorf("metrics not found for %s (used secondary C10M)", itemID)
-			return bestCost, bestMethod, associatedCost, math.NaN(), err
-		} else {
-			dlog("  [%s] Metrics missing and buy price invalid/missing. Cannot calculate C10M.", itemID)
-			err = fmt.Errorf("metrics and valid buy price not found for %s", itemID)
-			return math.Inf(1), "N/A", math.NaN(), math.NaN(), err
+		// Metrics missing: We can *only* calculate Secondary C10M. Primary is impossible.
+		dlog("  [%s] Metrics data not found. Primary C10M calculation skipped.", itemIDNorm)
+		err = fmt.Errorf("metrics not found for %s", itemIDNorm) // Store the error
+
+		// Calculate Secondary C10M
+		c10mSec := quantity * buyP
+		// Validate Secondary C10M
+		if math.IsNaN(c10mSec) || c10mSec < 0 || math.IsInf(c10mSec, 0) {
+			dlog("  [%s] Secondary C10M calculation failed (%.2f) even without metrics.", itemIDNorm, c10mSec)
+			// If secondary also fails (e.g., price was somehow bad despite earlier check), return Inf/N/A
+			return math.Inf(1), "N/A", math.NaN(), math.NaN(), fmt.Errorf("metrics missing and secondary C10M failed for %s", itemIDNorm)
 		}
-	}
 
-	// Both API (with valid prices) and Metrics data available, calculate C10M
-	var c10mPrim, c10mSec float64
-	var calcErr error
-	// Pass extracted prices directly to calculateC10M to avoid redundant lookups inside
-	// NOTE: We need calculateC10M to be refactored to accept prices or we need the old lookup logic back
-	// Let's revert calculateC10M call signature temporarily for simplicity, assuming it handles lookup
-	// Ideally, refactor calculateC10M to take sellP, buyP as args.
-	// Using original call structure for now:
-	// c10mPrim, c10mSec, _, rrValue, _, _, calcErr = calculateC10M(itemID, quantity, sellP, buyP, metricsMap) // Assuming metricsMap is []ProductMetrics locally
-	// Correction: Pass the single found metricsData
-	c10mPrim, c10mSec, _, rrValue, _, _, calcErr = calculateC10MInternal(itemID, quantity, sellP, buyP, metricsData) // Use internal helper
-
-	if calcErr != nil {
-		dlog("  [%s] Error during C10M calculation: %v", itemID, calcErr)
-		err = calcErr // Preserve the first error encountered
-		// Fall through to comparison logic, Inf values will be handled
-	}
-
-	// Determine Best C10M and Associated Cost
-	isPrimInf := math.IsInf(c10mPrim, 0)
-	isSecInf := math.IsInf(c10mSec, 0)
-	isPrimNaN := math.IsNaN(c10mPrim)
-	isSecNaN := math.IsNaN(c10mSec)
-
-	if (isPrimInf || isPrimNaN) && (isSecInf || isSecNaN) {
-		bestCost = math.Inf(1)
-		bestMethod = "N/A (Both Invalid)"
-		associatedCost = math.NaN()
-		dlog("  [%s] Both C10M invalid.", itemID)
-	} else if isPrimInf || isPrimNaN {
+		// Secondary is the only valid option
 		bestCost = c10mSec
 		bestMethod = "Secondary"
-		associatedCost = quantity * buyP // Use simple buy price
-		dlog("  [%s] Primary Invalid, using Secondary (%.2f). Assoc=%.2f", itemID, bestCost, associatedCost)
-	} else if isSecInf || isSecNaN {
-		bestCost = c10mPrim
-		bestMethod = "Primary"
-		associatedCost = quantity * sellP // Use simple sell price
-		dlog("  [%s] Secondary Invalid, using Primary (%.2f). Assoc=%.2f", itemID, bestCost, associatedCost)
-	} else {
-		// Both are valid numbers
+		associatedCost = bestCost // For secondary, associated cost IS the C10M cost
+		rrValue = math.NaN()      // RR is not applicable to secondary path
+		dlog("  [%s] Using Secondary C10M (%.2f) due to missing metrics.", itemIDNorm, bestCost)
+		// Return the calculated secondary cost and the error indicating metrics were missing
+		return bestCost, bestMethod, associatedCost, rrValue, err
+	}
+
+	// --- Both API (with valid prices) and Metrics data available ---
+	dlog("  [%s] Both API and Metrics data available. Calculating C10M...", itemIDNorm)
+	var c10mPrim, c10mSec float64
+	var calcErr error
+	// Pass extracted prices and metrics data directly to the internal calculator
+	c10mPrim, c10mSec, _, rrValue, _, _, calcErr = calculateC10MInternal(itemIDNorm, quantity, sellP, buyP, metricsData)
+
+	if calcErr != nil {
+		// If the internal calculation itself reported an error (e.g., bad inputs despite checks)
+		dlog("  [%s] Error during C10M internal calculation: %v", itemIDNorm, calcErr)
+		if err == nil { // Preserve original error (e.g., metrics missing) if it exists
+			err = calcErr
+		}
+		// Costs might be NaN/Inf due to error, comparison below will handle it.
+	}
+
+	// --- Determine Best C10M and Associated Cost ---
+	// Validate calculated costs again just in case internal logic had issues
+	validPrim := !math.IsInf(c10mPrim, 0) && !math.IsNaN(c10mPrim) && c10mPrim >= 0
+	validSec := !math.IsInf(c10mSec, 0) && !math.IsNaN(c10mSec) && c10mSec >= 0
+
+	if validPrim && validSec {
+		// Both primary and secondary are valid, finite, non-negative numbers
 		if c10mPrim <= c10mSec {
 			bestCost = c10mPrim
 			bestMethod = "Primary"
-			associatedCost = quantity * sellP // Use simple sell price
-			dlog("  [%s] Primary (%.2f) <= Secondary (%.2f). Using Primary. Assoc=%.2f", itemID, c10mPrim, c10mSec, associatedCost)
+			associatedCost = quantity * sellP // Simple sell price for primary path
+			dlog("  [%s] Primary (%.2f) <= Secondary (%.2f). Using Primary. Assoc=%.2f", itemIDNorm, c10mPrim, c10mSec, associatedCost)
 		} else {
 			bestCost = c10mSec
 			bestMethod = "Secondary"
-			associatedCost = quantity * buyP // Use simple buy price
-			dlog("  [%s] Secondary (%.2f) < Primary (%.2f). Using Secondary. Assoc=%.2f", itemID, c10mSec, c10mPrim, associatedCost)
+			associatedCost = quantity * buyP // Simple buy price for secondary path
+			rrValue = math.NaN()             // RR doesn't apply if Secondary is chosen
+			dlog("  [%s] Secondary (%.2f) < Primary (%.2f). Using Secondary. Assoc=%.2f", itemIDNorm, c10mSec, c10mPrim, associatedCost)
+		}
+	} else if validPrim {
+		// Only Primary is valid
+		bestCost = c10mPrim
+		bestMethod = "Primary"
+		associatedCost = quantity * sellP
+		dlog("  [%s] Secondary Invalid, using Primary (%.2f). Assoc=%.2f", itemIDNorm, bestCost, associatedCost)
+	} else if validSec {
+		// Only Secondary is valid
+		bestCost = c10mSec
+		bestMethod = "Secondary"
+		associatedCost = quantity * buyP
+		rrValue = math.NaN() // RR doesn't apply
+		dlog("  [%s] Primary Invalid, using Secondary (%.2f). Assoc=%.2f", itemIDNorm, bestCost, associatedCost)
+	} else {
+		// Neither Primary nor Secondary is valid
+		bestCost = math.Inf(1)
+		bestMethod = "N/A"
+		associatedCost = math.NaN()
+		rrValue = math.NaN()
+		dlog("  [%s] Both C10M results invalid.", itemIDNorm)
+		if err == nil { // If no specific calc error, create a generic one
+			err = fmt.Errorf("failed to determine valid C10M for %s (results invalid)", itemIDNorm)
 		}
 	}
 
-	// Final validation on costs
-	if math.IsNaN(bestCost) || bestCost < 0 {
-		bestCost = math.Inf(1)
-		bestMethod = "N/A (Calc Failed)"
-		associatedCost = math.NaN()
-	}
+	// Ensure associatedCost is NaN if it's invalid
 	if math.IsNaN(associatedCost) || associatedCost < 0 {
 		associatedCost = math.NaN()
-	} // Keep NaN if invalid, don't make Inf
-
-	// Update error status if no valid cost determined
-	if bestMethod == "N/A" || math.IsInf(bestCost, 1) {
-		if err == nil { // If no specific calc error, create a generic one
-			err = fmt.Errorf("failed to determine valid C10M for %s (result: %s)", itemID, bestMethod)
-		}
+	}
+	// Ensure rrValue is NaN if it's invalid or not applicable
+	if math.IsNaN(rrValue) || math.IsInf(rrValue, 0) {
+		rrValue = math.NaN()
 	}
 
-	dlog("  [%s] Best C10M: %.2f (%s), AssocCost: %.2f, RR: %.2f", itemID, bestCost, bestMethod, associatedCost, rrValue)
-	return bestCost, bestMethod, associatedCost, rrValue, err // Return error status
-}
-
-// calculateC10MInternal - temporary helper mirroring original calculateC10M logic
-// but taking a single ProductMetrics struct instead of a slice.
-// This avoids modifying the public calculateC10M signature yet.
-// TODO: Refactor calculateC10M properly to accept prices and single metrics struct.
-func calculateC10MInternal(
-	prodID string,
-	qty float64,
-	sellP float64, // Now takes prices directly
-	buyP float64, // Now takes prices directly
-	pm ProductMetrics, // Takes the single metrics struct
-) (c10mPrimary, c10mSecondary, IF, RR, DeltaRatio, adjustment float64, err error) { // Added error return
-
-	// Use provided prices directly
-	// Use provided pm directly
-
-	// 2) Clamp Metrics & Calculate Rates / Delta Ratio
-	s_s := math.Max(0, pm.SellSize)
-	s_f := math.Max(0, pm.SellFrequency)
-	o_f := math.Max(0, pm.OrderFrequency)
-	o_s := math.Max(0, pm.OrderSize)
-
-	supplyRate := s_s * s_f
-	demandRate := o_s * o_f
-	// dlog internal logs might be duplicated by getBestC10M, maybe remove later
-	dlog("  [Internal] Rates: Supply=%.4f, Demand=%.4f", supplyRate, demandRate)
-
-	if demandRate <= 0 {
-		if supplyRate <= 0 {
-			DeltaRatio = 1.0
-		} else {
-			DeltaRatio = math.Inf(1)
-		}
-	} else {
-		DeltaRatio = supplyRate / demandRate
-	}
-	dlog("  [Internal] DeltaRatio (SR/DR): %.4f", DeltaRatio)
-
-	// 3) Calculate IF, RR, Adjustment, and Primary C10M based on DeltaRatio
-	base := qty * sellP // Calculate base cost once
-	dlog("  [Internal] Base Cost: %.2f", base)
-
-	if DeltaRatio > 1.0 {
-		IF = math.Inf(1)
-		RR = 1.0
-		adjustment = 0.0
-		c10mPrimary = base
-		dlog("  [Internal] Delta > 1: Prim=%.2f", c10mPrimary)
-	} else {
-		if o_f <= 0 {
-			IF = 0
-		} else {
-			IF = s_s * (s_f / o_f)
-		}
-		if IF < 0 {
-			IF = 0
-		}
-		dlog("  [Internal] IF=%.4f", IF)
-
-		if IF <= 0 {
-			if supplyRate <= 0 {
-				RR = math.Inf(1)
-			} else {
-				RR = 1.0
-			}
-		} else {
-			RR = math.Ceil(qty / IF)
-		}
-		if RR < 1 && !math.IsInf(RR, 1) {
-			RR = 1.0
-		}
-		if math.IsNaN(RR) {
-			RR = math.Inf(1)
-		}
-		dlog("  [Internal] RR=%.2f", RR)
-
-		if math.IsInf(RR, 1) {
-			c10mPrimary = math.Inf(1)
-			adjustment = 0.0
-		} else {
-			if RR <= 1.0 {
-				adjustment = 0.0
-			} else {
-				adjustment = 1.0 - 1.0/RR
-			}
-			var extra float64 = 0.0
-			if adjustment > 0 {
-				RRint := int(RR)
-				sumK := float64(RRint*(RRint+1)) / 2.0
-				extra = sellP * (qty*RR - IF*sumK)
-				if extra < 0 {
-					extra = 0
-				}
-			}
-			c10mPrimary = base + adjustment*extra
-		}
-		dlog("  [Internal] Delta <= 1: Prim=%.2f", c10mPrimary)
-	}
-	c10mSecondary = qty * buyP
-	dlog("  [Internal] Sec=%.2f", c10mSecondary)
-
-	// 5) Final Validation
-	if math.IsNaN(c10mPrimary) || math.IsInf(c10mPrimary, -1) || c10mPrimary < 0 {
-		c10mPrimary = math.Inf(1)
-	}
-	if math.IsNaN(c10mSecondary) || math.IsInf(c10mSecondary, -1) || c10mSecondary < 0 {
-		c10mSecondary = math.Inf(1)
-	}
-
-	return // Returns named variables including the new 'err' (which is nil here)
+	dlog("  [%s] Best C10M Result: Cost=%.2f, Method=%s, AssocCost=%.2f, RR=%.2f, Err=%v", itemIDNorm, bestCost, bestMethod, associatedCost, rrValue, err)
+	return bestCost, bestMethod, associatedCost, rrValue, err // Return error status along with results
 }
