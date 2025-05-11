@@ -1,566 +1,95 @@
 <!-- src/App.svelte -->
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
+    import DualExpansionPage from './DualExpansionPage.svelte';
+    import OptimizerPage from './OptimizerPage.svelte';
   
-    let item = 'PRECURSOR_APPARATUS'; // Default item
-    let qty = 1;          // Default quantity
-    let dualResult = null;
-    let error = null;
-    let loading = false;
+    let currentPageComponent = null;
   
-    async function calculate() {
-      error = null; dualResult = null; loading = true;
-      const normalizedItem = item.toUpperCase().trim();
-      if (!normalizedItem) {
-        error = "Item ID cannot be empty.";
-        loading = false;
-        return;
-      }
-      const params = new URLSearchParams({ item: normalizedItem, qty: String(qty) });
-      try {
-        console.log(`Fetching: /api/expand-dual?${params}`);
-        const res = await fetch(`/api/expand-dual?${params}`);
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error(`API Error ${res.status}: ${errorText}`);
-          throw new Error(`API Error ${res.status}: ${errorText || res.statusText}`);
-        }
-        dualResult = await res.json();
-        console.log("API Dual Result:", dualResult);
-      } catch (e) {
-        console.error("Fetch/Calculation Error:", e);
-        error = e.message || 'An unknown error occurred.';
-      } finally {
-        loading = false;
-      }
-     }
+    function handleHashChange() {
+      const hash = window.location.hash;
+      console.log("Current Hash:", hash);
   
-    onMount(calculate);
-  
-    function handleClick() {
-      if (!loading) {
-        calculate();
+      if (hash === '#/optimize') {
+        currentPageComponent = OptimizerPage;
+      } else if (hash === '#/expand') {
+        currentPageComponent = DualExpansionPage;
+      } else {
+        console.log("Defaulting or unrecognized hash, navigating to #/expand");
+        window.location.hash = '#/expand';
       }
     }
   
-    function formatNum(num, digits = 2) {
-        if (num === null || num === undefined) return 'N/A';
-        if (isNaN(num)) return 'N/A';
-        if (!isFinite(num)) return num > 0 ? 'Infinite' : num < 0 ? '-Infinite' : 'N/A (Zero Div/Complex)'; // Handle +/- Inf
-        return Number(num).toFixed(digits);
-    }
+    onMount(() => {
+      console.log("App.svelte (Router) onMount");
+      window.addEventListener('hashchange', handleHashChange);
+      handleHashChange();
+    });
   
-    function formatTime(num) {
-         if (num === null || num === undefined || isNaN(num)) return 'N/A';
-         if (!isFinite(num)) return num > 0 ? 'Infinite' : 'N/A (-Inf)';
-         if (num < 0) return 'N/A (<0)';
-         if (num === 0) return '0.0s';
-         if (num < 1) return num.toFixed(2) + 's';
-         if (num < 60) return num.toFixed(1) + 's';
-         let mins = num / 60;
-         if (mins < 60) return mins.toFixed(1) + 'm';
-         let hours = mins / 60;
-         if (hours < 24) return hours.toFixed(1) + 'h';
-         let days = hours / 24;
-         return days.toFixed(1) + 'd';
-    }
-  
-    function getBaseIngredientsArray(perspectiveResult) {
-        const ingredientsMap = perspectiveResult?.base_ingredients ?? {};
-        const ingredientsArray = Object.entries(ingredientsMap).map(([name, detail]) => ({
-            name,
-            qty: detail.quantity,
-            assocCost: detail.associated_cost,
-            bestCost: detail.best_cost,
-            pricePerUnit: detail.quantity > 0 ? detail.associated_cost / detail.quantity : NaN,
-            method: detail.method,
-            rr: detail.rr,
-            if_value: detail.if // Assuming 'if' is the key in JSON from backend
-        }));
-        return ingredientsArray.sort((a, b) => a.name.localeCompare(b.name));
-    }
-  
-    function getPerspectiveSummary(perspective, topLevelQty) {
-        if (!perspective || !perspective.calculation_possible || topLevelQty <= 0) {
-          return { pricePerUnitCrafted: NaN, profitPerUnit: NaN, totalRevenue: NaN, totalProfit: NaN, topSellPrice: NaN };
-        }
-        const pricePerUnitCrafted = perspective.total_cost / topLevelQty;
-        const estTopSellPrice = perspective.top_level_cost / topLevelQty;
-        const totalRevenue = estTopSellPrice * topLevelQty;
-        const profitPerUnit = estTopSellPrice - pricePerUnitCrafted;
-        const totalProfit = totalRevenue - perspective.total_cost;
-        return { pricePerUnitCrafted, profitPerUnit, totalRevenue, totalProfit, topSellPrice: estTopSellPrice };
-    }
-  
+    onDestroy(() => {
+      window.removeEventListener('hashchange', handleHashChange);
+    });
   </script>
   
-  <main>
-    <h1>Bazaar Dual Expansion Dashboard</h1>
+  <header class="app-header">
+    <nav>
+      <a href="#/expand" class:active={currentPageComponent === DualExpansionPage}>Dual Expansion Calc</a>
+      <a href="#/optimize" class:active={currentPageComponent === OptimizerPage}>Optimizer</a>
+    </nav>
+  </header>
   
-    <div class="controls">
-       <label>Item ID: <input bind:value={item} placeholder="e.g. DIAMOND" disabled={loading} on:keyup={(e) => e.key === 'Enter' && handleClick()} /></label>
-       <label>Quantity: <input type="number" min="1" step="1" bind:value={qty} disabled={loading} on:keyup={(e) => e.key === 'Enter' && handleClick()} /></label>
-       <button on:click={handleClick} disabled={loading}> {#if loading}Calculating...{:else}Calculate{/if} </button>
-    </div>
-  
-    {#if error} <p class="error">Error: {error}</p> {/if}
-  
-    {#if dualResult && !error}
-      {@const primary = dualResult.primary_based}
-      {@const secondary = dualResult.secondary_based}
-      {@const primaryIngredients = getBaseIngredientsArray(primary)}
-      {@const secondaryIngredients = getBaseIngredientsArray(secondary)}
-      {@const primarySummary = getPerspectiveSummary(primary, dualResult.quantity)}
-      {@const secondarySummary = getPerspectiveSummary(secondary, dualResult.quantity)}
-  
-        <!-- Summary Grid -->
-        <div class="results-grid">
-           <!-- Perspective 1 Summary -->
-           <div class="perspective">
-               <h2>Perspective: Primary C10M Based</h2>
-               {#if primary.calculation_possible} <p class="status-ok">Calculation OK</p> {:else} <p class="status-error">Calculation Failed</p> {/if}
-               <p><strong>Top-Level Action:</strong> {primary.top_level_action ?? 'N/A'}</p>
-               {#if !primary.calculation_possible && primary.error_message}<p class="reason"><strong>Reason:</strong> {primary.error_message}</p>{/if}
-               <p><strong>Final Cost Method:</strong> {primary.final_cost_method ?? 'N/A'} </p>
-               <p><strong>Total Estimated Cost:</strong> <span class="cost">{formatNum(primary.total_cost, 2)}</span></p>
-               {#if primary.calculation_possible}
-                  <p><strong>Price Per Unit (Crafted):</strong> {formatNum(primarySummary.pricePerUnitCrafted, 2)}</p>
-                  <p><strong>Est. Profit Per Unit:</strong> {formatNum(primarySummary.profitPerUnit, 2)} <i>(vs benchmark)</i></p>
-               {/if}
-               <p><i>(Benchmark Primary Cost: {formatNum(primary.top_level_cost, 2)})</i></p>
-               {#if primary.top_level_rr !== null && primary.top_level_rr !== undefined } <p><i>(Top-Level Primary RR: {formatNum(primary.top_level_rr, 2)})</i></p> {/if}
-  
-               <div class="fill-time-sub-summary">
-                  <h4>Time Estimates (P1):</h4>
-                  {#if primary.calculation_possible && primary.top_level_action && (primary.top_level_action.includes('Expanded') || primary.top_level_action.includes('ExpansionFailed'))}
-                      {#if primary.slowest_ingredient_name}
-                          <p><strong>Slowest Ing. Buy Time:</strong> {formatTime(primary.slowest_ingredient_buy_time_seconds)}
-                              <br/><i>({primary.slowest_ingredient_name} x{formatNum(primary.slowest_ingredient_quantity,0)})</i></p>
-                      {:else if primaryIngredients.length > 0 || (primary.top_level_action === 'ExpansionFailed' && Object.keys(primary.base_ingredients || {}).length > 0)}
-                           <p><strong>Ingredient Buy Time:</strong> All ingredients instant or 0s.</p>
-                      {:else}
-                           <p><strong>Ingredient Buy Time:</strong> No ingredients to buy (e.g. empty recipe or cycle).</p>
-                      {/if}
-                  {:else if primary.calculation_possible && primary.top_level_action && primary.top_level_action.includes('TreatedAsBase')}
-                       <p><strong>Ingredient Buy Time:</strong> N/A (Top-level treated as base)</p>
-                  {:else if !primary.calculation_possible}
-                      <p><strong>Ingredient Buy Time:</strong> N/A (Calculation failed)</p>
-                  {/if}
-               </div>
-           </div>
-           <!-- Perspective 2 Summary -->
-           <div class="perspective">
-                <h2>Perspective: Secondary Based</h2>
-                {#if secondary.calculation_possible}
-                  {#if secondary.error_message && secondary.top_level_action !== "ExpansionFailed" && !secondary.error_message.toLowerCase().includes("fell back") && !secondary.error_message.toLowerCase().includes("due to cycle")}
-                      <p class="warning">Note: {secondary.error_message}</p> <p class="status-ok">Partial Calculation OK</p>
-                  {:else if secondary.error_message && secondary.top_level_action === "ExpansionFailed"}
-                      <p class="warning">Note: {secondary.error_message}</p> <p class="status-error">Calculation Failed</p>
-                  {:else}
-                      <p class="status-ok">Calculation OK</p>
-                      {#if secondary.error_message && (secondary.error_message.toLowerCase().includes("fell back") || secondary.error_message.toLowerCase().includes("due to cycle"))}
-                           <p class="note-info"><i>Note: {secondary.error_message}</i></p>
-                      {/if}
-                  {/if}
-                {:else} <p class="status-error">Calculation Failed</p>
-                {/if}
-                <p><strong>Top-Level Action:</strong> {secondary.top_level_action ?? 'N/A'}</p>
-                {#if !secondary.calculation_possible && secondary.error_message && (secondary.top_level_action === "Unknown" || (secondary.top_level_action !== "ExpansionFailed" && !secondary.calculation_possible))}<p class="reason"><strong>Reason:</strong> {secondary.error_message}</p>{/if}
-                <p><strong>Final Cost Method:</strong> {secondary.final_cost_method ?? 'N/A'} </p>
-                <p><strong>Total Estimated Cost:</strong> <span class="cost">{formatNum(secondary.total_cost, 2)}</span></p>
-                {#if secondary.calculation_possible}
-                  <p><strong>Price Per Unit (Acquired):</strong> {formatNum(secondarySummary.pricePerUnitCrafted, 2)}</p>
-                  <p><strong>Est. Profit Per Unit:</strong> {formatNum(secondarySummary.profitPerUnit, 2)} <i>(vs benchmark)</i></p>
-                {/if}
-                <p><i>(Benchmark Secondary Cost: {formatNum(secondary.top_level_cost, 2)})</i></p>
-  
-                <div class="fill-time-sub-summary">
-                  <h4>Time Estimates (P2):</h4>
-                  {#if secondary.calculation_possible && secondary.top_level_action && (secondary.top_level_action.includes('Expanded') || secondary.top_level_action.includes('ExpansionFailed'))}
-                      {#if secondary.slowest_ingredient_name}
-                          <p><strong>Slowest Ing. Buy Time:</strong> {formatTime(secondary.slowest_ingredient_buy_time_seconds)}
-                              <br/><i>({secondary.slowest_ingredient_name} x{formatNum(secondary.slowest_ingredient_quantity,0)})</i></p>
-                      {:else if secondaryIngredients.length > 0 || (secondary.top_level_action === 'ExpansionFailed' && Object.keys(secondary.base_ingredients || {}).length > 0)}
-                           <p><strong>Ingredient Buy Time:</strong> All ingredients instant or 0s.</p>
-                      {:else}
-                           <p><strong>Ingredient Buy Time:</strong> No ingredients to buy (e.g. empty recipe or cycle).</p>
-                      {/if}
-                  {:else if secondary.calculation_possible && secondary.top_level_action && secondary.top_level_action.includes('TreatedAsBase')}
-                       <p><strong>Ingredient Buy Time:</strong> N/A (Top-level treated as base)</p>
-                  {:else if !secondary.calculation_possible}
-                       <p><strong>Ingredient Buy Time:</strong> N/A (Calculation failed)</p>
-                  {/if}
-                  <p><strong>Top-Level Instasell Time:</strong> {formatTime(dualResult.top_level_instasell_time_seconds)}</p>
-                </div>
-           </div>
-        </div>
-  
-        <!-- Ingredient Tables Grid - NOW VERTICAL -->
-        <div class="ingredient-tables-grid">
-            <!-- Table 1: Primary Based Ingredients -->
-            <div class="results-table-container">
-                <h3>Base Ingredients (Primary Perspective)</h3>
-                {#if primaryIngredients.length > 0}
-                    <p class="note">Ingredients derived from choosing the best C10M cost at each step. Total cost above reflects this optimal path.</p>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Base Item</th>
-                                    <th class="num-col">Qty</th>
-                                    <th class="num-col">Price/Unit (Assoc.)</th>
-                                    <th class="num-col">Total Assoc. Cost</th>
-                                    <th class="num-col">Optimal C10M Cost</th>
-                                    <th>Method</th>
-                                    <th class="num-col">RR</th>
-                                    <th class="num-col">IF</th> <!-- New IF Column -->
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {#each primaryIngredients as ing}
-                                    <tr>
-                                        <td>{ing.name}</td>
-                                        <td class="num-col">{formatNum(ing.qty, 0)}</td>
-                                        <td class="num-col">{formatNum(ing.pricePerUnit,2)}</td>
-                                        <td class="num-col">{formatNum(ing.assocCost, 2)}</td>
-                                        <td class="num-col cost-cell">{formatNum(ing.bestCost, 2)}</td>
-                                        <td>{ing.method}</td>
-                                        <td class="num-col">{formatNum(ing.rr, 2)}</td>
-                                        <td class="num-col">{formatNum(ing.if_value, 2)}</td> <!-- Display IF -->
-                                    </tr>
-                                {/each}
-                            </tbody>
-                        </table>
-                    </div>
-                {:else if primary.calculation_possible && primary.top_level_action && (primary.top_level_action.includes('TreatedAsBase'))}
-                     <p>Top-level item treated as base for this perspective.</p>
-                {:else if !loading}
-                    <p>No base ingredients determined for this perspective.</p> {#if primary.error_message && primary.calculation_possible === false}<p class="error-detail">{primary.error_message}</p>{/if}
-                {/if}
-            </div>
-  
-            <!-- Table 2: Secondary Based Ingredients -->
-             <div class="results-table-container">
-                <h3>Base Ingredients (Secondary Perspective)</h3>
-                 {#if secondaryIngredients.length > 0}
-                     <p class="note">Ingredients derived based on P2's top-level decision benchmark. Total cost above reflects this.</p>
-                     <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Base Item</th>
-                                    <th class="num-col">Qty</th>
-                                    <th class="num-col">Price/Unit (Assoc.)</th>
-                                    <th class="num-col">Total Assoc. Cost</th>
-                                    <th class="num-col">Optimal C10M Cost</th>
-                                    <th>Method</th>
-                                    <th class="num-col">RR</th>
-                                    <th class="num-col">IF</th> <!-- New IF Column -->
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {#each secondaryIngredients as ing}
-                                    <tr>
-                                        <td>{ing.name}</td>
-                                        <td class="num-col">{formatNum(ing.qty, 0)}</td>
-                                        <td class="num-col">{formatNum(ing.pricePerUnit,2)}</td>
-                                        <td class="num-col">{formatNum(ing.assocCost, 2)}</td>
-                                        <td class="num-col cost-cell">{formatNum(ing.bestCost, 2)}</td>
-                                        <td>{ing.method}</td>
-                                        <td class="num-col">{formatNum(ing.rr, 2)}</td>
-                                        <td class="num-col">{formatNum(ing.if_value, 2)}</td> <!-- Display IF -->
-                                    </tr>
-                                {/each}
-                            </tbody>
-                        </table>
-                     </div>
-                 {:else if secondary.calculation_possible && secondary.top_level_action && (secondary.top_level_action.includes('TreatedAsBase'))}
-                    <p>Top-level item treated as base for this perspective.</p>
-                 {:else if secondary.top_level_action === 'ExpansionFailed'}
-                    <p class="note">Expansion failed for P2. Base ingredients (if partially resolved) from the attempt:</p>
-                     {#if Object.keys(secondary.base_ingredients || {}).length > 0}
-                         <div class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Base Item</th>
-                                        <th class="num-col">Qty</th>
-                                        <th class="num-col">Optimal C10M Cost</th>
-                                        <th>Method</th>
-                                        <th class="num-col">RR</th>
-                                        <th class="num-col">IF</th> <!-- New IF Column -->
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {#each Object.entries(secondary.base_ingredients) as [name, detail]}
-                                        <tr>
-                                            <td>{name}</td>
-                                            <td class="num-col">{formatNum(detail.quantity,0)}</td>
-                                            <td class="num-col cost-cell">{formatNum(detail.best_cost,2)}</td>
-                                            <td>{detail.method}</td>
-                                            <td class="num-col">{formatNum(detail.rr, 2)}</td>
-                                            <td class="num-col">{formatNum(detail.if, 2)}</td> <!-- Assuming 'if' is the key from backend -->
-                                        </tr>
-                                    {/each}
-                                </tbody>
-                            </table>
-                         </div>
-                     {:else}
-                          <p>No ingredients were resolved before failure.</p>
-                     {/if}
-                     {#if secondary.error_message}<p class="error-detail">Failure Reason: {secondary.error_message}</p>{/if}
-                 {:else if !loading}
-                     <p>No base ingredients determined for this perspective.</p> {#if secondary.error_message && secondary.calculation_possible === false}<p class="error-detail">{secondary.error_message}</p>{/if}
-                 {/if}
-            </div>
-        </div>
-  
-    {:else if !loading && !error} <p>Enter an Item ID and Quantity.</p> {/if}
-  </main>
+  <div class="page-content">
+    {#if currentPageComponent}
+      <svelte:component this={currentPageComponent} />
+    {:else}
+      <p>Loading page...</p>
+    {/if}
+  </div>
   
   <style>
-    main {
-      max-width: 1000px; /* Or adjust as needed for single column tables */
-      margin: 1.5rem auto;
-      padding: 1.5rem;
-      background: #1e1e1e;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-      color: #ddd;
-    }
-    h1 {
-      text-align: center;
-      color: #fff;
-      margin-bottom: 1.5rem;
-    }
-    h2 {
-      margin-top: 0;
-      font-size: 1.2rem;
-      color: #00aeff;
-      border-bottom: 1px solid #444;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    h3 {
-      margin-top: 0;
-      margin-bottom: 0.6rem;
-      text-align: left;
-      font-size: 1.05rem;
-      color: #eee;
-    }
-    h4 {
-      font-size: 0.9rem;
-      color: #bbb;
-      margin-top: 0.8rem;
-      margin-bottom: 0.3rem;
-      border-bottom: 1px dotted #555;
-      padding-bottom: 0.2rem;
-    }
-  
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 0.8rem;
-      margin-bottom: 1.5rem;
-      align-items: end;
-    }
-    label {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.85rem;
-      color: #bbb;
-    }
-    input {
-      padding: 0.5rem;
-      border: 1px solid #555;
-      border-radius: 4px;
-      background: #2a2a2a;
-      color: #fff;
-      font-size: 0.95rem;
-      margin-top: 0.2rem;
-    }
-    button {
-      padding: 0.6rem 1rem;
-      background: #0070f3;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover:not(:disabled) {
-      background: #005bb5;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-  
-    .results-grid { /* For summary boxes */
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.2rem;
-      margin-bottom: 1.5rem;
-    }
-    @media (max-width: 768px) { /* Stack summary boxes on smaller screens */
-        .results-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-  
-    .perspective {
-      background: #26262a;
-      padding: 1.2rem;
-      border-radius: 6px;
-      border: 1px solid #38383d;
-      display: flex;
-      flex-direction: column;
-    }
-    .perspective h2 {
-      text-align: left;
-      font-size: 1.05rem;
-      border: none;
-      padding: 0;
-    }
-    .perspective p {
-      margin: 0.3rem 0;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      color: #ccc;
-    }
-    .perspective strong {
+    :global(body) {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #121212;
       color: #e0e0e0;
-      min-width: 150px;
-      display: inline-block;
-    }
-    .perspective .cost {
-      font-weight: bold;
-      font-size: 1rem;
-      color: #50fa7b;
-    }
-    .perspective i {
-      font-size: 0.75rem;
-      color: #888;
-      display: inline;
-      margin-left: 4px;
-    }
-    .status-ok {
-      color: #50fa7b;
-      font-weight: bold;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-    }
-    .status-error {
-      color: #ff6b6b;
-      font-weight: bold;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-    }
-    .warning {
-      font-size: 0.8rem;
-      color: #f1fa8c;
-      margin-top: 0.3rem;
-      margin-bottom: 0.5rem;
-      padding: 0.3rem 0.5rem;
-      background-color: #44475a80;
-      border-left: 2px solid #f1fa8c;
-      border-radius: 3px;
-    }
-    .reason {
-      font-size: 0.8rem !important;
-      color: #aaa !important;
-      margin-top: 0.2rem;
-    }
-   .note-info {
-      font-style: italic;
-      font-size: 0.8rem;
-      color: #aaa;
-      margin-top: 0.2rem;
-      margin-bottom: 0.5rem;
     }
   
-    .fill-time-sub-summary {
-      margin-top: 0.8rem;
-      padding-top: 0.6rem;
-      border-top: 1px dashed #555;
-    }
-    .fill-time-sub-summary p {
-      margin: 0.2rem 0;
-    }
-    .fill-time-sub-summary i {
-      display: block;
-      font-size: 0.75rem;
-      margin-left: 10px;
-      color: #999;
+    .app-header {
+      background-color: #1e1e1e;
+      padding: 0.5em 1em;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      border-bottom: 1px solid #333;
     }
   
-    .ingredient-tables-grid {
-        display: grid;
-        grid-template-columns: 1fr; /* Changed for vertical stacking */
-        gap: 1.5rem; /* Increased gap for better separation when stacked */
-        margin-top: 1.5rem;
-    }
-    .results-table-container {
-      background: #252525;
-      padding: 1rem 1.2rem;
-      border-radius: 6px;
-      border: 1px solid #333;
-    }
-    .note {
-      font-size: 0.8rem;
-      color: #999;
-      margin-bottom: 0.8rem;
-      line-height: 1.3;
-      font-style: italic;
-    }
-    .table-wrapper {
-      overflow-x: auto; /* Still needed for individual table horizontal scroll if content is too wide */
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-    th, td {
-      padding: 0.5rem 0.7rem;
-      border: 1px solid #444;
-      text-align: left;
-      white-space: nowrap;
-    }
-    thead th {
-      background: #2c2c2c;
-      position: sticky; top: 0;
-      z-index: 1;
-      font-size: 0.8rem;
-      color: #ccc;
-    }
-    tbody tr:nth-child(even) {
-      background: #2a2a2a;
-    }
-    tbody tr:hover {
-      background: #353535;
-    }
-    .num-col {
-      text-align: right;
-    }
-    .cost-cell {
-      color: #8be9fd;
+    nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
     }
   
-    .error {
-      color: #ff6b6b;
-      font-weight: bold;
-      text-align: center;
-      background: #442222;
-      padding: 1rem;
-      border-radius: 4px;
-      border: 1px solid #ff6b6b;
-      margin-top: 1rem;
+    nav a {
+      color: #00aeff;
+      margin: 0 1.5em;
+      padding: 0.8em 0.5em;
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s ease, border-bottom-color 0.2s ease;
     }
-    .error-detail {
-      color: #ff9a9a;
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
+  
+    nav a:hover {
+      color: #61dafb;
+      border-bottom-color: #61dafb;
+    }
+    nav a.active {
+       color: #fff;
+       border-bottom-color: #00aeff;
+       font-weight: bold;
+    }
+    .page-content {
+       padding: 1em;
     }
   </style>

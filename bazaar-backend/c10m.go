@@ -207,12 +207,21 @@ func getBestC10M(
 
 	if !metricsOk {
 		dlog("  [%s] Metrics data not found. Primary C10M calculation skipped.", itemIDNorm)
-		err = fmt.Errorf("metrics not found for %s", itemIDNorm)
+		// err = fmt.Errorf("metrics not found for %s", itemIDNorm) // Keep this error if it's critical path, or allow fallback. Let's assume it's not fatal for getBestC10M to attempt Secondary.
+		// If metrics are missing, we can ONLY calculate Secondary C10M if API prices are valid.
+		// Primary C10M (and its IF/RR) becomes NaN/Inf.
 
 		c10mSec := quantity * buyP
 		if math.IsNaN(c10mSec) || c10mSec < 0 || math.IsInf(c10mSec, 0) {
 			dlog("  [%s] Secondary C10M calculation failed (%.2f) even without metrics.", itemIDNorm, c10mSec)
-			return math.Inf(1), "N/A", math.NaN(), math.NaN(), math.NaN(), fmt.Errorf("metrics missing and secondary C10M failed for %s", itemIDNorm)
+			// Combine error messages if err was already set
+			errMsg := "secondary C10M failed"
+			if err != nil {
+				err = fmt.Errorf("%v; and %s for %s", err, errMsg, itemIDNorm)
+			} else {
+				err = fmt.Errorf("metrics missing and %s for %s", errMsg, itemIDNorm)
+			}
+			return math.Inf(1), "N/A", math.NaN(), math.NaN(), math.NaN(), err
 		}
 
 		bestCost = c10mSec
@@ -221,20 +230,24 @@ func getBestC10M(
 		rrValue = math.NaN()
 		ifValue = math.NaN() // IF not applicable to secondary path
 		dlog("  [%s] Using Secondary C10M (%.2f) due to missing metrics.", itemIDNorm, bestCost)
+		if err == nil { // If no prior API error, set the metrics missing error
+			err = fmt.Errorf("metrics not found for %s, using Secondary C10M", itemIDNorm)
+		}
 		return bestCost, bestMethod, associatedCost, rrValue, ifValue, err
 	}
 
 	dlog("  [%s] Both API and Metrics data available. Calculating C10M...", itemIDNorm)
 	var c10mPrim, c10mSec float64
 	var calcErr error
-	// Pass extracted prices and metrics data directly to the internal calculator
-	// calculateC10MInternal now returns IF as the 3rd value
+	// calculateC10MInternal returns IF as the 3rd value, RR as 4th
 	c10mPrim, c10mSec, ifValue, rrValue, _, _, calcErr = calculateC10MInternal(itemIDNorm, quantity, sellP, buyP, metricsData)
 
 	if calcErr != nil {
 		dlog("  [%s] Error during C10M internal calculation: %v", itemIDNorm, calcErr)
 		if err == nil {
 			err = calcErr
+		} else {
+			err = fmt.Errorf("%v; additionally C10M internal calc failed: %w", err, calcErr)
 		}
 	}
 
@@ -276,7 +289,7 @@ func getBestC10M(
 		rrValue = math.NaN()
 		ifValue = math.NaN()
 		dlog("  [%s] Both C10M results invalid.", itemIDNorm)
-		if err == nil {
+		if err == nil { // If no specific calc error, create a generic one
 			err = fmt.Errorf("failed to determine valid C10M for %s (results invalid)", itemIDNorm)
 		}
 	}
@@ -284,10 +297,11 @@ func getBestC10M(
 	if math.IsNaN(associatedCost) || associatedCost < 0 {
 		associatedCost = math.NaN()
 	}
-	if math.IsNaN(rrValue) || math.IsInf(rrValue, 0) {
+	// Sanitize RR and IF before returning
+	if math.IsNaN(rrValue) || math.IsInf(rrValue, 0) { // Catches positive and negative infinity for RR
 		rrValue = math.NaN()
 	}
-	if math.IsNaN(ifValue) || math.IsInf(ifValue, 0) { // Sanitize IF as well
+	if math.IsNaN(ifValue) || math.IsInf(ifValue, 0) { // Catches positive and negative infinity for IF
 		ifValue = math.NaN()
 	}
 
