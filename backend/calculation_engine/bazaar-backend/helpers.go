@@ -46,7 +46,7 @@ func calculateTotalC10MForLevel(
 		}
 		// Get 5 values now, discard unused ones (assocCost, rrValue)
 		// Assumes getBestC10M defined elsewhere
-		cost, method, _, _, err := getBestC10M(itemID, quantity, apiResp, metricsMap)
+		cost, method, _, _, _, err := getBestC10M(itemID, quantity, apiResp, metricsMap)
 
 		// *** TEMPORARY DEBUG LOG ***
 		// Print details if the cost calculation for THIS item results in Inf/NaN/Error
