@@ -1,0 +1,2574 @@
+[
+  {
+    "item_name": "ACACIA_LOG",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "AMALGAMATED_CRIMSONITE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'AMALGAMATED_CRIMSONITE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for AMALGAMATED_CRIMSONITE)."
+  },
+  {
+    "item_name": "AMBER_MATERIAL",
+    "error_message": "Quantity 1 total cycle time (Acq:1120.00s + Sale:3780.00s = 4900.00s) exceeds max (3600.00s). Bottleneck: AMBER_MATERIAL."
+  },
+  {
+    "item_name": "AVARICIOUS_CHALICE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:16345.95s = +Infs) exceeds max (3600.00s). Bottleneck: AVARICIOUS_CHALICE."
+  },
+  {
+    "item_name": "BAYOU_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:5705.66s = 7385.66s) exceeds max (3600.00s). Bottleneck: BAYOU_WATER_ORB."
+  },
+  {
+    "item_name": "BAZAAR_COOKIE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "BLACK_WOOLEN_YARN",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:10427.59s = 13787.59s) exceeds max (3600.00s). Bottleneck: BLACK_WOOLEN_YARN."
+  },
+  {
+    "item_name": "BOUNCY_BEACH_BALL",
+    "error_message": "Quantity 1 total cycle time (Acq:3340.00s + Sale:396.33s = 3736.33s) exceeds max (3600.00s). Bottleneck: BOUNCY_BEACH_BALL."
+  },
+  {
+    "item_name": "BRAIDED_GRIFFIN_FEATHER",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:622.86s = 3982.86s) exceeds max (3600.00s). Bottleneck: BRAIDED_GRIFFIN_FEATHER."
+  },
+  {
+    "item_name": "BROWN_MUSHROOM_BLOCK",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "BULKY_STONE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:11630.77s = +Infs) exceeds max (3600.00s). Bottleneck: BULKY_STONE."
+  },
+  {
+    "item_name": "CHYME",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2092.73s = 5452.73s) exceeds max (3600.00s). Bottleneck: CHYME."
+  },
+  {
+    "item_name": "COMPACTOR",
+    "error_message": "Quantity 1 total cycle time (Acq:21735.00s + Sale:42.51s = 21777.51s) exceeds max (3600.00s). Bottleneck: REDSTONE."
+  },
+  {
+    "item_name": "DIRT_BOTTLE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'DIRT_BOTTLE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for DIRT_BOTTLE)."
+  },
+  {
+    "item_name": "DRAGON_HORN",
+    "error_message": "Quantity 1 total cycle time (Acq:6052837899185945600.00s + Sale:300.30s = 6052837899185945600.00s) exceeds max (3600.00s). Bottleneck: DRAGON_HORN."
+  },
+  {
+    "item_name": "DWARVEN_COMPACTOR",
+    "error_message": "Quantity 1 total cycle time (Acq:5686153.85s + Sale:72.81s = 5686226.65s) exceeds max (3600.00s). Bottleneck: MITHRIL_ORE."
+  },
+  {
+    "item_name": "DWARVEN_OS_ORE_OATS",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'DWARVEN_OS_ORE_OATS': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 354.90) for DWARVEN_OS_ORE_OATS)."
+  },
+  {
+    "item_name": "DWARVEN_TREASURE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'DWARVEN_TREASURE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 628.00) for DWARVEN_TREASURE)."
+  },
+  {
+    "item_name": "ECCENTRIC_PAINTING",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:2064.16s = +Infs) exceeds max (3600.00s). Bottleneck: ECCENTRIC_PAINTING."
+  },
+  {
+    "item_name": "ENCHANTED_BONE",
+    "error_message": "Quantity 1 total cycle time (Acq:178133.33s + Sale:0.35s = 178133.68s) exceeds max (3600.00s). Bottleneck: BONE."
+  },
+  {
+    "item_name": "ENCHANTED_BROWN_MUSHROOM",
+    "error_message": "Quantity 1 total cycle time (Acq:20736.00s + Sale:0.72s = 20736.72s) exceeds max (3600.00s). Bottleneck: BROWN_MUSHROOM."
+  },
+  {
+    "item_name": "ENCHANTED_CARROT_ON_A_STICK",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTED_CARROT_ON_A_STICK",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTED_COMPOST",
+    "error_message": "Quantity 1 total cycle time (Acq:27284.21s + Sale:28.78s = 27312.99s) exceeds max (3600.00s). Bottleneck: COMPOST."
+  },
+  {
+    "item_name": "ENCHANTED_EGG",
+    "error_message": "Quantity 1 total cycle time (Acq:239040.00s + Sale:3.84s = 239043.84s) exceeds max (3600.00s). Bottleneck: EGG."
+  },
+  {
+    "item_name": "ENCHANTED_EYE_OF_ENDER",
+    "error_message": "Quantity 1 total cycle time (Acq:46191.30s + Sale:0.88s = 46192.19s) exceeds max (3600.00s). Bottleneck: ENDER_PEARL."
+  },
+  {
+    "item_name": "ENCHANTED_FERMENTED_SPIDER_EYE",
+    "error_message": "Quantity 1 total cycle time (Acq:25804800.00s + Sale:4.64s = 25804804.64s) exceeds max (3600.00s). Bottleneck: SPIDER_EYE."
+  },
+  {
+    "item_name": "ENCHANTED_GLACITE",
+    "error_message": "Quantity 1 total cycle time (Acq:268800.00s + Sale:0.32s = 268800.32s) exceeds max (3600.00s). Bottleneck: GLACITE."
+  },
+  {
+    "item_name": "ENCHANTED_HARD_STONE",
+    "error_message": "Quantity 1 total cycle time (Acq:81687.27s + Sale:0.21s = 81687.48s) exceeds max (3600.00s). Bottleneck: HARD_STONE."
+  },
+  {
+    "item_name": "ENCHANTED_HAY_BLOCK",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'ENCHANTED_HAY_BLOCK': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for ENCHANTED_HAY_BLOCK)."
+  },
+  {
+    "item_name": "ENCHANTED_HUGE_MUSHROOM_1",
+    "error_message": "Quantity 1 total cycle time (Acq:2654208.00s + Sale:0.92s = 2654208.92s) exceeds max (3600.00s). Bottleneck: BROWN_MUSHROOM."
+  },
+  {
+    "item_name": "ENCHANTED_IRON",
+    "error_message": "Quantity 1 total cycle time (Acq:33912.00s + Sale:0.10s = 33912.10s) exceeds max (3600.00s). Bottleneck: IRON_INGOT."
+  },
+  {
+    "item_name": "ENCHANTED_IRON_BLOCK",
+    "error_message": "Quantity 1 total cycle time (Acq:21435733.33s + Sale:3.09s = 21435736.42s) exceeds max (3600.00s). Bottleneck: IRON_INGOT."
+  },
+  {
+    "item_name": "ENCHANTED_POPPY",
+    "error_message": "Quantity 1 total cycle time (Acq:4912.08s + Sale:27.15s = 4939.23s) exceeds max (3600.00s). Bottleneck: RED_ROSE."
+  },
+  {
+    "item_name": "ENCHANTED_RED_MUSHROOM",
+    "error_message": "Quantity 1 total cycle time (Acq:37942.86s + Sale:0.29s = 37943.15s) exceeds max (3600.00s). Bottleneck: RED_MUSHROOM."
+  },
+  {
+    "item_name": "ENCHANTED_SHARK_FIN",
+    "error_message": "Quantity 1 total cycle time (Acq:537600.00s + Sale:31.85s = 537631.85s) exceeds max (3600.00s). Bottleneck: SHARK_FIN."
+  },
+  {
+    "item_name": "ENCHANTED_SPONGE",
+    "error_message": "Quantity 1 total cycle time (Acq:134400.00s + Sale:4.05s = 134404.05s) exceeds max (3600.00s). Bottleneck: SPONGE."
+  },
+  {
+    "item_name": "ENCHANTED_TUNGSTEN",
+    "error_message": "Quantity 1 total cycle time (Acq:67200.00s + Sale:1.30s = 67201.30s) exceeds max (3600.00s). Bottleneck: TUNGSTEN."
+  },
+  {
+    "item_name": "ENCHANTED_WATER_LILY",
+    "error_message": "Quantity 1 total cycle time (Acq:48581.82s + Sale:2.32s = 48584.14s) exceeds max (3600.00s). Bottleneck: WATER_LILY."
+  },
+  {
+    "item_name": "ENCHANTED_WET_SPONGE",
+    "error_message": "Quantity 1 total cycle time (Acq:5376000.00s + Sale:16.08s = 5376016.08s) exceeds max (3600.00s). Bottleneck: SPONGE."
+  },
+  {
+    "item_name": "ENCHANTMENT_AIMING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_AIMING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_AIMING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_AIMING_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_AIMING_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ANGLER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ANGLER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ANGLER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ANGLER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ANGLER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_AQUA_AFFINITY_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BANE_OF_ARTHROPODS_7",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4616.79s = 7976.79s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_BANE_OF_ARTHROPODS_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_BIG_BRAIN_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:11200.00s = 11200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_BIG_BRAIN_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BIG_BRAIN_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:54981.82s = 54981.82s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLAST_PROTECTION_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLESSING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLESSING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLESSING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLESSING_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_BLESSING_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CASTER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CASTER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CASTER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CASTER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CASTER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CAYENNE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CAYENNE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CAYENNE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CAYENNE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:17788.24s = 17788.24s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_CAYENNE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1789.35s = 5149.35s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_CAYENNE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_10",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHAMPION_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHANCE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHANCE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHANCE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHARM_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:37800.00s = 37800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHARM_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:302400.00s = 302400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_CHARM_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CLEAVE_6",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2688.00s = 6048.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_CLEAVE_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_10",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COMPACT_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CORRUPTION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CORRUPTION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CORRUPTION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CORRUPTION_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:60480.00s = 60480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_COUNTER_STRIKE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COUNTER_STRIKE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_COUNTER_STRIKE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:60480.00s = 60480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CRITICAL_7",
+    "error_message": "Quantity 1 total cycle time (Acq:1113.33s + Sale:2676.11s = 3789.44s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_CRITICAL_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CUBISM_6",
+    "error_message": "Quantity 1 total cycle time (Acq:3400.73s + Sale:2688.00s = 6088.73s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_CUBISM_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CULTIVATING_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_CURSE_OF_VANISHING_0",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_DEDICATION_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3380.24s + Sale:3360.00s = 6740.24s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_DEDICATION_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_DEPTH_STRIDER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_DEPTH_STRIDER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_DEPTH_STRIDER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_DIVINE_GIFT_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:100800.00s = 100800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_DIVINE_GIFT_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:8284.93s = 8284.93s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_DRAGON_HUNTER_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10080.00s = 10080.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_DRAGON_HUNTER_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:8172.97s = 8172.97s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_DRAGON_HUNTER_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:9600.00s = 9600.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_10",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EFFICIENCY_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ENDER_SLAYER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ENDER_SLAYER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ENDER_SLAYER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ENDER_SLAYER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ENDER_SLAYER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXECUTE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXECUTE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXECUTE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXECUTE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXECUTE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERIENCE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERIENCE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERIENCE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERIENCE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:4382.61s = 6062.61s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_EXPERIENCE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_10",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_EXPERTISE_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_20",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEATHER_FALLING_9",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:3665.45s = 7025.45s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_FEATHER_FALLING_9."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEROCIOUS_MANA_1",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:3039.20s = 6399.20s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_FEROCIOUS_MANA_1."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEROCIOUS_MANA_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEROCIOUS_MANA_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1107.69s = 4467.69s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_FEROCIOUS_MANA_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEROCIOUS_MANA_8",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:14065.12s = 14065.12s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_FEROCIOUS_MANA_9",
+    "error_message": "Quantity 1 total cycle time (Acq:840.00s + Sale:20855.17s = 21695.17s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_FEROCIOUS_MANA_9."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_ASPECT_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_ASPECT_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRE_PROTECTION_6",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:985.02s = 4345.02s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_FIRE_PROTECTION_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRST_STRIKE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRST_STRIKE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRST_STRIKE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FIRST_STRIKE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FLAME_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FLAME_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FORTUNE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FORTUNE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FORTUNE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FRAIL_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FRAIL_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FRAIL_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FRAIL_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FRAIL_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FROST_WALKER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_FROST_WALKER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GIANT_KILLER_7",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:2541.18s = 4221.18s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_GIANT_KILLER_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_GREEN_THUMB_3",
+    "error_message": "Quantity 1 total cycle time (Acq:1106.67s + Sale:3756.52s = 4863.19s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_GREEN_THUMB_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_GREEN_THUMB_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:8284.93s = 11644.93s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_GREEN_THUMB_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_GREEN_THUMB_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4762.20s = 8122.20s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_GREEN_THUMB_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_GROWTH_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GROWTH_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GROWTH_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GROWTH_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_GROWTH_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARDENED_MANA_1",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2488.89s = 5848.89s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_HARDENED_MANA_1."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARDENED_MANA_7",
+    "error_message": "Quantity 1 total cycle time (Acq:840.00s + Sale:3852.23s = 4692.23s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_HARDENED_MANA_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARDENED_MANA_8",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7375.61s = 7375.61s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARDENED_MANA_9",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:50400.00s = 53760.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_HARDENED_MANA_9."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARVESTING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARVESTING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARVESTING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARVESTING_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HARVESTING_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_10",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_7",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_8",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_HECATOMB_9",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ICE_COLD_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:35576.47s = 35576.47s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ICE_COLD_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:86400.00s = 86400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ICE_COLD_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:60480.00s = 60480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ICE_COLD_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:9754.84s = 9754.84s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_IMPALING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_IMPALING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_IMPALING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_8",
+    "error_message": "Quantity 1 total cycle time (Acq:840.00s + Sale:4382.61s = 5222.61s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_INFINITE_QUIVER_8."
+  },
+  {
+    "item_name": "ENCHANTMENT_INFINITE_QUIVER_9",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10427.59s = 10427.59s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_KNOCKBACK_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_KNOCKBACK_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LAPIDARY_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:8284.93s = 11644.93s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_LAPIDARY_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_LAPIDARY_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:18900.00s = 18900.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_LAPIDARY_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:50400.00s = 50400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_LETHALITY_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LETHALITY_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LETHALITY_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LETHALITY_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LETHALITY_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LIFE_STEAL_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LIFE_STEAL_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LIFE_STEAL_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LOOTING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LOOTING_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LOOTING_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LOOTING_5",
+    "error_message": "Quantity 1 total cycle time (Acq:1113.33s + Sale:2994.06s = 4107.39s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_LOOTING_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_7",
+    "error_message": "Quantity 1 total cycle time (Acq:3340.00s + Sale:2839.44s = 6179.44s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_LUCK_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_OF_THE_SEA_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_OF_THE_SEA_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_OF_THE_SEA_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_OF_THE_SEA_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LUCK_OF_THE_SEA_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LURE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LURE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LURE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LURE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_LURE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MAGNET_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_STEAL_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:30240.00s = 30240.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_VAMPIRE_10",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:3952.94s = 3952.94s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_VAMPIRE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1542.86s = 4902.86s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_MANA_VAMPIRE_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_VAMPIRE_6",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1200.00s = 4560.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_MANA_VAMPIRE_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_VAMPIRE_8",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:18327.27s = 21687.27s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_MANA_VAMPIRE_8."
+  },
+  {
+    "item_name": "ENCHANTMENT_MANA_VAMPIRE_9",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:151200.00s = 151200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_OVERLOAD_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:12096.00s = 12096.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_OVERLOAD_3",
+    "error_message": "Quantity 1 total cycle time (Acq:2240.00s + Sale:10996.36s = 13236.36s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_OVERLOAD_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_OVERLOAD_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:23261.54s = 23261.54s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PALEONTOLOGIST_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:100800.00s = 100800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PALEONTOLOGIST_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:75600.00s = 75600.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PALEONTOLOGIST_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:37800.00s = 37800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PESTERMINATOR_4",
+    "error_message": "Quantity 1 total cycle time (Acq:6680.00s + Sale:2390.51s = 9070.51s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_PESTERMINATOR_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_PIERCING_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PISCARY_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PISCARY_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PISCARY_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PISCARY_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PISCARY_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_POWER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_POWER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_POWER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_POWER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_POWER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PRISTINE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:8518.31s = 10198.31s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_PRISTINE_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_PRISTINE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:11858.82s = 13538.82s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_PRISTINE_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_PRISTINE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:12868.09s = 12868.09s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROJECTILE_PROTECTION_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSECUTE_6",
+    "error_message": "Quantity 1 total cycle time (Acq:1120.00s + Sale:2541.18s = 3661.18s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_PROSECUTE_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSPERITY_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:86400.00s = 86400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSPERITY_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:60480.00s = 60480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSPERITY_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:60480.00s = 60480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROSPERITY_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:11630.77s = 11630.77s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PROTECTION_7",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2064.16s = 5424.16s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_PROTECTION_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_PUNCH_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_PUNCH_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_QUANTUM_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10250.85s = 10250.85s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_QUICK_BITE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:25200.00s = 25200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_QUICK_BITE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:50400.00s = 50400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_QUICK_BITE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:54981.82s = 54981.82s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_QUICK_BITE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:4320.00s = 6000.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_QUICK_BITE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_REFLECTION_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:11858.82s = 11858.82s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_REFLECTION_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:28800.00s = 28800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_REFLECTION_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:23261.54s = 23261.54s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_REJUVENATE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:953.94s = 4313.94s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_REJUVENATE_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPIRATION_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPIRATION_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPIRATION_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPITE_1",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1353.02s = 4713.02s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_RESPITE_1."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPITE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:14751.22s = 14751.22s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPITE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:579.87s = 3939.87s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_RESPITE_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_RESPITE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:24192.00s = 24192.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SCAVENGER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SCAVENGER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SCAVENGER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SHARPNESS_7",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2562.71s = 5922.71s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SHARPNESS_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_SILK_TOUCH_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMALL_BRAIN_3",
+    "error_message": "Quantity 1 total cycle time (Acq:480.00s + Sale:4320.00s = 4800.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SMALL_BRAIN_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMALL_BRAIN_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:302400.00s = 302400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMALL_BRAIN_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4480.00s = 7840.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SMALL_BRAIN_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMARTY_PANTS_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:12600.00s = 12600.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMARTY_PANTS_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10610.53s = 10610.53s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMARTY_PANTS_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:54981.82s = 54981.82s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMELTING_TOUCH_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMITE_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMOLDERING_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:151200.00s = 151200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMOLDERING_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:151200.00s = 151200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMOLDERING_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:120960.00s = 120960.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SMOLDERING_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:9026.87s = 12386.87s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SMOLDERING_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_SNIPE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SNIPE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SNIPE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SNIPE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:1106.67s + Sale:3234.22s = 4340.89s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SNIPE_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_SPIKED_HOOK_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SPIKED_HOOK_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SPIKED_HOOK_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SPIKED_HOOK_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SPIKED_HOOK_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_STRONG_MANA_10",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:4086.49s = 4086.49s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_STRONG_MANA_2",
+    "error_message": "Quantity 1 total cycle time (Acq:5010.00s + Sale:5259.13s = 10269.13s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_STRONG_MANA_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_STRONG_MANA_8",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:12868.09s = 12868.09s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_STRONG_MANA_9",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:43200.00s = 43200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SUGAR_RUSH_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:28800.00s = 32160.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SUGAR_RUSH_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_SUNDER_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:23261.54s = 23261.54s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SUNDER_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:43200.00s = 43200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_SUNDER_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:35576.47s = 38936.47s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SUNDER_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_SUNDER_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:3323.08s = 6683.08s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_SUNDER_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_SYPHON_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SYPHON_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_SYPHON_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TABASCO_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TABASCO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10080.00s = 10080.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_THORNS_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THORNS_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THORNS_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERBOLT_7",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2371.76s = 5731.76s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_THUNDERBOLT_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERLORD_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERLORD_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERLORD_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERLORD_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_THUNDERLORD_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TIDAL_1",
+    "error_message": "Quantity 1 total cycle time (Acq:224.00s + Sale:7200.00s = 7424.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TIDAL_1."
+  },
+  {
+    "item_name": "ENCHANTMENT_TIDAL_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:+Infs = +Infs) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TIDAL_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:12868.09s = 16228.09s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TIDAL_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_6",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TITAN_KILLER_7",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:3780.00s = 5460.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TITAN_KILLER_7."
+  },
+  {
+    "item_name": "ENCHANTMENT_TRIPLE_STRIKE_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TRIPLE_STRIKE_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TRIPLE_STRIKE_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TRIPLE_STRIKE_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TRIPLE_STRIKE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:2240.00s + Sale:2606.90s = 4846.90s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TRIPLE_STRIKE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CACTUS_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:43200.00s = 43200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CACTUS_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7560.00s = 7560.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CACTUS_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:18327.27s = 18327.27s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CANE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:9163.64s = 9163.64s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CANE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5760.00s = 5760.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CANE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5652.34s = 5652.34s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CARROT_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7115.29s = 7115.29s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CARROT_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_CARROT_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:10250.85s = 13610.85s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_CARROT_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_COCO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:17280.00s = 17280.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_COCO_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7957.89s = 7957.89s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_COCO_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:28800.00s = 28800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MELON_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:4171.03s = 4171.03s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MELON_3",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:2468.57s = 4148.57s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_MELON_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MELON_4",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:3217.02s = 4897.02s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_MELON_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MUSHROOMS_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:22400.00s = 22400.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MUSHROOMS_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:6503.23s = 6503.23s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MUSHROOMS_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:13147.83s = 16507.83s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_MUSHROOMS_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_MUSHROOMS_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3340.00s + Sale:763.64s = 4103.64s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_MUSHROOMS_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_POTATO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10800.00s = 10800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_POTATO_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4725.00s = 8085.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_POTATO_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_POTATO_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:11858.82s = 15218.82s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_POTATO_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_PUMPKIN_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7560.00s = 7560.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_PUMPKIN_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_PUMPKIN_4",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:7854.55s = 9534.55s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_PUMPKIN_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WARTS_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:10427.59s = 10427.59s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WARTS_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5082.35s = 5082.35s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WARTS_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5448.65s = 5448.65s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WHEAT_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:6434.04s = 6434.04s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WHEAT_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:4142.47s = 4142.47s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_TURBO_WHEAT_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4259.15s = 7619.15s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_TURBO_WHEAT_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_BANK_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5760.00s = 5760.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_BOBBIN_TIME_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_BOBBIN_TIME_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:67200.00s = 70560.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_BOBBIN_TIME_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_CHIMERA_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:120960.00s = 124320.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_CHIMERA_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_CHIMERA_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_CHIMERA_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_CHIMERA_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_COMBO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1070.44s = 4430.44s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_COMBO_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_COMBO_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:4957.38s = 4957.38s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_COMBO_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:25200.00s = 25200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_COMBO_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3340.00s + Sale:447.67s = 3787.67s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_COMBO_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FATAL_TEMPO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:100800.00s = 100800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FATAL_TEMPO_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:604800.00s = 604800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FATAL_TEMPO_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FATAL_TEMPO_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FLASH_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:17788.24s = 17788.24s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FLASH_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:37800.00s = 41160.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_FLASH_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FLASH_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:151200.00s = 151200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FLASH_5",
+    "error_message": "Quantity 1 total cycle time (Acq:672.00s + Sale:12342.86s = 13014.86s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_FLASH_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_FLOWSTATE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4289.36s = 7649.36s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_FLOWSTATE_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_HABANERO_TACTICS_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:3304.92s = 6664.92s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_HABANERO_TACTICS_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_INFERNO_1",
+    "error_message": "Quantity 1 total cycle time (Acq:6680.00s + Sale:2800.00s = 9480.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_INFERNO_1."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_INFERNO_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:75600.00s = 75600.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_INFERNO_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:151200.00s = 151200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_INFERNO_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:+Infs = +Infs) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_INFERNO_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:604800.00s = 604800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_JERRY_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_JERRY_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_JERRY_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:21600.00s = 21600.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_LAST_STAND_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2419.20s = 5779.20s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_LAST_STAND_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_LAST_STAND_4",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2688.00s = 6048.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_LAST_STAND_4."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_LEGION_2",
+    "error_message": "Quantity 1 total cycle time (Acq:664.00s + Sale:3183.16s = 3847.16s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_LEGION_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_LEGION_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:4480.00s = 4480.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_5",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:5929.41s = 7609.41s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_NO_PAIN_NO_GAIN_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_ONE_FOR_ALL_0",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REFRIGERATE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:6646.15s = 6646.15s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REFRIGERATE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4351.08s = 7711.08s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_REFRIGERATE_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REFRIGERATE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:9754.84s = 9754.84s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REFRIGERATE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2085.52s = 5445.52s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_REFRIGERATE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REITERATE_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:37800.00s = 37800.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REITERATE_3",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:21600.00s = 24960.00s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_REITERATE_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REITERATE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:67200.00s = 67200.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REITERATE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:2213.33s + Sale:1728.00s = 3941.33s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_REITERATE_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REND_2",
+    "error_message": "Quantity 1 total cycle time (Acq:1120.00s + Sale:3495.95s = 4615.95s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_REND_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REND_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REND_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:+Infs = +Infs) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_REND_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:13440.00s = 13440.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SOUL_EATER_2",
+    "error_message": "Quantity 1 total cycle time (Acq:4175.00s + Sale:5352.21s = 9527.21s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_SOUL_EATER_2."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SOUL_EATER_3",
+    "error_message": "Quantity 1 total cycle time (Acq:1120.00s + Sale:2488.89s = 3608.89s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_SOUL_EATER_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SOUL_EATER_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:6795.51s = 6795.51s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SWARM_2",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:15915.79s = 15915.79s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SWARM_3",
+    "error_message": "Quantity 1 total cycle time (Acq:6680.00s + Sale:8284.93s = 14964.93s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_ULTIMATE_SWARM_3."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_SWARM_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:35576.47s = 35576.47s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_THE_ONE_4",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:3780.00s = 3780.00s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_ULTIMATE_THE_ONE_5",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:16345.95s = 16345.95s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_VAMPIRISM_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VAMPIRISM_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VAMPIRISM_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VAMPIRISM_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VAMPIRISM_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_1",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_2",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_3",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_5",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VENOMOUS_6",
+    "error_message": "Quantity 1 total cycle time (Acq:1106.67s + Sale:2866.35s = 3973.02s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_VENOMOUS_6."
+  },
+  {
+    "item_name": "ENCHANTMENT_VICIOUS_3",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:20855.17s = 20855.17s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "ENCHANTMENT_VICIOUS_4",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENCHANTMENT_VICIOUS_5",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:7375.61s = 9055.61s) exceeds max (3600.00s). Bottleneck: ENCHANTMENT_VICIOUS_5."
+  },
+  {
+    "item_name": "ENCHANTMENT_WITHER_HUNTER_0",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. No recipe and C10M methods invalid/unavailable."
+  },
+  {
+    "item_name": "ENTROPY_SUPPRESSOR",
+    "error_message": "Quantity 1 total cycle time (Acq:427520000.00s + Sale:50400.00s = 427570400.00s) exceeds max (3600.00s). Bottleneck: SULPHUR_ORE."
+  },
+  {
+    "item_name": "EXPIRED_PUMPKIN",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:11.96s = +Infs) exceeds max (3600.00s). Bottleneck: EXPIRED_PUMPKIN."
+  },
+  {
+    "item_name": "FLAMES",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:60.41s = +Infs) exceeds max (3600.00s). Bottleneck: FLAMES."
+  },
+  {
+    "item_name": "FLAWED_AMETHYST_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:10752000.00s + Sale:8.70s = 10752008.70s) exceeds max (3600.00s). Bottleneck: ROUGH_AMETHYST_GEM."
+  },
+  {
+    "item_name": "FLAWED_CITRINE_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:7.53s = +Infs) exceeds max (3600.00s). Bottleneck: ROUGH_CITRINE_GEM."
+  },
+  {
+    "item_name": "FLAWED_JASPER_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:7168000.00s + Sale:14.12s = 7168014.12s) exceeds max (3600.00s). Bottleneck: ROUGH_JASPER_GEM."
+  },
+  {
+    "item_name": "FLAWED_OPAL_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:268800.00s + Sale:6.00s = 268806.00s) exceeds max (3600.00s). Bottleneck: ROUGH_OPAL_GEM."
+  },
+  {
+    "item_name": "FLAWED_RUBY_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:89600.00s + Sale:1.46s = 89601.46s) exceeds max (3600.00s). Bottleneck: ROUGH_RUBY_GEM."
+  },
+  {
+    "item_name": "FLAWED_TOPAZ_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:21536320.00s + Sale:7.61s = 21536327.61s) exceeds max (3600.00s). Bottleneck: ROUGH_TOPAZ_GEM."
+  },
+  {
+    "item_name": "FLAWLESS_AMETHYST_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:2150528000.00s + Sale:60.26s = 2150528060.26s) exceeds max (3600.00s). Bottleneck: FLAWED_AMETHYST_GEM."
+  },
+  {
+    "item_name": "FLYCATCHER_UPGRADE",
+    "error_message": "Quantity 1 total cycle time (Acq:25735.38s + Sale:290.07s = 26025.46s) exceeds max (3600.00s). Bottleneck: TARANTULA_SILK."
+  },
+  {
+    "item_name": "FRIGID_HUSK",
+    "error_message": "Quantity 1 total cycle time (Acq:4400.00s + Sale:3475.86s = 7875.86s) exceeds max (3600.00s). Bottleneck: FRIGID_HUSK."
+  },
+  {
+    "item_name": "FULL_JAW_FANGING_KIT",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:7957.89s = +Infs) exceeds max (3600.00s). Bottleneck: FULL_JAW_FANGING_KIT."
+  },
+  {
+    "item_name": "GIANT_BOUNCY_BEACH_BALL",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:2724.32s = +Infs) exceeds max (3600.00s). Bottleneck: GIANT_BOUNCY_BEACH_BALL."
+  },
+  {
+    "item_name": "GLEAMING_CRYSTAL",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:25200.00s = 28560.00s) exceeds max (3600.00s). Bottleneck: GLEAMING_CRYSTAL."
+  },
+  {
+    "item_name": "GLOWSTONE_DUST_DISTILLATE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:183.72s = +Infs) exceeds max (3600.00s). Bottleneck: GLOWSTONE_DUST_DISTILLATE."
+  },
+  {
+    "item_name": "GOLDEN_BOUNTY",
+    "error_message": "Quantity 1 total cycle time (Acq:830.00s + Sale:2907.69s = 3737.69s) exceeds max (3600.00s). Bottleneck: GOLDEN_BOUNTY."
+  },
+  {
+    "item_name": "GOLD_BOTTLE_CAP",
+    "error_message": "Quantity 1 total cycle time (Acq:1344.00s + Sale:2381.10s = 3725.10s) exceeds max (3600.00s). Bottleneck: GOLD_BOTTLE_CAP."
+  },
+  {
+    "item_name": "GRAVEL",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'GRAVEL': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 2.60) for GRAVEL)."
+  },
+  {
+    "item_name": "GUNPOWDER",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "HARDENED_WOOD",
+    "error_message": "Quantity 1 total cycle time (Acq:830.00s + Sale:4059.06s = 4889.06s) exceeds max (3600.00s). Bottleneck: HARDENED_WOOD."
+  },
+  {
+    "item_name": "HAY_BLOCK",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'HAY_BLOCK': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for HAY_BLOCK)."
+  },
+  {
+    "item_name": "HOTSPOT_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:5815.38s = 5815.38s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "INFERNO_APEX",
+    "error_message": "Quantity 1 total cycle time (Acq:1685.05s + Sale:2317.24s = 4002.29s) exceeds max (3600.00s). Bottleneck: INFERNO_APEX."
+  },
+  {
+    "item_name": "INK_SAC",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "JALAPENO_BOOK",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:7286.75s = 10646.75s) exceeds max (3600.00s). Bottleneck: JALAPENO_BOOK."
+  },
+  {
+    "item_name": "JERRY_STONE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'JERRY_STONE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 4099.90) for JERRY_STONE)."
+  },
+  {
+    "item_name": "KUUDRA_MANDIBLE",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1165.32s = 4525.32s) exceeds max (3600.00s). Bottleneck: KUUDRA_MANDIBLE."
+  },
+  {
+    "item_name": "LAPIS_CRYSTAL",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'LAPIS_CRYSTAL': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 99.80) for LAPIS_CRYSTAL)."
+  },
+  {
+    "item_name": "LARGE_WALNUT",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:2562.71s = 4242.71s) exceeds max (3600.00s). Bottleneck: LARGE_WALNUT."
+  },
+  {
+    "item_name": "LAVA_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:480.00s + Sale:3397.75s = 3877.75s) exceeds max (3600.00s). Bottleneck: LAVA_WATER_ORB."
+  },
+  {
+    "item_name": "LESSER_SOULFLOW_ENGINE",
+    "error_message": "Quantity 1 total cycle time (Acq:1329015466.67s + Sale:265.61s = 1329015732.28s) exceeds max (3600.00s). Bottleneck: IRON_INGOT."
+  },
+  {
+    "item_name": "LUCKY_DICE",
+    "error_message": "Quantity 1 total cycle time (Acq:280.00s + Sale:3687.80s = 3967.80s) exceeds max (3600.00s). Bottleneck: LUCKY_DICE."
+  },
+  {
+    "item_name": "MAGIC_TOP_HAT",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:24192.00s = 27552.00s) exceeds max (3600.00s). Bottleneck: MAGIC_TOP_HAT."
+  },
+  {
+    "item_name": "MAGMA_CORE",
+    "error_message": "Quantity 1 total cycle time (Acq:4017.39s + Sale:59.77s = 4077.16s) exceeds max (3600.00s). Bottleneck: MAGMA_CORE."
+  },
+  {
+    "item_name": "MAGMA_CREAM_DISTILLATE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:1174.37s = +Infs) exceeds max (3600.00s). Bottleneck: MAGMA_CREAM_DISTILLATE."
+  },
+  {
+    "item_name": "METEOR_SHARD",
+    "error_message": "Quantity 1 total cycle time (Acq:16800000.00s + Sale:2223.53s = 16802223.53s) exceeds max (3600.00s). Bottleneck: GHAST_TEAR."
+  },
+  {
+    "item_name": "MIDAS_JEWEL",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:3621.56s = 5301.56s) exceeds max (3600.00s). Bottleneck: MIDAS_JEWEL."
+  },
+  {
+    "item_name": "MINION_EXPANDER",
+    "error_message": "Quantity 1 total cycle time (Acq:4300800.00s + Sale:35.53s = 4300835.53s) exceeds max (3600.00s). Bottleneck: QUARTZ."
+  },
+  {
+    "item_name": "MIXED_MITE_GEL",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2468.57s = 5828.57s) exceeds max (3600.00s). Bottleneck: MIXED_MITE_GEL."
+  },
+  {
+    "item_name": "MOIL_LOG",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'MOIL_LOG': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for MOIL_LOG)."
+  },
+  {
+    "item_name": "MOLTEN_CUBE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'MOLTEN_CUBE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 16199.60) for MOLTEN_CUBE)."
+  },
+  {
+    "item_name": "NETHERRACK",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'NETHERRACK': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 2.70) for NETHERRACK)."
+  },
+  {
+    "item_name": "NETHER_STALK_DISTILLATE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:532.39s = +Infs) exceeds max (3600.00s). Bottleneck: NETHER_STALK_DISTILLATE."
+  },
+  {
+    "item_name": "NULL_BLADE",
+    "error_message": "Quantity 1 total cycle time (Acq:549769846.15s + Sale:397.11s = 549770243.26s) exceeds max (3600.00s). Bottleneck: MITHRIL_ORE."
+  },
+  {
+    "item_name": "OAK_LOG",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "PACKED_ICE",
+    "error_message": "Quantity 1 total cycle time (Acq:30240.00s + Sale:0.10s = 30240.10s) exceeds max (3600.00s). Bottleneck: ICE."
+  },
+  {
+    "item_name": "PERFECT_OPAL_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:612.77s = +Infs) exceeds max (3600.00s). Bottleneck: PERFECT_OPAL_GEM."
+  },
+  {
+    "item_name": "PERFECT_TOPAZ_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:4920.00s + Sale:156.12s = 5076.12s) exceeds max (3600.00s). Bottleneck: PERFECT_TOPAZ_GEM."
+  },
+  {
+    "item_name": "PET_ITEM_TIER_BOOST_DROP",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:17788.24s = 21148.24s) exceeds max (3600.00s). Bottleneck: PET_ITEM_TIER_BOOST_DROP."
+  },
+  {
+    "item_name": "PET_ITEM_TOY_JERRY",
+    "error_message": "Quantity 1 total cycle time (Acq:560.00s + Sale:3133.68s = 3693.68s) exceeds max (3600.00s). Bottleneck: PET_ITEM_TOY_JERRY."
+  },
+  {
+    "item_name": "PREMIUM_FLESH",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'PREMIUM_FLESH': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 2.10) for PREMIUM_FLESH)."
+  },
+  {
+    "item_name": "PRESUMED_GALLON_OF_RED_PAINT",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2935.92s = 6295.92s) exceeds max (3600.00s). Bottleneck: PRESUMED_GALLON_OF_RED_PAINT."
+  },
+  {
+    "item_name": "PURE_MITHRIL",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:4480.00s = 7840.00s) exceeds max (3600.00s). Bottleneck: PURE_MITHRIL."
+  },
+  {
+    "item_name": "RADIOACTIVE_VIAL",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:4414.60s = 6094.60s) exceeds max (3600.00s). Bottleneck: RADIOACTIVE_VIAL."
+  },
+  {
+    "item_name": "RARE_DIAMOND",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'RARE_DIAMOND': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: 50.10, bP: NaN) for RARE_DIAMOND)."
+  },
+  {
+    "item_name": "RED_MUSHROOM_BLOCK",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "RED_NOSE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'RED_NOSE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: 0.10, bP: NaN) for RED_NOSE)."
+  },
+  {
+    "item_name": "REFINED_AMBER",
+    "error_message": "Quantity 1 total cycle time (Acq:1120.00s + Sale:3952.94s = 5072.94s) exceeds max (3600.00s). Bottleneck: REFINED_AMBER."
+  },
+  {
+    "item_name": "ROUGH_CITRINE_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:0.55s = +Infs) exceeds max (3600.00s). Bottleneck: ROUGH_CITRINE_GEM."
+  },
+  {
+    "item_name": "ROUGH_ONYX_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:0.60s = +Infs) exceeds max (3600.00s). Bottleneck: ROUGH_ONYX_GEM."
+  },
+  {
+    "item_name": "ROUGH_OPAL_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:291.89s = 3651.89s) exceeds max (3600.00s). Bottleneck: ROUGH_OPAL_GEM."
+  },
+  {
+    "item_name": "ROUGH_TOPAZ_GEM",
+    "error_message": "Quantity 1 total cycle time (Acq:4008.00s + Sale:1.26s = 4009.26s) exceeds max (3600.00s). Bottleneck: ROUGH_TOPAZ_GEM."
+  },
+  {
+    "item_name": "RUSTY_ANCHOR",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:54981.82s = 58341.82s) exceeds max (3600.00s). Bottleneck: RUSTY_ANCHOR."
+  },
+  {
+    "item_name": "SADAN_BROOCH",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:2700.00s = +Infs) exceeds max (3600.00s). Bottleneck: SADAN_BROOCH."
+  },
+  {
+    "item_name": "SCUTTLER_SHELL",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:4998.35s = +Infs) exceeds max (3600.00s). Bottleneck: SCUTTLER_SHELL."
+  },
+  {
+    "item_name": "SEVERED_PINCER",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:1323.41s = 4683.41s) exceeds max (3600.00s). Bottleneck: SEVERED_PINCER."
+  },
+  {
+    "item_name": "SHARK_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:24192.00s = 25872.00s) exceeds max (3600.00s). Bottleneck: SHARK_WATER_ORB."
+  },
+  {
+    "item_name": "SLEEPY_HOLLOW",
+    "error_message": "Quantity 1 total cycle time (Acq:1680.00s + Sale:4171.03s = 5851.03s) exceeds max (3600.00s). Bottleneck: SLEEPY_HOLLOW."
+  },
+  {
+    "item_name": "SLIMEBALL",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "SOULFLOW_ENGINE",
+    "error_message": "Quantity 1 total cycle time (Acq:20749789866.67s + Sale:4513.43s = 20749794380.10s) exceeds max (3600.00s). Bottleneck: IRON_INGOT."
+  },
+  {
+    "item_name": "SPOOKY_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:7115.29s = 7115.29s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "SPOTLITE",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:3269.19s = +Infs) exceeds max (3600.00s). Bottleneck: SPOTLITE."
+  },
+  {
+    "item_name": "SUBZERO_INVERTER",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:6951.72s = 10311.72s) exceeds max (3600.00s). Bottleneck: SUBZERO_INVERTER."
+  },
+  {
+    "item_name": "SUPER_COMPACTOR_3000",
+    "error_message": "Quantity 1 total cycle time (Acq:708802.50s + Sale:8.06s = 708810.56s) exceeds max (3600.00s). Bottleneck: REDSTONE."
+  },
+  {
+    "item_name": "TESSELLATED_ENDER_PEARL",
+    "error_message": "Quantity 1 total cycle time (Acq:3529.06s + Sale:217.48s = 3746.53s) exceeds max (3600.00s). Bottleneck: TESSELLATED_ENDER_PEARL."
+  },
+  {
+    "item_name": "TIGHTLY_TIED_HAY_BALE",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'TIGHTLY_TIED_HAY_BALE': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for TIGHTLY_TIED_HAY_BALE)."
+  },
+  {
+    "item_name": "TITANOBOA_SHED",
+    "error_message": "Quantity 1 total cycle time (Acq:941.18s + Sale:17280.00s = 18221.18s) exceeds max (3600.00s). Bottleneck: TITANOBOA_SHED."
+  },
+  {
+    "item_name": "TOIL_LOG",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'TOIL_LOG': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: NaN) for TOIL_LOG)."
+  },
+  {
+    "item_name": "TROUBLED_BUBBLE",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:2022.74s = 5382.74s) exceeds max (3600.00s). Bottleneck: TROUBLED_BUBBLE."
+  },
+  {
+    "item_name": "VOLCANIC_ROCK",
+    "error_message": "Quantity 1 total cycle time (Acq:+Infs + Sale:153.23s = +Infs) exceeds max (3600.00s). Bottleneck: VOLCANIC_ROCK."
+  },
+  {
+    "item_name": "WHITE_WOOL",
+    "error_message": "Item not found in current Bazaar API data."
+  },
+  {
+    "item_name": "WINTER_FRAGMENT",
+    "error_message": "Quantity 1 total cycle time (Acq:3360.00s + Sale:345.01s = 3705.01s) exceeds max (3600.00s). Bottleneck: WINTER_FRAGMENT."
+  },
+  {
+    "item_name": "WINTER_WATER_ORB",
+    "error_message": "Quantity 1 total cycle time (Acq:0.00s + Sale:23261.54s = 23261.54s) exceeds max (3600.00s). Bottleneck: ."
+  },
+  {
+    "item_name": "WISHING_COMPASS",
+    "error_message": "P1 calculation failed for qty 1 check: P1: No valid acquisition method found. Crafting failed (Cannot determine valid BEST cost for base ingredient 'WISHING_COMPASS': BestC:+Inf, Method: N/A, Err: invalid prices from API (sP: NaN, bP: 0.70) for WISHING_COMPASS)."
+  },
+  {
+    "item_name": "WOOD_SINGULARITY",
+    "error_message": "Quantity 1 total cycle time (Acq:840.00s + Sale:2907.69s = 3747.69s) exceeds max (3600.00s). Bottleneck: WOOD_SINGULARITY."
+  }
+]

@@ -4,30 +4,37 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"time" // Added for timestamp
+	"time"
 )
 
 const (
-	metricsFilename    = "latest_metrics.json"
-	itemFilesDir       = "dependencies/items"
-	outputJSONFilename = "optimizer_results.json"
+	metricsFilename           = "latest_metrics.json"
+	itemFilesDir              = "dependencies/items"
+	outputJSONFilename        = "optimizer_results.json"
+	failedItemsReportFilename = "failed_items_report.json" // New constant for the failed items report
 )
 
-// New struct to hold the summary and the results
+// Struct to hold the summary and the results for the main output
 type OptimizationRunOutput struct {
 	Summary OptimizationSummary   `json:"summary"`
-	Results []OptimizedItemResult `json:"results"` // OptimizedItemResult is defined in optimizer.go
+	Results []OptimizedItemResult `json:"results"`
 }
 
-// New struct for the summary information
+// Struct for the summary information
 type OptimizationSummary struct {
 	RunTimestamp                string  `json:"run_timestamp"`
 	APILastUpdatedTimestamp     string  `json:"api_last_updated_timestamp,omitempty"`
 	TotalItemsConsidered        int     `json:"total_items_considered"`
-	ItemsSuccessfullyCalculated int     `json:"items_successfully_calculated"` // CalculationPossible = true
-	ItemsWithCalculationErrors  int     `json:"items_with_calculation_errors"` // CalculationPossible = false
+	ItemsSuccessfullyCalculated int     `json:"items_successfully_calculated"`
+	ItemsWithCalculationErrors  int     `json:"items_with_calculation_errors"`
 	MaxAllowedCycleTimeSecs     float64 `json:"max_allowed_cycle_time_seconds"`
 	MaxInitialSearchQuantity    float64 `json:"max_initial_search_quantity"`
+}
+
+// New struct for detailing failed items in the separate report
+type FailedItemDetail struct {
+	ItemName     string `json:"item_name"`
+	ErrorMessage string `json:"error_message,omitempty"`
 }
 
 func main() {
@@ -35,7 +42,7 @@ func main() {
 
 	// 1. Load API Data
 	log.Println("Loading Hypixel API data...")
-	apiResp, err := getApiResponse() // This populates apiResponseCache
+	apiResp, err := getApiResponse()
 	if err != nil {
 		log.Fatalf("CRITICAL: Initial API load failed: %v. Optimizer cannot run.", err)
 	}
@@ -46,7 +53,7 @@ func main() {
 
 	var apiLastUpdatedStr string
 	if apiResp.LastUpdated > 0 {
-		apiLastUpdatedStr = time.Unix(apiResp.LastUpdated/1000, 0).Format(time.RFC3339) // API gives ms
+		apiLastUpdatedStr = time.Unix(apiResp.LastUpdated/1000, 0).Format(time.RFC3339)
 	}
 
 	// 2. Load Metrics Data
@@ -62,7 +69,7 @@ func main() {
 
 	// 3. Get Item IDs for Optimization
 	var itemIDs []string
-	apiCacheMutex.RLock() // Accessing global apiResponseCache
+	apiCacheMutex.RLock()
 	if apiResponseCache == nil || apiResponseCache.Products == nil {
 		apiCacheMutex.RUnlock()
 		log.Fatalf("CRITICAL: Global apiResponseCache is nil or has no products when trying to get item IDs.")
@@ -88,45 +95,67 @@ func main() {
 	optimizedResults := RunFullOptimization(itemIDs, maxAllowedFillTime, apiResp, metricsMap, itemFilesDir, maxInitialSearchQty)
 	log.Printf("Optimization complete. Generated %d results.", len(optimizedResults))
 
-	// 6. Prepare Summary
+	// 6. Prepare Summary and collect failed items
 	successfullyCalculatedCount := 0
 	calculationErrorCount := 0
+	var failedItemsDetails []FailedItemDetail // Slice to store details of failed items
+
 	for _, res := range optimizedResults {
 		if res.CalculationPossible {
 			successfullyCalculatedCount++
 		} else {
 			calculationErrorCount++
+			failedItemsDetails = append(failedItemsDetails, FailedItemDetail{
+				ItemName:     res.ItemName,
+				ErrorMessage: res.ErrorMessage,
+			})
 		}
 	}
 
 	summary := OptimizationSummary{
 		RunTimestamp:                runStartTime.Format(time.RFC3339),
 		APILastUpdatedTimestamp:     apiLastUpdatedStr,
-		TotalItemsConsidered:        len(itemIDs), // Could also be len(optimizedResults) if some items were skipped before optimization call
+		TotalItemsConsidered:        len(itemIDs),
 		ItemsSuccessfullyCalculated: successfullyCalculatedCount,
 		ItemsWithCalculationErrors:  calculationErrorCount,
 		MaxAllowedCycleTimeSecs:     maxAllowedFillTime,
 		MaxInitialSearchQuantity:    maxInitialSearchQty,
 	}
 
-	// 7. Combine summary and results into the final output structure
-	finalOutput := OptimizationRunOutput{
+	// 7. Combine summary and results for the main output file
+	mainFinalOutput := OptimizationRunOutput{
 		Summary: summary,
 		Results: optimizedResults,
 	}
 
-	// 8. Marshal the final output structure to JSON
-	jsonBytes, err := json.MarshalIndent(finalOutput, "", "  ")
+	// 8. Marshal the main output structure to JSON
+	mainJsonBytes, err := json.MarshalIndent(mainFinalOutput, "", "  ")
 	if err != nil {
-		log.Fatalf("CRITICAL: Failed to marshal final optimization output to JSON: %v", err)
+		log.Fatalf("CRITICAL: Failed to marshal main optimization output to JSON: %v", err)
 	}
 
-	// 9. Write JSON to File
-	log.Printf("Writing optimizer results to '%s'...", outputJSONFilename)
-	err = os.WriteFile(outputJSONFilename, jsonBytes, 0644)
+	// 9. Write main JSON to File
+	log.Printf("Writing main optimizer results to '%s'...", outputJSONFilename)
+	err = os.WriteFile(outputJSONFilename, mainJsonBytes, 0644)
 	if err != nil {
-		log.Fatalf("CRITICAL: Failed to write JSON output to file '%s': %v", outputJSONFilename, err)
+		log.Fatalf("CRITICAL: Failed to write main JSON output to file '%s': %v", outputJSONFilename, err)
 	}
+	log.Printf("Main optimizer results successfully written to '%s'.", outputJSONFilename)
 
-	log.Printf("Optimizer results successfully written to '%s'.", outputJSONFilename)
+	// 10. Marshal and Write Failed Items Report (if any)
+	if len(failedItemsDetails) > 0 {
+		failedItemsJsonBytes, err := json.MarshalIndent(failedItemsDetails, "", "  ")
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to marshal failed items report to JSON: %v", err)
+		}
+
+		log.Printf("Writing failed items report to '%s'...", failedItemsReportFilename)
+		err = os.WriteFile(failedItemsReportFilename, failedItemsJsonBytes, 0644)
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to write failed items report to file '%s': %v", failedItemsReportFilename, err)
+		}
+		log.Printf("Failed items report successfully written to '%s'.", failedItemsReportFilename)
+	} else {
+		log.Println("No items failed calculation; failed items report not generated.")
+	}
 }
