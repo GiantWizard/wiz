@@ -2,521 +2,131 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"math"
-	"net/http"
 	"os"
-	"path/filepath"
-	"runtime/debug"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
+	"time" // Added for timestamp
 )
 
 const (
-	metricsFilename = "latest_metrics.json"
-	itemFilesDir    = "dependencies/items"
+	metricsFilename    = "latest_metrics.json"
+	itemFilesDir       = "dependencies/items"
+	outputJSONFilename = "optimizer_results.json"
 )
 
-type Ingredient struct {
-	Name             string  `json:"name"`
-	Qty              float64 `json:"qty"`
-	CostPerUnit      float64 `json:"cost_per_unit"`
-	TotalCost        float64 `json:"total_cost"`
-	PriceSource      string  `json:"price_source"`
-	BuyOrderFillTime float64 `json:"buy_order_fill_time"`
-	RR               float64 `json:"rr"`
-	IF               float64 `json:"if,omitempty"`
-	Delta            float64 `json:"delta,omitempty"`
+// New struct to hold the summary and the results
+type OptimizationRunOutput struct {
+	Summary OptimizationSummary   `json:"summary"`
+	Results []OptimizedItemResult `json:"results"` // OptimizedItemResult is defined in optimizer.go
 }
-type FillResponse struct {
-	Recipe                []Ingredient `json:"recipe"`
-	SlowestIngredient     string       `json:"slowest_ingredient"`
-	SlowestIngredientQty  float64      `json:"slowest_ingredient_qty"`
-	SlowestFillTime       float64      `json:"slowest_fill_time"`
-	TopLevelInstasellTime float64      `json:"top_level_instasell_time"`
-	TotalBaseCost         float64      `json:"total_base_cost"`
-	TopSellPrice          float64      `json:"top_sell_price"`
-	TotalRevenue          float64      `json:"total_revenue"`
-	ProfitPerUnit         float64      `json:"profit_per_unit"`
-	TotalProfit           float64      `json:"total_profit"`
+
+// New struct for the summary information
+type OptimizationSummary struct {
+	RunTimestamp                string  `json:"run_timestamp"`
+	APILastUpdatedTimestamp     string  `json:"api_last_updated_timestamp,omitempty"`
+	TotalItemsConsidered        int     `json:"total_items_considered"`
+	ItemsSuccessfullyCalculated int     `json:"items_successfully_calculated"` // CalculationPossible = true
+	ItemsWithCalculationErrors  int     `json:"items_with_calculation_errors"` // CalculationPossible = false
+	MaxAllowedCycleTimeSecs     float64 `json:"max_allowed_cycle_time_seconds"`
+	MaxInitialSearchQuantity    float64 `json:"max_initial_search_quantity"`
 }
 
 func main() {
-	var err error
-	_, err = getApiResponse()
+	runStartTime := time.Now()
+
+	// 1. Load API Data
+	log.Println("Loading Hypixel API data...")
+	apiResp, err := getApiResponse() // This populates apiResponseCache
 	if err != nil {
-		log.Printf("WARNING: Initial API load failed: %v.", err)
-	} else {
-		log.Println("Initial API data loaded.")
+		log.Fatalf("CRITICAL: Initial API load failed: %v. Optimizer cannot run.", err)
 	}
-	_, err = getMetricsMap(metricsFilename)
+	if apiResp == nil || apiResp.Products == nil {
+		log.Fatalf("CRITICAL: API data is nil or has no products after load attempt. Optimizer cannot run. Stored API fetch error: %v", apiFetchErr)
+	}
+	log.Println("Initial API data loaded successfully.")
+
+	var apiLastUpdatedStr string
+	if apiResp.LastUpdated > 0 {
+		apiLastUpdatedStr = time.Unix(apiResp.LastUpdated/1000, 0).Format(time.RFC3339) // API gives ms
+	}
+
+	// 2. Load Metrics Data
+	log.Println("Loading metrics data...")
+	metricsMap, err := getMetricsMap(metricsFilename)
 	if err != nil {
-		log.Fatalf("CRITICAL: Cannot load metrics '%s': %v", metricsFilename, err)
-	} else {
-		log.Printf("Metrics data loaded from '%s'.", metricsFilename)
+		log.Fatalf("CRITICAL: Cannot load metrics '%s': %v. Optimizer cannot run.", metricsFilename, err)
 	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir("public")))
-	mux.Handle("/api/fill", withCORS(withRecovery(fillHandler)))
-	mux.Handle("/api/expand-dual", withCORS(withRecovery(dualExpansionHandler)))
-	mux.Handle("/api/optimize-all", withCORS(withRecovery(optimizerApiHandler)))
-
-	port := "8080"
-	log.Printf("Listening on :%s...", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatalf("CRITICAL: Server failed: %v", err)
+	if metricsMap == nil {
+		log.Fatalf("CRITICAL: Metrics map is nil after load, even without a direct load error. Optimizer cannot run.")
 	}
-}
+	log.Printf("Metrics data loaded from '%s'.", metricsFilename)
 
-func fillHandler(w http.ResponseWriter, r *http.Request) {
-	handlerID := fmt.Sprintf("[%d-fill]", time.Now().UnixNano())
-	log.Printf("%s Handler Start: %s %s", handlerID, r.Method, r.URL.String())
-	defer log.Printf("%s Handler End", handlerID)
-
-	itemQuery := r.URL.Query().Get("item")
-	qtyStr := r.URL.Query().Get("qty")
-	if itemQuery == "" {
-		http.Error(w, "missing item parameter", http.StatusBadRequest)
-		return
-	}
-	item := BAZAAR_ID(itemQuery)
-	qty, err := strconv.ParseFloat(qtyStr, 64)
-	if err != nil || qty <= 0 {
-		http.Error(w, "invalid qty parameter", http.StatusBadRequest)
-		return
-	}
-	log.Printf("%s Validated Request: item=%s, qty=%.2f", handlerID, item, qty)
-
-	apiCacheMutex.RLock()
-	currentApiResp := apiResponseCache
-	currentApiErr := apiFetchErr
-	apiCacheMutex.RUnlock()
-	if currentApiResp == nil {
-		errMsg := "API data unavailable"
-		if currentApiErr != nil {
-			errMsg += fmt.Sprintf(" (%v)", currentApiErr)
-		}
-		log.Printf("%s Error: %s", handlerID, errMsg)
-		http.Error(w, errMsg, http.StatusServiceUnavailable)
-		return
-	}
-
-	currentMetricsMap, metricsErr := getMetricsMap(metricsFilename)
-	if metricsErr != nil || currentMetricsMap == nil {
-		log.Printf("%s Error: Metrics unavailable (%v)", handlerID, metricsErr)
-		http.Error(w, "Metrics unavailable", http.StatusInternalServerError)
-		return
-	}
-	log.Printf("%s Global data OK", handlerID)
-
-	log.Printf("%s Determining Primary-Based expansion for %s...", handlerID, item)
-	shouldExpandFill := false
-	sellP := getSellPrice(currentApiResp, item)
-	buyP := getBuyPrice(currentApiResp, item)
-	metricsP := getMetrics(currentMetricsMap, item)
-
-	topC10mPrim, topC10mSec, _, _, _, _, errTopC10M := calculateC10MInternal(
-		item, qty, sellP, buyP, metricsP,
-	)
-	isApiNotFoundErrorFill := errTopC10M != nil && strings.Contains(errTopC10M.Error(), "API data not found")
-	topLevelRecipeExistsFill := false
-	if errTopC10M == nil || isApiNotFoundErrorFill {
-		filePathFill := filepath.Join(itemFilesDir, item+".json")
-		if _, statErr := os.Stat(filePathFill); statErr == nil {
-			topLevelRecipeExistsFill = true
-		} else if !os.IsNotExist(statErr) {
-			log.Printf("%s CRITICAL Error checking recipe file: %v", handlerID, statErr)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if isApiNotFoundErrorFill {
-		shouldExpandFill = topLevelRecipeExistsFill
-	} else if errTopC10M != nil {
-		shouldExpandFill = false
-		log.Printf("%s WARN: Top-level C10M failed for %s: %v. Treating as base.", handlerID, item, errTopC10M)
-	} else {
-		validPrim := !math.IsInf(topC10mPrim, 0) && !math.IsNaN(topC10mPrim) && topC10mPrim >= 0
-		validSec := !math.IsInf(topC10mSec, 0) && !math.IsNaN(topC10mSec) && topC10mSec >= 0
-		if validPrim && validSec {
-			shouldExpandFill = topC10mPrim <= topC10mSec
-		} else if validPrim {
-			shouldExpandFill = true
-		} else {
-			shouldExpandFill = false
-		}
-	}
-	log.Printf("%s Primary-Based Decision: Expand = %v", handlerID, shouldExpandFill)
-
-	var baseMap map[string]float64
-	if shouldExpandFill {
-		var expandErr error
-		baseMap, expandErr = ExpandItem(item, qty, currentApiResp, currentMetricsMap, itemFilesDir)
-		if expandErr != nil {
-			log.Printf("%s CRITICAL Error during ExpandItem: %v", handlerID, expandErr)
-			http.Error(w, fmt.Sprintf("Error expanding recipe: %v", expandErr), http.StatusInternalServerError)
-			return
-		}
-		if len(baseMap) == 0 {
-			log.Printf("%s WARN: Expansion resulted in empty map (likely cycles). Treating %s as base.", handlerID, item)
-			baseMap = map[string]float64{item: qty}
-		}
-	} else {
-		baseMap = map[string]float64{item: qty}
-	}
-
-	if baseMap == nil {
-		log.Printf("%s CRITICAL Error: baseMap is nil after expansion logic", handlerID)
-		http.Error(w, "Internal server error during recipe processing", http.StatusInternalServerError)
-		return
-	}
-	log.Printf("%s Expansion processing complete. Found %d base types.", handlerID, len(baseMap))
-
-	ingredientResults := make([]Ingredient, 0, len(baseMap))
-	var slowestTimeRaw float64 = 0.0
-	var slowestIngredientName string = ""
-	var slowestIngredientQty float64 = 0.0
-	var sumSimpleCost float64 = 0.0
-	processingErrorOccurred := false
-	log.Printf("%s Processing %d base ingredients...", handlerID, len(baseMap))
-
-	for name, amt := range baseMap {
-		_, method, assocCost, rr, ifVal, errC10M := getBestC10M(name, amt, currentApiResp, currentMetricsMap)
-		priceSource := "N/A"
-		costPerUnitSimple := math.NaN()
-		currentTotalCost := math.NaN()
-		currentIF := math.NaN()
-		currentDelta := math.NaN()
-
-		metricsDataForDelta, metricsOkForDelta := safeGetMetricsData(currentMetricsMap, name)
-		if metricsOkForDelta {
-			currentDelta = metricsDataForDelta.SellSize*metricsDataForDelta.SellFrequency - metricsDataForDelta.OrderSize*metricsDataForDelta.OrderFrequency
-		}
-
-		if errC10M != nil || method == "N/A" || math.IsNaN(assocCost) || math.IsInf(assocCost, 0) || assocCost < 0 {
-			rr = math.NaN()
-			currentIF = math.NaN()
-			processingErrorOccurred = true
-		} else {
-			currentTotalCost = assocCost
-			if amt > 0 {
-				costPerUnitSimple = assocCost / amt
-			}
-			if method == "Primary" {
-				priceSource = "SellP"
-				currentIF = ifVal
-			} else if method == "Secondary" {
-				priceSource = "BuyP"
-				rr = math.NaN()
-				currentIF = math.NaN()
-			}
-		}
-
-		var buyTimeForIngredient float64 = math.NaN()
-		var rawBuyTimeForSlowestCheck float64 = math.Inf(1)
-
-		metricsDataForFillTime, metricsOkForFillTime := safeGetMetricsData(currentMetricsMap, name)
-		if !metricsOkForFillTime {
-			processingErrorOccurred = true
-			rr = math.NaN()
-			currentIF = math.NaN()
-		} else {
-			var buyErr error
-			buyTimeForIngredient, _, buyErr = calculateBuyOrderFillTime(name, amt, metricsDataForFillTime)
-			rawBuyTimeForSlowestCheck = buyTimeForIngredient // Use the direct result for slowest check
-			if buyErr != nil || math.IsNaN(buyTimeForIngredient) || math.IsInf(buyTimeForIngredient, 0) || buyTimeForIngredient < 0 {
-				buyTimeForIngredient = math.NaN()
-				processingErrorOccurred = true
-			}
-		}
-		ingredientResults = append(ingredientResults, Ingredient{
-			Name:             name,
-			Qty:              amt,
-			CostPerUnit:      sanitizeFloat(costPerUnitSimple),
-			TotalCost:        sanitizeFloat(currentTotalCost),
-			PriceSource:      priceSource,
-			BuyOrderFillTime: sanitizeFloat(buyTimeForIngredient),
-			RR:               sanitizeFloat(rr),
-			IF:               sanitizeFloat(currentIF),
-			Delta:            sanitizeFloat(currentDelta),
-		})
-
-		if !math.IsNaN(rawBuyTimeForSlowestCheck) {
-			if math.IsInf(rawBuyTimeForSlowestCheck, 1) {
-				if !math.IsInf(slowestTimeRaw, 1) {
-					slowestTimeRaw = rawBuyTimeForSlowestCheck
-					slowestIngredientName = name
-					slowestIngredientQty = amt
-				}
-			} else if !math.IsInf(slowestTimeRaw, 1) && rawBuyTimeForSlowestCheck > slowestTimeRaw {
-				slowestTimeRaw = rawBuyTimeForSlowestCheck
-				slowestIngredientName = name
-				slowestIngredientQty = amt
-			}
-		}
-
-		if !math.IsNaN(assocCost) && !math.IsInf(assocCost, 0) && assocCost >= 0 {
-			sumSimpleCost += assocCost
-		} else {
-			if !math.IsNaN(sumSimpleCost) {
-				sumSimpleCost = math.NaN()
-			}
-			processingErrorOccurred = true
-		}
-	}
-	log.Printf("%s Finished ingredient loop.", handlerID)
-
-	resp := FillResponse{}
-	sort.Slice(ingredientResults, func(i, j int) bool { return ingredientResults[i].Name < ingredientResults[j].Name })
-	resp.Recipe = ingredientResults
-	log.Printf("%s Sorted results.", handlerID)
-
-	log.Printf("%s Calculating top-level profit & instasell time for %s...", handlerID, item)
-	topProd, topApiOk := safeGetProductData(currentApiResp, item)
-	var topInstaSellPrice float64 = math.NaN()
-	var topLevelInstaSellTimeRaw float64 = math.NaN() // Store raw before sanitizing
-
-	if !topApiOk {
-		processingErrorOccurred = true
-	} else {
-		if len(topProd.BuySummary) > 0 {
-			price := topProd.BuySummary[0].PricePerUnit
-			if price <= 0 || math.IsNaN(price) || math.IsInf(price, 0) {
-				processingErrorOccurred = true
-			} else {
-				topInstaSellPrice = price
-			}
-		} else {
-			processingErrorOccurred = true
-		}
-
-		var instaErr error
-		topLevelInstaSellTimeRaw, instaErr = calculateInstasellFillTime(qty, topProd)
-		if instaErr != nil || math.IsNaN(topLevelInstaSellTimeRaw) || math.IsInf(topLevelInstaSellTimeRaw, -1) || topLevelInstaSellTimeRaw < 0 {
-			topLevelInstaSellTimeRaw = math.NaN()
-			processingErrorOccurred = true
-		}
-	}
-	log.Printf("%s Top Instasell Price for crafted item: %.2f | Top Instasell Time (raw): %.2f", handlerID, topInstaSellPrice, topLevelInstaSellTimeRaw)
-
-	totalRevCalc, profitUnitSimpleCalc, totalProfitSimpleCalc := math.NaN(), math.NaN(), math.NaN()
-	if !math.IsNaN(sumSimpleCost) && !math.IsNaN(topInstaSellPrice) && qty > 0 {
-		totalRevCalc = topInstaSellPrice * qty
-		profitUnitSimpleCalc = topInstaSellPrice - (sumSimpleCost / qty)
-		totalProfitSimpleCalc = totalRevCalc - sumSimpleCost
-	} else {
-		processingErrorOccurred = true
-	}
-	resp.SlowestFillTime = sanitizeFloat(slowestTimeRaw)
-	resp.SlowestIngredient = slowestIngredientName
-	resp.SlowestIngredientQty = slowestIngredientQty
-	resp.TopLevelInstasellTime = sanitizeFloat(topLevelInstaSellTimeRaw)
-	resp.TotalBaseCost = sanitizeFloat(sumSimpleCost)
-	resp.TopSellPrice = sanitizeFloat(topInstaSellPrice)
-	resp.TotalRevenue = sanitizeFloat(totalRevCalc)
-	resp.ProfitPerUnit = sanitizeFloat(profitUnitSimpleCalc)
-	resp.TotalProfit = sanitizeFloat(totalProfitSimpleCalc)
-
-	if processingErrorOccurred {
-		w.Header().Set("X-Calculation-Warnings", "true")
-		log.Printf("%s Fill handler completed WITH warnings.", handlerID)
-	}
-
-	log.Printf("%s Setting headers & encoding JSON...", handlerID)
-	w.Header().Set("Content-Type", "application/json")
-	jsonBytes, errMarshal := json.MarshalIndent(resp, "", "  ")
-	if errMarshal != nil {
-		http.Error(w, "Internal server error during JSON creation", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBytes)))
-	_, errWrite := w.Write(jsonBytes)
-	if errWrite != nil {
-		log.Printf("%s ERROR: Failed to write JSON response: %v", handlerID, errWrite)
-		return
-	}
-	log.Printf("%s JSON sent.", handlerID)
-}
-
-func dualExpansionHandler(w http.ResponseWriter, r *http.Request) {
-	handlerID := fmt.Sprintf("[%d-dual]", time.Now().UnixNano())
-	log.Printf("%s Handler Start: %s %s", handlerID, r.Method, r.URL.String())
-	defer log.Printf("%s Handler End", handlerID)
-
-	itemQuery := r.URL.Query().Get("item")
-	qtyStr := r.URL.Query().Get("qty")
-	if itemQuery == "" {
-		http.Error(w, "missing item parameter", http.StatusBadRequest)
-		return
-	}
-	item := BAZAAR_ID(itemQuery)
-	qty, err := strconv.ParseFloat(qtyStr, 64)
-	if err != nil || qty <= 0 {
-		http.Error(w, "invalid qty parameter", http.StatusBadRequest)
-		return
-	}
-	log.Printf("%s Validated Request: item=%s, qty=%.2f", handlerID, item, qty)
-
-	apiCacheMutex.RLock()
-	currentApiResp := apiResponseCache
-	currentApiErr := apiFetchErr
-	apiCacheMutex.RUnlock()
-	if currentApiResp == nil {
-		errMsg := "API data unavailable"
-		if currentApiErr != nil {
-			errMsg += fmt.Sprintf(" (%v)", currentApiErr)
-		}
-		log.Printf("%s Error: %s", handlerID, errMsg)
-		http.Error(w, errMsg, http.StatusServiceUnavailable)
-		return
-	}
-
-	currentMetricsMap, metricsErr := getMetricsMap(metricsFilename)
-	if metricsErr != nil {
-		log.Printf("%s Error getting metrics: %v", handlerID, metricsErr)
-		http.Error(w, "Metrics unavailable", http.StatusInternalServerError)
-		return
-	}
-	if currentMetricsMap == nil {
-		log.Printf("%s CRITICAL ERROR: Metrics map is nil after load.", handlerID)
-		http.Error(w, "Internal server error: Metrics unavailable", http.StatusInternalServerError)
-		return
-	}
-	log.Printf("%s Global data OK", handlerID)
-
-	log.Printf("%s Calling PerformDualExpansion from expansion.go for %s...", handlerID, item)
-	dualResult, errPerform := PerformDualExpansion(item, qty, currentApiResp, currentMetricsMap, itemFilesDir)
-	if errPerform != nil {
-		log.Printf("%s CRITICAL Error PerformDualExpansion: %v", handlerID, errPerform)
-		http.Error(w, fmt.Sprintf("Error setting up expansion: %v", errPerform), http.StatusInternalServerError)
-		return
-	}
-	if dualResult == nil {
-		log.Printf("%s CRITICAL Error: PerformDualExpansion returned nil result without error", handlerID)
-		http.Error(w, "Internal server error during expansion calculation", http.StatusInternalServerError)
-		return
-	}
-	log.Printf("%s PerformDualExpansion completed.", handlerID)
-
-	if !dualResult.PrimaryBased.CalculationPossible || !dualResult.SecondaryBased.CalculationPossible {
-		w.Header().Set("X-Calculation-Warnings", "true")
-		log.Printf("%s Completed WITH warnings (Primary Possible: %v [%s], Secondary Possible: %v [%s])", handlerID, dualResult.PrimaryBased.CalculationPossible, dualResult.PrimaryBased.ErrorMessage, dualResult.SecondaryBased.CalculationPossible, dualResult.SecondaryBased.ErrorMessage)
-	} else {
-		log.Printf("%s Completed successfully.", handlerID)
-	}
-
-	log.Printf("%s Setting headers & encoding JSON...", handlerID)
-	w.Header().Set("Content-Type", "application/json")
-	jsonBytes, errMarshal := json.MarshalIndent(dualResult, "", "  ")
-	if errMarshal != nil {
-		log.Printf("%s ERROR during JSON marshal for /api/expand-dual: %v", handlerID, errMarshal) // More specific log
-		http.Error(w, "Internal server error during JSON creation", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBytes)))
-	_, errWrite := w.Write(jsonBytes)
-	if errWrite != nil {
-		log.Printf("%s ERROR: Failed to write JSON response: %v", handlerID, errWrite)
-		return
-	}
-	log.Printf("%s JSON sent.", handlerID)
-}
-
-func optimizerApiHandler(w http.ResponseWriter, r *http.Request) {
-	handlerID := fmt.Sprintf("[%d-optimize]", time.Now().UnixNano())
-	log.Printf("%s Handler Start: %s %s", handlerID, r.Method, r.URL.String())
-	defer log.Printf("%s Handler End", handlerID)
-
-	apiCacheMutex.RLock()
-	currentApiResp := apiResponseCache
-	currentApiErr := apiFetchErr
-	apiCacheMutex.RUnlock()
-
-	if currentApiResp == nil || currentApiResp.Products == nil {
-		errMsg := "API data unavailable for optimizer"
-		if currentApiErr != nil {
-			errMsg += fmt.Sprintf(" (%v)", currentApiErr)
-		}
-		log.Printf("%s Error: %s", handlerID, errMsg)
-		http.Error(w, errMsg, http.StatusServiceUnavailable)
-		return
-	}
-
-	currentMetricsMap, metricsErr := getMetricsMap(metricsFilename)
-	if metricsErr != nil || currentMetricsMap == nil {
-		log.Printf("%s Error: Metrics unavailable for optimizer (%v)", handlerID, metricsErr)
-		http.Error(w, "Metrics unavailable for optimizer", http.StatusInternalServerError)
-		return
-	}
-
+	// 3. Get Item IDs for Optimization
 	var itemIDs []string
-	for id := range currentApiResp.Products {
+	apiCacheMutex.RLock() // Accessing global apiResponseCache
+	if apiResponseCache == nil || apiResponseCache.Products == nil {
+		apiCacheMutex.RUnlock()
+		log.Fatalf("CRITICAL: Global apiResponseCache is nil or has no products when trying to get item IDs.")
+	}
+	for id := range apiResponseCache.Products {
 		itemIDs = append(itemIDs, id)
 	}
+	apiCacheMutex.RUnlock()
 
+	if len(itemIDs) == 0 {
+		log.Fatalf("CRITICAL: No items found in API data to optimize.")
+	}
+	log.Printf("Found %d items to potentially optimize.", len(itemIDs))
+
+	// 4. Define Optimizer Parameters
 	maxAllowedFillTime := 3600.0
 	maxInitialSearchQty := 1000000.0
 
-	if r.URL.Query().Get("time_limit_secs") != "" {
-		if t, err := strconv.ParseFloat(r.URL.Query().Get("time_limit_secs"), 64); err == nil && t > 0 {
-			maxAllowedFillTime = t
+	log.Printf("Optimizer Parameters: Max Allowed Total Cycle Time=%.1fs, Max Initial Quantity for Search=%.1f", maxAllowedFillTime, maxInitialSearchQty)
+
+	// 5. Run Optimization
+	log.Println("Starting full optimization process...")
+	optimizedResults := RunFullOptimization(itemIDs, maxAllowedFillTime, apiResp, metricsMap, itemFilesDir, maxInitialSearchQty)
+	log.Printf("Optimization complete. Generated %d results.", len(optimizedResults))
+
+	// 6. Prepare Summary
+	successfullyCalculatedCount := 0
+	calculationErrorCount := 0
+	for _, res := range optimizedResults {
+		if res.CalculationPossible {
+			successfullyCalculatedCount++
 		} else {
-			log.Printf("%s WARN: Invalid time_limit_secs query param '%s', using default %.1fs", handlerID, r.URL.Query().Get("time_limit_secs"), maxAllowedFillTime)
+			calculationErrorCount++
 		}
 	}
-	if r.URL.Query().Get("max_qty_search") != "" {
-		if q, err := strconv.ParseFloat(r.URL.Query().Get("max_qty_search"), 64); err == nil && q > 0 {
-			maxInitialSearchQty = q
-		} else {
-			log.Printf("%s WARN: Invalid max_qty_search query param '%s', using default %.1f", handlerID, r.URL.Query().Get("max_qty_search"), maxInitialSearchQty)
-		}
+
+	summary := OptimizationSummary{
+		RunTimestamp:                runStartTime.Format(time.RFC3339),
+		APILastUpdatedTimestamp:     apiLastUpdatedStr,
+		TotalItemsConsidered:        len(itemIDs), // Could also be len(optimizedResults) if some items were skipped before optimization call
+		ItemsSuccessfullyCalculated: successfullyCalculatedCount,
+		ItemsWithCalculationErrors:  calculationErrorCount,
+		MaxAllowedCycleTimeSecs:     maxAllowedFillTime,
+		MaxInitialSearchQuantity:    maxInitialSearchQty,
 	}
-	log.Printf("%s Optimizer Params: TimeLimit=%.1fs, MaxInitialQtySearch=%.1f", handlerID, maxAllowedFillTime, maxInitialSearchQty)
 
-	optimizedResults := RunFullOptimization(itemIDs, maxAllowedFillTime, currentApiResp, currentMetricsMap, itemFilesDir, maxInitialSearchQty)
+	// 7. Combine summary and results into the final output structure
+	finalOutput := OptimizationRunOutput{
+		Summary: summary,
+		Results: optimizedResults,
+	}
 
-	log.Printf("%s Optimizer run complete. Returning %d results.", handlerID, len(optimizedResults))
-
-	w.Header().Set("Content-Type", "application/json")
-	jsonBytes, err := json.MarshalIndent(optimizedResults, "", "  ")
+	// 8. Marshal the final output structure to JSON
+	jsonBytes, err := json.MarshalIndent(finalOutput, "", "  ")
 	if err != nil {
-		log.Printf("%s ERROR: Failed to marshal optimization results: %v", handlerID, err)
-		http.Error(w, "Failed to marshal optimization results", http.StatusInternalServerError)
-		return
+		log.Fatalf("CRITICAL: Failed to marshal final optimization output to JSON: %v", err)
 	}
-	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBytes)))
-	_, writeErr := w.Write(jsonBytes)
-	if writeErr != nil {
-		log.Printf("%s ERROR: Failed to write optimizer JSON response: %v", handlerID, writeErr)
-	}
-	log.Printf("%s Optimizer JSON response sent.", handlerID)
-}
 
-func withRecovery(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Printf("PANIC recovered: %v\n%s", rec, string(debug.Stack()))
-				http.Error(w, "internal server error", http.StatusInternalServerError)
-			}
-		}()
-		h(w, r)
+	// 9. Write JSON to File
+	log.Printf("Writing optimizer results to '%s'...", outputJSONFilename)
+	err = os.WriteFile(outputJSONFilename, jsonBytes, 0644)
+	if err != nil {
+		log.Fatalf("CRITICAL: Failed to write JSON output to file '%s': %v", outputJSONFilename, err)
 	}
-}
-func withCORS(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		if r.Method == http.MethodOptions {
-			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		h(w, r)
-	}
+
+	log.Printf("Optimizer results successfully written to '%s'.", outputJSONFilename)
 }
