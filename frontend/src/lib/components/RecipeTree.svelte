@@ -204,7 +204,7 @@
       <div class="flex items-center gap-2 ml-[-1.5rem]">
         <img
           bind:this={parentImageRef}
-          src={"https://sky.shiiyu.moe/item/" + tree.item}
+          src={"https://sky.coflnet.com/static/icon/" + tree.item}
           alt={tree.item || 'item'}
           class="w-8 h-8 rounded-sm shadow-sm"
         />
@@ -239,7 +239,7 @@
                     <div class="flex items-center gap-2">
                       <img
                         use:registerChildImage={i}
-                        src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
+                        src={"https://sky.coflnet.com/static/icon/" + ing.ingredient}
                         alt={ing.ingredient}
                         class="w-8 h-8 rounded-sm shadow-sm"
                       />
@@ -322,7 +322,7 @@
                   <div class="flex items-center gap-2">
                     <img
                       use:registerChildImage={i}
-                      src={"https://sky.shiiyu.moe/item/" + ing.ingredient}
+                      src={"https://sky.coflnet.com/static/icon/" + ing.ingredient}
                       alt={ing.ingredient}
                       class="w-8 h-8 rounded-sm shadow-sm"
                     />

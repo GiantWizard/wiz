@@ -194,7 +194,7 @@
           <!-- Image -->
           <div class="image-wrapper">
             <img 
-              src={`https://sky.shiiyu.moe/item/${item.item}`}
+              src={`https://sky.coflnet.com/static/icon/${item.item}`}
               alt={toTitleCase(item.item)}
             />
           </div>

@@ -328,7 +328,7 @@
     <div id="main-item-graph" class="mb-6">
       <div class="flex items-center justify-center mb-2 space-x-2">
         <img
-          src={"https://sky.shiiyu.moe/item/" + item.item}
+          src={"https://sky.coflnet.com/static/icon/" + item.item}
           alt={item.item}
           class="w-8 h-8 md:w-12 md:h-12"
         />
@@ -360,7 +360,7 @@
         <div class="bg-darker p-4 rounded-lg shadow">
           <div class="flex items-center justify-center mb-1">
             <img
-              src={"https://sky.shiiyu.moe/item/" + mat.ingredient}
+              src={"https://sky.coflnet.com/static/icon/" + mat.ingredient}
               alt={mat.ingredient}
               class="w-6 h-6 mr-2"
             />
