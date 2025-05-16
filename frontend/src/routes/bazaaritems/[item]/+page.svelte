@@ -1,404 +1,302 @@
-<script context="module" lang="ts">
-  import type { PageLoad } from './$types';
-
-  export const load: PageLoad = async ({ params, fetch }) => {
-    const decodedItem = decodeURIComponent(params.item);
-    const res = await fetch('/top_40_bazaar_crafts.json');
-    if (!res.ok) {
-      throw new Error('Could not fetch profitable items data');
-    }
-    const items = await res.json();
-    if (!Array.isArray(items)) {
-      throw new Error('Fetched JSON is not an array');
-    }
-    const foundItem = items.find(i => i.item === decodedItem);
-    if (!foundItem) {
-      throw new Error(`Item ${decodedItem} not found`);
-    }
-    return {
-      props: {
-        item: foundItem
-      }
-    };
-  };
-</script>
-
 <script lang="ts">
   import { onMount } from 'svelte';
   import RecipeTree from '$lib/components/RecipeTree.svelte';
   import AveragePriceChart from '$lib/components/AveragePriceChart.svelte';
 
-  // ================================
-  // Helpers
-  // ================================
-  function formatLargeNumber(num: number): string {
-    const abs = Math.abs(num);
-    if (abs < 1000) {
-      return num.toString();
-    } else if (abs < 1_000_000) {
-      return Math.round(num / 1_000) + 'k';
-    } else if (abs < 1_000_000_000) {
-      return Math.round(num / 1_000_000) + 'm';
+  // Types are for the `data.item` prop passed from the load function in +page.ts
+  import type { 
+      NewTopLevelItem, 
+      TransformedTree, 
+      RawMaterialReport,
+      AvgPriceData as ChartAvgPriceData,
+      PriceHistory
+  } from '$lib/utils/typesAndTransforms';
+  // Helpers are for display formatting within this component
+  import { 
+      simplifiedTransform, 
+      getRawMaterialsFromNewTree,
+      toTitleCase,
+      abbreviateNumber,
+      formatNumberSimple
+  } from '$lib/utils/typesAndTransforms';
+
+  export let data: { item: NewTopLevelItem }; // Data comes from +page.ts load function
+  
+  let item: NewTopLevelItem;
+  $: item = data.item; // Reactive assignment
+
+  // Component-specific reactive calculations
+  let transformedRecipeTree: TransformedTree | undefined;
+  let rawMaterialsList: RawMaterialReport[] = [];
+
+  let displayProfitPerHour: number = 0;
+  let displayCraftCostPerItem: number = 0;
+  let displaySellPricePerItem: number = 0;
+  let displayItemsPerHour: number = 0; 
+  let displayProfitPerItem: number = 0;
+  let displayPercentFlip: number = 0;
+  let displayEffectiveCycleTimePerItem: number = 0; 
+  let displayAcquisitionTimePerItem: number = 0;
+  let displaySaleTimePerItem: number = 0;
+
+  $: if (item) { 
+    const mfQuantity = item.max_feasible_quantity > 0 ? item.max_feasible_quantity : 1;
+    
+    displayCraftCostPerItem = (item.cost_at_optimal_qty ?? 0) / mfQuantity;
+    displaySellPricePerItem = (item.revenue_at_optimal_qty ?? 0) / mfQuantity;
+    displayProfitPerItem = (item.max_profit ?? 0) / mfQuantity;
+    displayAcquisitionTimePerItem = (item.acquisition_time_at_optimal_qty ?? 0) / mfQuantity;
+    displaySaleTimePerItem = (item.sale_time_at_optimal_qty ?? 0) / mfQuantity;
+
+    if ((item.total_cycle_time_at_optimal_qty ?? 0) > 0) {
+        displayProfitPerHour = ((item.max_profit ?? 0) / ((item.total_cycle_time_at_optimal_qty ?? 1) / 3600));
+        displayEffectiveCycleTimePerItem = (item.total_cycle_time_at_optimal_qty ?? 0) / mfQuantity;
     } else {
-      return Math.round(num / 1_000_000_000) + 'b';
+        displayProfitPerHour = 0;
+        displayEffectiveCycleTimePerItem = 0;
+    }
+    
+    if ((item.total_cycle_time_at_optimal_qty ?? 0) > 0 && item.max_feasible_quantity > 0) {
+        displayItemsPerHour = (item.max_feasible_quantity / ((item.total_cycle_time_at_optimal_qty ?? 1) / 3600));
+    } else {
+        displayItemsPerHour = 0;
+    }
+
+    if (displayCraftCostPerItem > 0) {
+        displayPercentFlip = (displayProfitPerItem / displayCraftCostPerItem) * 100;
+    } else {
+        displayPercentFlip = 0;
+    }
+
+    if (item.recipe_tree) {
+        transformedRecipeTree = simplifiedTransform(item.recipe_tree);
+        rawMaterialsList = getRawMaterialsFromNewTree(item.recipe_tree);
+    } else {
+        console.warn(`Item ${item.item_name} is missing recipe_tree (in +page.svelte script block).`);
+        transformedRecipeTree = undefined;
+        rawMaterialsList = [];
     }
   }
+  
+  // --- Price Data Processing for Charts ---
+  let allAvgPrices: ChartAvgPriceData[] | null = null;
+  let mainItemChartData: ChartAvgPriceData | null = null;
 
-  function toTitleCase(str: string): string {
-    return str
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b(\w)/g, (_, g1) => g1.toUpperCase());
-  }
-
-  // ================================
-  // Interfaces
-  // ================================
-  interface Tree {
-    item?: string;
-    note?: string;
-    ingredients?: Ingredient[];
-  }
-
-  interface Ingredient {
-    ingredient: string;
-    total_needed: number;
-    buy_method?: string;
-    cost_per_unit?: number;
-    sub_breakdown?: Tree;
-  }
-
-  interface BazaarItem {
-    item: string;
-    profit_per_hour: number;
-    crafting_cost: number;
-    sell_price: number;
-    cycles_per_hour: number;
-    longest_step_count: number;
-    crafting_savings: number;
-    buy_fill_time: number;
-    sell_fill_time: number;
-    effective_cycle_time: number;
-    inventory_cycles: number;
-    step_breakdown: Tree;
-  }
-
-  // Percent flip helper
-  function percentFlip(item: BazaarItem): number {
-    if (!item.crafting_cost) return 0;
-    return (item.crafting_savings / item.crafting_cost) * 100;
-  }
-
-  // ================================
-  // Props and Data
-  // ================================
-  export let data: { item: BazaarItem };
-  let item: BazaarItem;
-  $: item = data.item;
-
-  // ================================
-  // Raw Materials Processing
-  // ================================
-  function getRawMaterials(tree: Tree, multiplier: number = 1): Ingredient[] {
-    const rawMap: Record<string, Ingredient> = {};
-    if (tree.ingredients) {
-      tree.ingredients.forEach(ing => {
-        const total = ing.total_needed * multiplier;
-        // Recurse if a sub_breakdown exists with no note
-        if (ing.sub_breakdown && !ing.sub_breakdown.note) {
-          const subRaws = getRawMaterials(ing.sub_breakdown, total);
-          subRaws.forEach(raw => {
-            if (rawMap[raw.ingredient]) {
-              rawMap[raw.ingredient].total_needed += raw.total_needed;
-            } else {
-              rawMap[raw.ingredient] = { ...raw };
-            }
-          });
-        } else {
-          // Otherwise, it's a raw material
-          if (rawMap[ing.ingredient]) {
-            rawMap[ing.ingredient].total_needed += total;
-          } else {
-            rawMap[ing.ingredient] = {
-              ingredient: ing.ingredient,
-              total_needed: total
-            };
-          }
-        }
-      });
-    }
-    return Object.values(rawMap);
-  }
-
-  let rawMaterials: Ingredient[] = [];
-  $: if (item && item.step_breakdown) {
-    rawMaterials = getRawMaterials(item.step_breakdown);
-  }
-
-  // ================================
-  // Price Data Processing
-  // ================================
-  interface PriceRecord {
-    buy: number;
-    sell: number;
-    timestamp: string;
-  }
-  interface AvgPriceData {
-    item: string;
-    history: PriceRecord[];
-  }
-  let allAvgPrices: AvgPriceData[] | null = null;
-  let mainAvgData: AvgPriceData | null = null;
-
-  interface ThreeDayData {
-    [key: string]: {
-      price: number;
-      count: number;
-      sales: number;
-      clean_price?: number;
-      clean_sales?: number;
-    };
-  }
+  // Interface for 3-day data (if not already in typesAndTransforms.ts)
+  interface ThreeDayPrice { price: number; count: number; sales: number; clean_price?: number; clean_sales?: number; }
+  interface ThreeDayData { [key: string]: ThreeDayPrice; }
   let all3DayData: ThreeDayData | null = null;
 
-  // ================================
-  // Data Fetching
-  // ================================
+  let chartDataLoading = true;
+
   onMount(async () => {
-    try {
-      // Fetch local average prices
-      const localRes = await fetch('/avgPrices.json');
-      if (!localRes.ok) {
-        console.error('Failed to fetch avgPrices.json');
+    if (!item || !item.item_name) { 
+        chartDataLoading = false;
         return;
-      }
-      allAvgPrices = await localRes.json();
-      if (Array.isArray(allAvgPrices)) {
-        mainAvgData = allAvgPrices.find(d => d.item === item.item) || null;
+    }
+    console.log(`[DETAIL PAGE ONMOUNT for ${item.item_name}] Fetching chart data...`);
+    try {
+      const localResPromise = fetch('/avgPrices.json').catch(e => { console.error("avgPrices.json fetch error in onMount:", e); return null; });
+      const threeDayResPromise = fetch('/3day.json').catch(e => { console.error("3day.json fetch error in onMount:", e); return null; });
+
+      const [localRes, threeDayRes] = await Promise.all([localResPromise, threeDayResPromise]);
+
+      if (localRes && localRes.ok) {
+          allAvgPrices = await localRes.json();
+      } else if(localRes) {
+          console.error('Failed to fetch avgPrices.json in onMount', localRes.status, await localRes.text().catch(()=>"Could not read error body for avgPrices"));
+      } else {
+          console.error('localResPromise for avgPrices.json failed or returned null.');
       }
 
-      // Fetch 3-day data
-      const threeDayRes = await fetch('/3day.json');
-      if (!threeDayRes.ok) {
-        console.error('Failed to fetch 3day.json');
-        return;
+      if (threeDayRes && threeDayRes.ok) {
+          all3DayData = await threeDayRes.json();
+      } else if (threeDayRes) {
+          console.error('Failed to fetch 3day.json in onMount', threeDayRes.status, await threeDayRes.text().catch(()=>"Could not read error body for 3day"));
+      } else {
+          console.error('threeDayResPromise for 3day.json failed or returned null.');
       }
-      all3DayData = await threeDayRes.json();
     } catch (err) {
-      console.error('Error fetching data:', err);
+        console.error("Error in onMount chart data fetching logic:", err);
+    } finally {
+        chartDataLoading = false; 
     }
   });
 
-  // Convert a single 3day item into minimal AvgPriceData
-  function toSinglePointAvgData(itemName: string, price: number): AvgPriceData {
+  $: if (!chartDataLoading && item && item.item_name) { 
+      mainItemChartData = findChartDataForDisplay(item.item_name);
+  }
+
+  function toSinglePointAvgData(itemName: string, price: number): ChartAvgPriceData {
     return {
       item: itemName,
-      history: [
-        {
-          buy: price,
-          sell: price,
-          timestamp: new Date().toISOString()
-        }
-      ]
+      history: [{ buy: price, sell: price, timestamp: new Date().toISOString() }]
     };
   }
 
-  // Find chart data from local data or fallback to 3day data
-  function findChartData(itemName: string): AvgPriceData | null {
+  function findChartDataForDisplay(itemName?: string): ChartAvgPriceData | null {
+    if (!itemName) return null;
     if (allAvgPrices) {
       const localItem = allAvgPrices.find(d => d.item === itemName);
       if (localItem) return localItem;
     }
     if (all3DayData && all3DayData[itemName]) {
       const price = all3DayData[itemName].price;
-      return toSinglePointAvgData(itemName, price);
+      if (price != null) return toSinglePointAvgData(itemName, price);
     }
+    console.log(`[Chart Data] No data found for ${itemName}`);
     return null;
+  }
+
+  function handleImageErrorLocal(event: Event) {
+    const imgElement = event.target as HTMLImageElement;
+    console.error('IMAGE LOAD FAILED (Detail Page Component):', imgElement.src, 'Natural Width:', imgElement.naturalWidth);
   }
 </script>
 
-{#if item}
-<div class="p-8 max-w-4xl mx-auto bg-darker rounded-lg shadow-lg space-y-16">
+{#if item && item.item_name} <!-- Check item and item_name before trying to render -->
+  {#if item.calculation_possible}
+    <div class="p-4 md:p-8 max-w-4xl mx-auto bg-darker rounded-lg shadow-xl space-y-12 md:space-y-16">
 
-  <!-- ================================================== -->
-  <!-- Section 1: Main Overview (Stats & Details) -->
-  <!-- ================================================== -->
-  <section id="stats-section" class="space-y-10">
-    <!-- Stats Header -->
-    <div class="text-center space-y-2">
-      <h1 class="text-3xl md:text-4xl font-bold text-light font-inter">
-        {toTitleCase(item.item)}
-      </h1>
-      <h2 class="text-2xl md:text-3xl font-semibold text-accent">
-        {formatLargeNumber(item.profit_per_hour)}/h
-      </h2>
-    </div>
+      <section id="stats-section" class="space-y-8 md:space-y-10">
+        <div class="text-center space-y-2">
+          <h1 class="text-3xl md:text-4xl font-bold text-light font-inter">
+            {toTitleCase(item.item_name)}
+          </h1>
+          <h2 class="text-2xl md:text-3xl font-semibold text-accent">
+            {abbreviateNumber(displayProfitPerHour)}/h
+          </h2>
+        </div>
 
-    <!-- Profit & Efficiency & Timing Details -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Profit & Efficiency Details -->
-      <div class="space-y-4">
-        <h3 class="text-xl md:text-2xl font-semibold text-accent">Profit &amp; Efficiency</h3>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Craft Cost</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.crafting_cost)}
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Sell Price</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.sell_price)}
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Cycles</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.cycles_per_hour)}
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Savings</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            ▲ {formatLargeNumber(item.crafting_savings)}
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">% Flip</span>
-          <span class="text-sm md:text-base font-medium text-light bg-primary px-2 py-1 rounded">
-            {formatLargeNumber(percentFlip(item))}%
-          </span>
-        </div>
-      </div>
-
-      <!-- Timing & Depth Details -->
-      <div class="space-y-4">
-        <h3 class="text-xl md:text-2xl font-semibold text-accent">Timing &amp; Depth</h3>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Max Depth</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.longest_step_count)}
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Buy Fill Time</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.buy_fill_time)}s
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Sell Fill Time</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.sell_fill_time)}s
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Effective Cycle Time</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.effective_cycle_time)}s
-          </span>
-        </div>
-        <div class="flex justify-between border-b border-dark pb-1">
-          <span class="text-sm md:text-base text-accent">Inventory Cycles</span>
-          <span class="text-sm md:text-base font-medium text-light">
-            {formatLargeNumber(item.inventory_cycles)}
-          </span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================================================== -->
-  <!-- Section 2: Recipe Tree -->
-  <!-- ================================================== -->
-  <section id="recipe-tree-section">
-    <h2 class="text-center text-2xl md:text-3xl font-bold text-light mb-4">Recipe Tree</h2>
-    <div class="relative bg-darker p-6 rounded-lg shadow-lg">
-      <RecipeTree tree={item.step_breakdown} />
-    </div>
-  </section>
-
-  <!-- ================================================== -->
-  <!-- Section 3: Graphs -->
-  <!-- ================================================== -->
-  <section id="item-graphs-section">
-    <h2 class="text-center text-3xl md:text-4xl font-bold text-light mb-4">Item Graphs</h2>
-    
-    <!-- Main Item Graph Block with Icon and Name -->
-    <div id="main-item-graph" class="mb-6">
-      <div class="flex items-center justify-center mb-2 space-x-2">
-        <img
-          src={"https://sky.coflnet.com/static/icon/" + item.item}
-          alt={item.item}
-          class="w-8 h-8 md:w-12 md:h-12"
-        />
-        <span class="text-2xl md:text-3xl font-bold text-light">{toTitleCase(item.item)}</span>
-      </div>
-      {#if (mainAvgData !== null) || (all3DayData !== null)}
-        {#if findChartData(item.item) !== null}
-          <AveragePriceChart
-            avgData={findChartData(item.item)}
-            width={700}
-            height={300}
-            padding={50}
-          />
-        {:else}
-          <p class="text-light text-center">
-            No average price data available for this item.
-          </p>
-        {/if}
-      {:else}
-        <p class="text-light text-center">
-          No average price data available for this item.
-        </p>
-      {/if}
-    </div>
-    
-    <!-- Sub-Item Graphs: Raw Material Graphs -->
-    <div id="sub-item-graphs" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {#each rawMaterials as mat (mat.ingredient)}
-        <div class="bg-darker p-4 rounded-lg shadow">
-          <div class="flex items-center justify-center mb-1">
-            <img
-              src={"https://sky.coflnet.com/static/icon/" + mat.ingredient}
-              alt={mat.ingredient}
-              class="w-6 h-6 mr-2"
-            />
-            <span class="text-light font-medium">{toTitleCase(mat.ingredient)}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          <div class="space-y-3 md:space-y-4 bg-dark p-4 rounded-lg shadow-md">
+            <h3 class="text-xl md:text-2xl font-semibold text-accent mb-3">Profit & Efficiency</h3>
+            {@html [
+              { label: "Craft Cost/Item", value: abbreviateNumber(displayCraftCostPerItem) },
+              { label: "Sell Price/Item", value: abbreviateNumber(displaySellPricePerItem) },
+              { label: "Profit/Item", value: `▲ ${abbreviateNumber(displayProfitPerItem)}` },
+              { label: "Items/Hour", value: abbreviateNumber(displayItemsPerHour) },
+              { label: "% Flip", value: `${displayPercentFlip.toFixed(1)}%`, highlight: true }
+            ].map(stat => (
+              `<div class="flex justify-between border-b border-gray-700 pb-1.5 pt-1">` +
+              `<span class="text-sm md:text-base text-gray-400">${stat.label}</span>` +
+              `<span class="text-sm md:text-base font-medium text-light ${stat.highlight ? 'bg-primary px-2 py-0.5 rounded-md' : ''}">${stat.value}</span>` +
+              `</div>`
+            )).reduce((html, current) => html + current, '')}
           </div>
-          {#if allAvgPrices !== null || all3DayData !== null}
-            {#if findChartData(mat.ingredient) !== null}
-              <AveragePriceChart
-                avgData={findChartData(mat.ingredient)}
-                width={320}
-                height={280}
-                padding={60}
-              />
-            {:else}
-              <p class="text-sm text-light">
-                No data for {toTitleCase(mat.ingredient)}
-              </p>
-            {/if}
+
+          <div class="space-y-3 md:space-y-4 bg-dark p-4 rounded-lg shadow-md">
+            <h3 class="text-xl md:text-2xl font-semibold text-accent mb-3">Timing & Depth</h3>
+            {@html [
+              { label: "Max Recipe Depth", value: item.recipe_tree?.max_sub_tree_depth ?? item.max_recipe_depth ?? 0 },
+              { label: "Acquisition Time/Item", value: `${formatNumberSimple(displayAcquisitionTimePerItem, 2)}s` },
+              { label: "Sale Time/Item", value: `${formatNumberSimple(displaySaleTimePerItem, 2)}s` },
+              { label: "Effective Cycle Time/Item", value: `${formatNumberSimple(displayEffectiveCycleTimePerItem, 2)}s` },
+              { label: "Max Batch Size", value: abbreviateNumber(item.max_feasible_quantity, 0) }
+            ].map(stat => (
+              `<div class="flex justify-between border-b border-gray-700 pb-1.5 pt-1">` +
+              `<span class="text-sm md:text-base text-gray-400">${stat.label}</span>` +
+              `<span class="text-sm md:text-base font-medium text-light">${stat.value}</span>` +
+              `</div>`
+            )).reduce((html, current) => html + current, '')}
+          </div>
+        </div>
+      </section>
+
+      {#if transformedRecipeTree && transformedRecipeTree.item }
+      <section id="recipe-tree-section">
+        <h2 class="text-center text-2xl md:text-3xl font-bold text-light mb-4">
+            Recipe for 1 {toTitleCase(transformedRecipeTree.item)}
+        </h2>
+        <div class="relative bg-dark p-4 md:p-6 rounded-lg shadow-inner overflow-x-auto">
+          <RecipeTree tree={transformedRecipeTree} parentQuantity={1} isTopLevel={true} />
+        </div>
+      </section>
+      {/if}
+      
+      <section id="item-graphs-section">
+        <h2 class="text-center text-2xl md:text-3xl font-bold text-light mb-6 md:mb-8">Price Graphs</h2>
+        
+        <div id="main-item-graph" class="mb-8 md:mb-12 bg-dark p-4 rounded-lg shadow-md">
+          <div class="flex items-center justify-center mb-3 space-x-2">
+            <img
+              src={`https://sky.coflnet.com/static/icon/${item.item_name}`}
+              alt={toTitleCase(item.item_name)}
+              class="w-8 h-8 md:w-10 md:h-10 sharp-image rounded-sm"
+              loading="lazy"
+              on:error={handleImageErrorLocal}
+            />
+            <span class="text-xl md:text-2xl font-semibold text-light">{toTitleCase(item.item_name)}</span>
+          </div>
+          {#if chartDataLoading}
+            <p class="text-light text-center text-sm py-10">📈 Loading price data...</p>
+          {:else if mainItemChartData}
+            <AveragePriceChart avgData={mainItemChartData} width={600} height={280} padding={60} />
           {:else}
-            <p class="text-sm text-light">Loading price data...</p>
+            <p class="text-light text-center text-sm py-10">📊 No average price data available for this item.</p>
           {/if}
         </div>
-      {/each}
+        
+        {#if rawMaterialsList.length > 0}
+          <h3 class="text-center text-xl md:text-2xl font-semibold text-accent mb-6">Raw Material Graphs</h3>
+          <div id="sub-item-graphs" class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {#each rawMaterialsList as mat (mat.ingredient)}
+              {@const chartData = findChartDataForDisplay(mat.ingredient)}
+              <div class="bg-dark p-4 rounded-lg shadow-md">
+                <div class="flex items-center justify-center mb-2 space-x-2">
+                  <img
+                    src={`https://sky.coflnet.com/static/icon/${mat.ingredient}`}
+                    alt={toTitleCase(mat.ingredient)}
+                    class="w-6 h-6 sharp-image rounded-sm"
+                    loading="lazy"
+                    on:error={handleImageErrorLocal}
+                  />
+                  <span class="text-light font-medium">{toTitleCase(mat.ingredient)}</span>
+                </div>
+                {#if chartDataLoading && !chartData} 
+                     <p class="text-sm text-light text-center mt-2 py-8">📈 Loading price data...</p>
+                {:else if chartData}
+                  <AveragePriceChart avgData={chartData} width={300} height={220} padding={50} />
+                {:else}
+                  <p class="text-sm text-light text-center mt-2 py-8">📊 No data for {toTitleCase(mat.ingredient)}</p>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </section>
+      
     </div>
-  </section>
-  
-</div>
-{:else}
-<div class="p-8 max-w-3xl mx-auto bg-darker rounded-lg shadow-lg">
-  <p class="text-light">Item not found or data is still loading.</p>
-</div>
-{/if}
+  {:else if item && !item.calculation_possible}
+    <div class="p-8 max-w-3xl mx-auto bg-darker rounded-lg shadow-xl text-center">
+      <h1 class="text-3xl font-bold text-light mb-4">{toTitleCase(item.item_name)}</h1>
+      <p class="text-light text-lg">Profit calculation is not currently possible for this item.</p>
+      <p class="text-sm text-gray-400 mt-2">This might be due to missing price data for essential components or extreme market volatility.</p>
+    </div>
+  {/if} <!-- Closes inner #if item.calculation_possible -->
+{:else} 
+  <div class="p-8 max-w-3xl mx-auto bg-darker rounded-lg shadow-lg">
+    <p class="text-light text-center py-10">Item data is loading or item was not found. If testing with minimal load, ensure you are requesting SKELETON_KEY or expand the test cases in the load function.</p>
+  </div>
+{/if} <!-- Closes outer #if item && item.item_name -->
 
 <style>
-  /* Increase spacing between major sections */
   #stats-section,
   #recipe-tree-section,
   #item-graphs-section {
-    margin-bottom: 4rem;
+    margin-bottom: 3rem; 
+  }
+  @media (min-width: 768px) { 
+    #stats-section,
+    #recipe-tree-section,
+    #item-graphs-section {
+      margin-bottom: 4rem;
+    }
+  }
+  .sharp-image {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
   }
 </style>
