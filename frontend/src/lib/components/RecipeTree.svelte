@@ -8,16 +8,16 @@
   export let tree!: TransformedTree; 
   export let parentQuantity: number = 1; 
   export let isTopLevel: boolean = true;
-  export let parentImageRef: HTMLImageElement | null = null;
+  export let parentImageRef: HTMLImageElement | null = null; 
 
-  // --- State for UI ---
+  // console.log(`[RT Init D${depth}] Item: ${tree?.item}, isTopLevel: ${isTopLevel}, parentImageRef: ${!!parentImageRef}`);
+
   let openDropdowns: Record<string, boolean> = {};
   function toggleDropdown(id: string): void {
     openDropdowns[id] = !openDropdowns[id];
     openDropdowns = { ...openDropdowns };
   }
 
-  // --- Ingredient Aggregation ---
   function aggregateIngredients(ingredients?: TransformedIngredient[]): TransformedIngredient[] {
     if (!ingredients) return [];
     const aggregated: Record<string, TransformedIngredient> = {};
@@ -27,10 +27,8 @@
         aggregated[key] = { ...ing, total_needed: 0 };
       }
       aggregated[key].total_needed += ing.total_needed;
-      if (ing.sub_breakdown && !aggregated[key].sub_breakdown) {
-          aggregated[key].sub_breakdown = ing.sub_breakdown;
-      }
-       if (ing.buy_method && !aggregated[key].buy_method) { 
+      if (ing.sub_breakdown && !aggregated[key].sub_breakdown) aggregated[key].sub_breakdown = ing.sub_breakdown;
+      if (ing.buy_method && !aggregated[key].buy_method) {
           aggregated[key].buy_method = ing.buy_method;
           aggregated[key].cost_per_unit = ing.cost_per_unit;
       }
@@ -40,8 +38,10 @@
 
   let aggregatedIngredients: TransformedIngredient[] = [];
   $: aggregatedIngredients = aggregateIngredients(tree?.ingredients);
+  $: if (aggregatedIngredients.length > 0 && typeof window !== 'undefined') {
+    setTimeout(updateAllPointers, 50);
+  }
 
-  // --- POINTER LOGIC ---
   let rootElement: HTMLDivElement | null = null; 
   let containerRefs: (HTMLDivElement | null)[] = [];
   let childImageRefs: (HTMLImageElement | null)[] = []; 
@@ -53,44 +53,46 @@
   let accentWidth: number[] = [];
   let accentHeight: number[] = [];
 
-  const offsetX = 15; 
-  const offsetY = -15; 
-  const defaultAccentWidth = 3; 
-  // const pointerCircleRadius = 17; // Not directly used in style but good to know
+  // --- POINTER LOGIC Constants ---
+  const POINTER_DIAMETER = 34;
+  const POINTER_RADIUS = POINTER_DIAMETER / 2;
+  const offsetX = 14; // Adjusted: Shifts pointer circle further right
+  const offsetY = -7; 
+  const defaultAccentWidth = 4; 
 
   function updatePointer(index: number) {
-    if (!parentImageRef || !childImageRefs[index] || !containerRefs[index] || !rootElement) {
+    const currentIngredient = aggregatedIngredients[index];
+    if (!parentImageRef || !childImageRefs[index] || !containerRefs[index] || !rootElement || !currentIngredient) {
       return;
     }
-
-    // It's usually better to calculate relative to a common, non-scrolling ancestor, 
-    // or ensure all getBoundingClientRect calls are in the same scroll context.
-    // For simplicity here, assuming relative to viewport is okay if elements are close.
-    // However, for robustness, you might pass the viewport-relative rect of `rootElement`
-    // and subtract its top/left from other element rects.
 
     const parentImgRect = parentImageRef.getBoundingClientRect();
     const childImgRect = childImageRefs[index]!.getBoundingClientRect();
     const ingredientItemContainerRect = containerRefs[index]!.getBoundingClientRect(); 
 
-    // Parent image center relative to the `ingredientItemContainerRect` (the `div.pointer-container`)
+    if (parentImgRect.width === 0 || childImgRect.width === 0) {
+      return; 
+    }
+
     const parentCenterXRel = (parentImgRect.left + parentImgRect.width / 2) - ingredientItemContainerRect.left;
     const parentCenterYRel = (parentImgRect.top + parentImgRect.height / 2) - ingredientItemContainerRect.top;
-    
-    // Child image center relative to the `ingredientItemContainerRect`
     const childCenterYRel = (childImgRect.top + childImgRect.height / 2) - ingredientItemContainerRect.top;
 
+    // Pointer circle's center X and Y
     pointerLeft[index] = parentCenterXRel + offsetX;
     pointerTop[index] = childCenterYRel + offsetY;
 
-    const lineStartX = parentCenterXRel; 
-    const lineStartY = parentCenterYRel + (parentImgRect.height / 2) * 0.5; // Start from mid-bottom of parent
+    // Accent Line Logic
+    // Adjusted: Start the line further down from the parent image's center.
+    const lineStartY = parentCenterYRel + (parentImgRect.height / 2) + 5; 
 
-    const lineEndX = pointerLeft[index]; 
+    // Adjusted: Shift the accent line the radius of the pointer to the left (relative to pointer circle's center)
+    const accentLineCenterX = pointerLeft[index] - POINTER_RADIUS + 2; 
+
+    accentLeft[index] = accentLineCenterX - (defaultAccentWidth / 2); 
+    
     const lineEndY = pointerTop[index]; 
 
-    // For a vertical-ish line
-    accentLeft[index] = lineStartX - (defaultAccentWidth / 2); // Center the line
     accentTop[index] = Math.min(lineStartY, lineEndY);
     accentWidth[index] = defaultAccentWidth;
     accentHeight[index] = Math.abs(lineEndY - lineStartY);
@@ -107,34 +109,26 @@
 
   function updateAllPointers() {
     if (!aggregatedIngredients) return; 
-    if (depth > 0 && parentImageRef) {
+    if (parentImageRef && ((depth > 0) || (depth === 0 && isTopLevel))) {
       aggregatedIngredients.forEach((_, i) => {
-        setTimeout(() => updatePointer(i), 120); // Increased delay slightly more
+        setTimeout(() => updatePointer(i), 150); 
       });
     }
   }
 
   onMount(() => {
     if (rootElement) { 
-        updateAllPointers(); 
+        if (isTopLevel && depth === 0 && parentImageRef) {
+            setTimeout(updateAllPointers, 50); 
+        } else if (depth > 0) {
+            updateAllPointers();
+        }
         window.addEventListener('resize', updateAllPointers);
-        
         if (typeof MutationObserver !== 'undefined') {
-            observer = new MutationObserver((mutationsList) => {
-                let needsUpdate = false;
-                for(const mutation of mutationsList) {
-                    if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                        needsUpdate = true;
-                        break; 
-                    }
-                }
-                if (needsUpdate) {
-                    // console.log(`[RecipeTree Observer] Mutation at depth ${depth}, updating pointers.`);
-                    updateAllPointers();
-                }
+            observer = new MutationObserver(() => {
+                updateAllPointers();
             });
-            // Observe the root element of this component instance for changes
-            observer.observe(rootElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'], characterData: false });
+            observer.observe(rootElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
         }
     }
     return () => {
@@ -144,33 +138,21 @@
   });
 
   afterUpdate(() => {
-     updateAllPointers();
+    updateAllPointers();
   });
 
   function registerContainer(node: HTMLDivElement, index: number) {
     containerRefs[index] = node;
-    return { 
-      destroy() { 
-        containerRefs[index] = null; 
-      } 
-    };
+    return { destroy() { containerRefs[index] = null; } };
   }
 
   function registerChildImage(node: HTMLImageElement, index: number) {
     childImageRefs[index] = node;
-    node.onload = () => {
-        // console.log(`[RecipeTree Image Onload] Image loaded for depth ${depth}, index ${index}. Updating pointers.`);
-        updateAllPointers(); // Re-calculate when image loads and has dimensions
-    };
-    // If image is already loaded (e.g. cached), onload might not fire, so also update
-    if (node.complete) {
-        updateAllPointers();
-    }
-    return { 
-      destroy() { 
-        childImageRefs[index] = null; 
-      } 
-    };
+    const update = () => updateAllPointers();
+    if (node.complete && node.naturalHeight !== 0) setTimeout(update, 0); 
+    else node.onload = update;
+    node.onerror = () => console.error(`[RT Image Error D${depth}] Failed: ${node.src}`);
+    return { destroy() { node.onload = null; node.onerror = null; childImageRefs[index] = null; } };
   }
 </script>
 
@@ -181,48 +163,29 @@
     padding-left: 1rem; 
   }
   li.ingredient-item.has-pointer {
-    padding-left: 2.5rem; 
+    padding-left: 3rem; 
   }
-
-  .pointer-container { 
-    position: relative; 
-  }
+  .pointer-container { position: relative; }
   .ingredient-pointer { 
-    position: absolute; 
-    width: 34px; 
-    height: 34px; 
-    border-radius: 50%; 
-    background: #C8ACD6; 
-    --b: 3px; --a: 90deg; aspect-ratio: 1; padding: var(--b);
+    position: absolute; width: 34px; height: 34px; border-radius: 50%; background: #C8ACD6; 
+    --b: 4px; --a: 90deg; aspect-ratio: 1; padding: var(--b);
     --_g: /var(--b) var(--b) no-repeat radial-gradient(circle at 50% 50%, #000000 97%, #0000);
     --_h: /var(--b) var(--b) no-repeat linear-gradient(90deg, #000000 100%, #0000);
     mask: top var(--_g), calc(50% + 50%*sin(var(--a))) calc(50% - 50%*cos(var(--a))) var(--_g), linear-gradient(#0000 0 0) content-box intersect, conic-gradient(#000000 var(--a), #0000 0), right 0 top 50% var(--_h);
-    z-index: 2; 
-    /* Centering the pointer circle on its left/top coordinates */
+    z-index: 20; 
     transform: translate(-50%, -50%) rotate(180deg); 
   }
   .ingredient-accent { 
-    position: absolute; 
-    background-color: #C8ACD6; 
-    z-index: 1; 
+    position: absolute; background-color: #C8ACD6; z-index: 10; 
   }
-  .sharp-image { 
-    image-rendering: -moz-crisp-edges; 
-    image-rendering: -webkit-crisp-edges; 
-    image-rendering: pixelated; 
-    image-rendering: crisp-edges; 
-  }
-  .node-content {
-    position: relative; /* To ensure it's in the flow and z-index works as expected relative to pointers */
-    z-index: 0; /* Below pointers and accents if they overlap */
-  }
+  .sharp-image { image-rendering: pixelated; image-rendering: crisp-edges; }
+  .node-content { position: relative; z-index: 1; }
 </style>
 
 <div bind:this={rootElement}>
   {#if tree && tree.item && isTopLevel}
     <div class="mb-4">
-      <!-- Corrected comment placement -->
-      <div class="flex items-center gap-2 ml-[-1.5rem]"> <!-- Negative margin for alignment -->
+      <div class="flex items-center gap-2 ml-[-1.5rem]"> 
         <img
           bind:this={parentImageRef} 
           src={`https://sky.coflnet.com/static/icon/${tree.item}`}
@@ -240,9 +203,9 @@
     <div style={depth === 0 && isTopLevel ? "transform: translateX(-20px) translateY(-5px);" : ""}>
       <ul class="space-y-6">
         {#each aggregatedIngredients as ing, i (ing.ingredient + i + depth)}
-          <li class={`ingredient-item ${depth > 0 && parentImageRef ? 'has-pointer' : ''}`}>
+          <li class={`ingredient-item ${parentImageRef && ((depth > 0) || (depth === 0 && isTopLevel)) ? 'has-pointer' : ''}`}>
             <div class="pointer-container" use:registerContainer={i}>
-              {#if parentImageRef && depth > 0}
+              {#if parentImageRef && ((depth > 0) || (depth === 0 && isTopLevel))}
                 <div 
                   class="ingredient-accent" 
                   style="left: {accentLeft[i] || 0}px; top: {accentTop[i] || 0}px; width: {accentWidth[i] || 0}px; height: {accentHeight[i] || 0}px;"
@@ -253,6 +216,7 @@
                   aria-hidden="true"
                 ></div>
               {/if}
+
               <div class="node-content"> 
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -281,7 +245,7 @@
                         </svg>
                       </button>
                       {#if openDropdowns[ing.ingredient + i]}
-                        <div class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-10">
+                        <div class="absolute right-0 mt-1 py-1 px-2 bg-darker rounded-md shadow-lg z-30">
                           <span class="text-sm text-gray-400 whitespace-nowrap">
                             {ing.buy_method}
                           </span>
