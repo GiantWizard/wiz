@@ -10,32 +10,21 @@ RUN go mod download
 
 # Copy source & build
 COPY . .
+# Assuming your main package is in the root of the context copied
 RUN go build -o calculation_service .
+# If your main.go is in a cmd/yourprogram subdirectory, it would be:
+# RUN go build -o calculation_service ./cmd/yourprogram
 
 
 # ─── Runtime Stage ─────────────────────────────────────────────────
 FROM debian:bookworm-slim
 
-# Enable AMD64 architecture for MEGAcmd on ARM64
-RUN dpkg --add-architecture amd64 \
- && rm -rf /var/lib/apt/lists/*
-
-# Single pass: update, install deps, add MEGA repo, install megacmd, clean
+# Install necessary dependencies including megatools and ca-certificates
+# ca-certificates is important for HTTPS connections that megatools will make.
 RUN apt-get update --fix-missing \
  && apt-get install -y --no-install-recommends \
-      curl \
-      apt-transport-https \
+      megatools \
       ca-certificates \
-      gnupg \
-      dirmngr \
- && mkdir -p /etc/apt/keyrings \
- && curl -fsSL https://mega.nz/keys/MEGA_signing.key \
-      | gpg --dearmor -o /etc/apt/keyrings/mega.gpg \
- && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/mega.gpg] https://mega.nz/linux/repo/Debian_12/ ./" \
-      > /etc/apt/sources.list.d/mega.list \
- # Refresh indexes including new arch & repo
- && apt-get update --fix-missing \
- && apt-get install -y --no-install-recommends megacmd:amd64 \
  # Cleanup
  && rm -rf /var/lib/apt/lists/*
 
@@ -46,4 +35,3 @@ COPY --from=builder /app/calculation_service .
 # Expose port and default command
 EXPOSE 8081
 CMD ["./calculation_service"]
-
