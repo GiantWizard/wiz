@@ -1,0 +1,13 @@
+/* /Users/a/Downloads/wiz/frontend/src/app.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add any other global custom CSS rules here if needed */
+/* For example:
+body {
+  font-family: 'Inter', sans-serif; // This is also handled by your +layout.svelte font-inter class
+  background-color: #0B0B16; // Often handled by Tailwind utility on a root element
+  color: #e5e7eb; // Often handled by Tailwind utility on a root element
+}
+*/
