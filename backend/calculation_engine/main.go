@@ -587,6 +587,10 @@ func main() {
 	http.HandleFunc("/failed_items_report.json", failedItemsReportHandler)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", rootHandler)
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 
 	addr := "0.0.0.0:8081"
 	log.Printf("Main: Starting HTTP server on %s", addr)
