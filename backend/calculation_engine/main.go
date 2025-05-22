@@ -588,12 +588,9 @@ func main() {
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", rootHandler)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Main: Starting HTTP server. Listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	addr := "0.0.0.0:8081"
+	log.Printf("Main: Starting HTTP server on %s", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("FATAL: Failed to start HTTP server: %v", err)
 	}
 }
