@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"context" // Added for command timeout
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,19 +12,27 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	metricsFilename      = "latest_metrics.json"
-	itemFilesDir         = "dependencies/items"
-	megaCmdCheckInterval = 5 * time.Minute
-	megaCmdTimeout       = 60 * time.Second // Timeout for MEGA CLI commands
+	metricsFilename             = "latest_metrics.json"
+	itemFilesDir                = "dependencies/items"
+	megaCmdCheckInterval        = 5 * time.Minute
+	megaCmdTimeout              = 60 * time.Second
+	initialMetricsDownloadDelay = 10 * time.Second // Delay before first MEGA download
+	initialOptimizationDelay    = 20 * time.Second // Delay before first optimization (after metrics download might have started)
 )
 
-// Assume external definitions for ProductMetrics, OptimizedItemResult, HypixelAPIResponse, etc.
+// ... (Assume your structs: OptimizationRunOutput, OptimizationSummary, FailedItemDetail) ...
+// ... (Assume your global vars: latestOptimizerResultsJSON, etc.) ...
+// ... (Assume your types: ProductMetrics, OptimizedItemResult, HypixelAPIResponse, ProductDetails) ...
+// ... (Assume your functions: RunFullOptimization, getApiResponse) ...
+
+// COPY-PASTE ALL YOUR STRUCT DEFS AND GLOBAL VARS HERE if they were in the previous full code block
 
 type OptimizationRunOutput struct {
 	Summary OptimizationSummary   `json:"summary"`
@@ -94,22 +102,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 
 	cmdEnv := os.Environ()
-	// cmdEnv = append(cmdEnv, "HOME=/app") // .megarc is now a fallback, direct flags preferred.
-
-	// .megarc creation (now a fallback, can be removed if direct flags are always used and work)
-	/*
-		homeDir := "/app"
-		megarcPath := filepath.Join(homeDir, ".megarc")
-		if _, err := os.Stat(megarcPath); os.IsNotExist(err) {
-			log.Printf(".megarc not found at %s, attempting to create (as fallback).", megarcPath)
-			megarcContent := fmt.Sprintf("[Login]\nUsername = %s\nPassword = %s\n", megaEmail, megaPassword)
-			if errWrite := os.WriteFile(megarcPath, []byte(megarcContent), 0600); errWrite != nil {
-				log.Printf("Warning: failed to write .megarc file to %s: %v. Relying on direct flags.", megarcPath, errWrite)
-			} else {
-				log.Printf("Successfully wrote .megarc file to %s.", megarcPath)
-			}
-		}
-	*/
 
 	log.Printf("Listing files in MEGA folder: %s (using 'megals' with direct auth flags)", megaRemoteFolderPath)
 
@@ -181,8 +173,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	ctxGet, cancelGet := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelGet()
 
-	// IMPORTANT: VERIFY 'megaget' flags with 'megaget --help'
-	// Assuming it uses similar flags: --username, --password
 	getCmd := exec.CommandContext(ctxGet, "megaget",
 		"--username", megaEmail,
 		"--password", megaPassword,
@@ -220,7 +210,7 @@ func downloadAndStoreMetrics() {
 	tempMetricsFilename := metricsFilename + ".downloading.tmp"
 	defer os.Remove(tempMetricsFilename)
 
-	metricsDownloadStatusMutex.Lock()
+	metricsDownloadStatusMutex.Lock() // Lock early
 	lastMetricsDownloadTime = time.Now()
 	err := downloadMetricsFromMega(tempMetricsFilename)
 
@@ -258,6 +248,7 @@ func downloadAndStoreMetrics() {
 	}
 
 	log.Printf("downloadAndStoreMetrics: Downloaded data IS a valid JSON array. Proceeding to update latestMetricsData.")
+	// Only lock metricsDataMutex when actually writing to it.
 	metricsDataMutex.Lock()
 	latestMetricsData = data
 	log.Printf("downloadAndStoreMetrics: SET latestMetricsData to (len %d): %.100s", len(latestMetricsData), string(latestMetricsData))
@@ -271,11 +262,14 @@ func downloadAndStoreMetrics() {
 
 	lastMetricsDownloadStatus = fmt.Sprintf("Successfully updated metrics from MEGA/local file at %s. Size: %d bytes", lastMetricsDownloadTime.Format(time.RFC3339), len(data))
 	log.Printf("downloadAndStoreMetrics: %s", lastMetricsDownloadStatus)
-	metricsDownloadStatusMutex.Unlock()
+	metricsDownloadStatusMutex.Unlock() // Unlock at the end of successful path
 }
 
 func downloadMetricsPeriodically() {
 	go func() {
+		log.Printf("downloadMetricsPeriodically: Waiting %v before initial metrics download...", initialMetricsDownloadDelay)
+		time.Sleep(initialMetricsDownloadDelay) // <<<< INITIAL DELAY ADDED
+
 		log.Println("downloadMetricsPeriodically: Performing initial metrics download...")
 		downloadAndStoreMetrics()
 		log.Println("downloadMetricsPeriodically: Initial metrics download finished.")
@@ -348,12 +342,25 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	}
 	log.Printf("performOptimizationCycleNow: Processing %d items from API.", len(itemIDs))
 
+	// Read chunking parameters from environment or use defaults
+	itemsPerChunk := 50 // Default
+	if ipcStr := os.Getenv("ITEMS_PER_CHUNK"); ipcStr != "" {
+		if val, err := strconv.Atoi(ipcStr); err == nil && val > 0 {
+			itemsPerChunk = val
+		}
+	}
+	pauseBetweenChunks := 500 * time.Millisecond // Default
+	if pbcStr := os.Getenv("PAUSE_MS_BETWEEN_CHUNKS"); pbcStr != "" {
+		if val, err := strconv.Atoi(pbcStr); err == nil && val >= 0 { // Allow 0ms pause
+			pauseBetweenChunks = time.Duration(val) * time.Millisecond
+		}
+	}
+	// Constants for other params
 	const (
 		maxAllowedCycleTimePerItem = 3600.0
 		maxInitialSearchQty        = 1000000.0
-		itemsPerChunk              = 50
-		pauseBetweenChunks         = 500 * time.Millisecond
 	)
+
 	log.Printf("performOptimizationCycleNow: Optimization Params: maxCycleTimePerItem=%.0fs, maxInitialSearchQty=%.0f, itemsPerChunk=%d, pauseBetweenChunks=%v",
 		maxAllowedCycleTimePerItem, maxInitialSearchQty, itemsPerChunk, pauseBetweenChunks)
 
@@ -376,7 +383,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 		chunkResults := RunFullOptimization(currentChunkItemIDs, maxAllowedCycleTimePerItem, apiResp, productMetrics, itemFilesDir, maxInitialSearchQty)
 		allOptimizedResults = append(allOptimizedResults, chunkResults...)
 
-		if end < len(itemIDs) {
+		if end < len(itemIDs) && pauseBetweenChunks > 0 { // Only pause if not the last chunk and pause is configured
 			log.Printf("performOptimizationCycleNow: Pausing for %v after processing chunk.", pauseBetweenChunks)
 			time.Sleep(pauseBetweenChunks)
 		}
@@ -523,24 +530,30 @@ func runSingleOptimizationAndUpdateResults() {
 
 func optimizePeriodically() {
 	go func() {
+		log.Printf("optimizePeriodically: Waiting %v before initial optimization run...", initialOptimizationDelay)
+		time.Sleep(initialOptimizationDelay) // <<<< INITIAL DELAY ADDED
+
 		isOptimizingMutex.Lock()
 		if isOptimizing {
 			isOptimizingMutex.Unlock()
-			log.Println("optimizePeriodically (initial): Optimization already in progress. Skipping initial run.")
+			log.Println("optimizePeriodically (initial delayed): Optimization was already triggered. Skipping.")
 			return
 		}
 		isOptimizing = true
 		isOptimizingMutex.Unlock()
 
-		log.Println("optimizePeriodically (initial): Starting initial optimization run...")
+		log.Println("optimizePeriodically (initial delayed): Starting initial optimization run...")
 		runSingleOptimizationAndUpdateResults()
 
 		isOptimizingMutex.Lock()
 		isOptimizing = false
 		isOptimizingMutex.Unlock()
-		log.Println("optimizePeriodically (initial): Initial optimization run finished.")
+		log.Println("optimizePeriodically (initial delayed): Initial optimization run finished.")
 	}()
 
+	// This ticker starts after the main function has initialized everything.
+	// The first tick will occur 20 seconds after this optimizePeriodically goroutine itself starts (which is quick).
+	// The *work* for that first tick will be further controlled by the isOptimizing mutex.
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 
@@ -666,6 +679,8 @@ func min(a, b int) int {
 	return b
 }
 
+// strconv.Atoi import might be needed if using env vars for chunking params
+
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 
@@ -677,6 +692,8 @@ func main() {
 		log.Printf("DEBUG ENV: MEGA_PWD from container's env (logging first char for presence): []")
 	}
 	log.Printf("DEBUG ENV: MEGA_METRICS_FOLDER_PATH from container's env: [%s]", os.Getenv("MEGA_METRICS_FOLDER_PATH"))
+	log.Printf("DEBUG ENV: ITEMS_PER_CHUNK from env: [%s]", os.Getenv("ITEMS_PER_CHUNK"))
+	log.Printf("DEBUG ENV: PAUSE_MS_BETWEEN_CHUNKS from env: [%s]", os.Getenv("PAUSE_MS_BETWEEN_CHUNKS"))
 
 	log.Println("Main: Optimizer service starting...")
 
@@ -709,7 +726,7 @@ func main() {
 			log.Printf("Main Init: SET latestMetricsData from valid cache file '%s' (len %d): %.100s",
 				metricsFilename, len(latestMetricsData), string(latestMetricsData))
 		} else {
-			log.Printf("Main Init: Warning: Cache file '%s' (len %d) is NOT a valid JSON array: %v. Content(start): %.100s.",
+			log.Printf("Main Init: Warning: Cache file '%s' (len %d) is NOT A valid JSON array: %v. Content(start): %.100s.",
 				metricsFilename, len(initialMetricsBytes), parseErr, string(initialMetricsBytes))
 			latestMetricsData = []byte("[]")
 			log.Printf("Main Init: SET latestMetricsData to default '[]' (len %d) due to unparseable cache.", len(latestMetricsData))
