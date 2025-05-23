@@ -1,3 +1,4 @@
+// recipe.go
 package main
 
 // Item struct definitions remain here as they describe the recipe file format.
@@ -30,7 +31,7 @@ type SingleRecipe struct {
 }
 
 type Item struct {
-	ItemID  string       `json:"itemid"`         // Make sure this matches the JSON field name, e.g., "internalname" or "itemid"
+	ItemID  string       `json:"itemid"`         // Make sure this matches the JSON field name
 	Name    string       `json:"name,omitempty"` // Optional: if your JSON has a display name
 	Recipe  SingleRecipe `json:"recipe"`
 	Recipes []Recipe     `json:"recipes"`
