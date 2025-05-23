@@ -1,3 +1,4 @@
+// metrics.go
 package main
 
 import (
@@ -21,104 +22,85 @@ type ProductMetrics struct {
 	// BuyMovingWeek  float64 `json:"buy_moving_week"` // If present and useful, though live API is often preferred
 }
 
-// --- Global variables for Metrics caching ---
+// --- Global variables for Metrics caching (used by legacy direct file load) ---
+// This caching mechanism is less used now that main.go handles metrics loading and updating.
+// However, getMetricsMap might still be called by older code paths if they exist,
+// or could be repurposed if direct file access is needed elsewhere.
 var (
-	metricsCache    map[string]ProductMetrics // Key is ProductID (should be normalized)
-	loadMetricsOnce sync.Once                 // Ensures loading happens only once
-	metricsLoadErr  error                     // Stores error encountered during loading
-	metricsMutex    sync.RWMutex              // Read/Write mutex for thread-safe access
+	metricsFileCache    map[string]ProductMetrics // Key is ProductID (should be normalized)
+	loadMetricsFileOnce sync.Once                 // Ensures loading happens only once
+	metricsFileLoadErr  error                     // Stores error encountered during loading
+	metricsFileMutex    sync.RWMutex              // Read/Write mutex for thread-safe access
 )
 
-// --- Metrics Loading Logic ---
+// loadMetricsDataFromFile reads a specific JSON file and populates the metricsFileCache.
+// This is intended for a one-time load if direct file access is used, separate from main.go's mechanism.
+func loadMetricsDataFromFile(filename string) {
+	metricsFileMutex.Lock()
+	defer metricsFileMutex.Unlock()
 
-// loadMetricsData reads the JSON file and populates the metricsCache.
-// It should only be called once via loadMetricsOnce.Do().
-// It handles setting metricsLoadErr internally.
-func loadMetricsData(filename string) {
-	// Lock for writing, as we are potentially modifying metricsCache and metricsLoadErr
-	metricsMutex.Lock()
-	defer metricsMutex.Unlock()
-
-	// Double-check locking pattern: Check if already loaded/failed *inside* the lock
-	// This prevents redundant work if multiple goroutines call getMetricsMap concurrently
-	// before loadMetricsOnce.Do() completes.
-	if metricsCache != nil || metricsLoadErr != nil {
-		dlog("Metrics loading already attempted (Cache:%v, Err:%v). Skipping.", metricsCache != nil, metricsLoadErr != nil)
-		return // Already loaded or failed
+	// Prevent re-entry or redundant work if already attempted
+	if metricsFileCache != nil || metricsFileLoadErr != nil {
+		dlog("Metrics file loading already attempted (Cache:%v, Err:%v) for %s. Skipping.", metricsFileCache != nil, metricsFileLoadErr != nil, filename)
+		return
 	}
 
-	dlog("Loading metrics data from '%s'...", filename) // Assumes dlog defined in utils.go
+	dlog("Loading metrics data directly from file '%s'...", filename)
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		metricsLoadErr = fmt.Errorf("failed to read metrics file '%s': %w", filename, err)
-		log.Printf("ERROR: %v", metricsLoadErr)
-		// metricsCache remains nil
-		return // Exit after setting the error
+		metricsFileLoadErr = fmt.Errorf("failed to read metrics file '%s': %w", filename, err)
+		log.Printf("ERROR (loadMetricsDataFromFile): %v", metricsFileLoadErr)
+		return
 	}
 
-	// Expecting a JSON array of ProductMetrics objects
 	var metricsList []ProductMetrics
 	if err := json.Unmarshal(data, &metricsList); err != nil {
-		metricsLoadErr = fmt.Errorf("failed to parse metrics JSON from '%s': %w", filename, err)
-		log.Printf("ERROR: %v", metricsLoadErr)
-		// metricsCache remains nil
-		return // Exit after setting the error
+		metricsFileLoadErr = fmt.Errorf("failed to parse metrics JSON from '%s': %w", filename, err)
+		log.Printf("ERROR (loadMetricsDataFromFile): %v", metricsFileLoadErr)
+		return
 	}
 
-	// Create the map and populate it using normalized IDs
 	tempCache := make(map[string]ProductMetrics, len(metricsList))
 	skippedCount := 0
 	for _, pm := range metricsList {
 		if pm.ProductID == "" {
-			log.Printf("Warning: Skipping metric entry with empty product_id in '%s'", filename)
+			log.Printf("Warning (loadMetricsDataFromFile): Skipping metric entry with empty product_id in '%s'", filename)
 			skippedCount++
 			continue
 		}
-		// Normalize the ID *before* using it as a key
-		normalizedID := BAZAAR_ID(pm.ProductID) // Assumes BAZAAR_ID defined in utils.go
+		normalizedID := BAZAAR_ID(pm.ProductID)
 		if existing, found := tempCache[normalizedID]; found {
-			log.Printf("Warning: Duplicate normalized ProductID '%s' found in metrics file '%s'. Overwriting previous entry (%+v) with (%+v).", normalizedID, filename, existing, pm)
+			log.Printf("Warning (loadMetricsDataFromFile): Duplicate normalized ProductID '%s' found in metrics file '%s'. Overwriting previous entry (%+v) with (%+v).", normalizedID, filename, existing, pm)
 		}
-		// Ensure the stored ProductID within the struct is also normalized for consistency? Optional.
-		// pm.ProductID = normalizedID
+		pm.ProductID = normalizedID // Ensure ProductID within struct is also normalized
 		tempCache[normalizedID] = pm
 	}
 
-	// Assign to the global variable once the map is fully populated
-	metricsCache = tempCache
-
-	// Reset error state as loading was successful
-	metricsLoadErr = nil
-
-	dlog("Metrics data loaded and cached successfully. Loaded: %d, Skipped: %d", len(metricsCache), skippedCount)
+	metricsFileCache = tempCache
+	metricsFileLoadErr = nil // Clear error on success
+	dlog("Metrics data from file '%s' loaded and cached successfully. Loaded: %d, Skipped: %d", filename, len(metricsFileCache), skippedCount)
 }
 
-// getMetricsMap ensures metrics are loaded once and returns the cached map.
-// It provides thread-safe read access to the cache.
-func getMetricsMap(filename string) (map[string]ProductMetrics, error) {
-	// Ensure loadMetricsData runs only once across all goroutines calling this function.
-	loadMetricsOnce.Do(func() {
-		loadMetricsData(filename)
+// getMetricsMapFromFile ensures metrics are loaded once from a specific file and returns the cached map.
+// This is distinct from main.go's metrics handling which uses `latestMetricsData`.
+func getMetricsMapFromFile(filename string) (map[string]ProductMetrics, error) {
+	loadMetricsFileOnce.Do(func() {
+		loadMetricsDataFromFile(filename) // This will only run the loading logic once per application lifetime
 	})
 
-	// Acquire read lock to safely access the shared cache and error variables.
-	metricsMutex.RLock()
-	defer metricsMutex.RUnlock()
+	metricsFileMutex.RLock() // Acquire read lock for accessing shared cache and error
+	defer metricsFileMutex.RUnlock()
 
-	// Check if loading failed
-	if metricsLoadErr != nil {
-		return nil, metricsLoadErr
+	if metricsFileLoadErr != nil {
+		return nil, metricsFileLoadErr // Return error if loading failed
 	}
 
-	// Check if cache is nil (could happen if loading failed silently before error was set, or file was empty)
-	if metricsCache == nil {
-		// If no error was recorded, but cache is nil, it implies an empty or problematic file,
-		// but not necessarily a read/parse error caught by loadMetricsData.
-		// Return an empty map and log a warning, rather than an error, unless an error *was* previously set.
-		log.Printf("Warning: Metrics cache is nil after load attempt, but no error reported. Returning empty map. Check file '%s'.", filename)
-		return make(map[string]ProductMetrics), nil // Return empty map, not nil, if no error
+	if metricsFileCache == nil {
+		// This state implies loading was attempted (due to Once.Do) but cache remains nil,
+		// and no error was set. This could mean an empty file or other non-error producing issue.
+		log.Printf("Warning (getMetricsMapFromFile): Metrics cache for '%s' is nil after load attempt, but no error reported. Returning empty map.", filename)
+		return make(map[string]ProductMetrics), nil // Return empty map rather than nil if no explicit error
 	}
 
-	// Return the populated cache and nil error
-	return metricsCache, nil
+	return metricsFileCache, nil
 }
