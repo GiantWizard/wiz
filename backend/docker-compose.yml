@@ -13,16 +13,16 @@ services:
       - MEGA_PWD=${MEGA_PWD}
       - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
 
-  server9:
-    build:
-      context: ./server9
-      dockerfile: Dockerfile
-    container_name: server9_local
-    depends_on:
-      - calculation_engine
-    environment:
-      - MEGA_EMAIL=${MEGA_EMAIL}
-      - MEGA_PWD=${MEGA_PWD}
-      - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
+  # server9:
+  #   build:
+  #     context: ./server9
+  #     dockerfile: Dockerfile
+  #   container_name: server9_local
+  #   depends_on:
+  #     - calculation_engine
+  #   environment:
+  #     - MEGA_EMAIL=${MEGA_EMAIL}
+  #     - MEGA_PWD=${MEGA_PWD}
+  #     - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
     # ports:
     #   - "9000:9000"
