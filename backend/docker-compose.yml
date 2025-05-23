@@ -1,28 +1,28 @@
 version: '3.8'
 
 services:
-  # calculation_engine:
-  #   build:
-  #     context: ./calculation_engine
-  #     dockerfile: Dockerfile
-  #   container_name: calculation_engine_local
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     - MEGA_EMAIL=${MEGA_EMAIL}
-  #     - MEGA_PWD=${MEGA_PWD}
-  #     - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
-
-  server9:
+  calculation_engine:
     build:
-      context: ./server9
+      context: ./calculation_engine
       dockerfile: Dockerfile
-    container_name: server9_local
-    depends_on: # This will cause 'docker-compose up' to fail if calculation_engine is not defined
-      - calculation_engine
+    container_name: calculation_engine_local
+    ports:
+      - "8081:8081"
     environment:
       - MEGA_EMAIL=${MEGA_EMAIL}
       - MEGA_PWD=${MEGA_PWD}
       - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
+
+  # server9:
+  #   build:
+  #     context: ./server9
+  #     dockerfile: Dockerfile
+  #   container_name: server9_local
+  #   depends_on:
+  #     - calculation_engine
+  #   environment:
+  #     - MEGA_EMAIL=${MEGA_EMAIL}
+  #     - MEGA_PWD=${MEGA_PWD}
+  #     - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
     # ports:
     #   - "9000:9000"
