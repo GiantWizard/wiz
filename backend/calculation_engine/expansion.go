@@ -19,6 +19,7 @@ func valueOrNaN(v float64) float64 {
 }
 
 // --- Structs Definitions (using JSONFloat64) ---
+// These structs are used by tree_builder.go and optimizer.go as well.
 type BaseIngredientDetail struct {
 	Quantity       float64     `json:"quantity"`
 	BestCost       JSONFloat64 `json:"best_cost,omitempty"`
@@ -76,7 +77,8 @@ func calculateDetailedCostsAndFillTimes(
 ) {
 	totalSumOfBestCosts = 0.0
 	isPossible = true
-	errorMsg = ""
+	// Use strings.Builder for potentially long error messages
+	var errorMsgBuilder strings.Builder
 	detailedMapOutput = make(map[string]BaseIngredientDetail)
 	currentSlowestTimeRaw := 0.0
 	slowestIngName = ""
@@ -100,19 +102,18 @@ func calculateDetailedCostsAndFillTimes(
 		if errC10M != nil || method == "N/A" || math.IsInf(bestCostRaw, 0) || math.IsNaN(bestCostRaw) || bestCostRaw < 0 {
 			currentErrMsg := fmt.Sprintf("Cannot determine valid BEST cost for base ingredient '%s': BestC:%.2f, Method: %s, Err: %v", itemID, bestCostRaw, method, errC10M)
 			dlog("  WARN (calculateDetailedCostsAndFillTimes - Best): %s", currentErrMsg)
-			if errorMsg == "" {
-				errorMsg = currentErrMsg
-			} else {
-				errorMsg += "; " + currentErrMsg
+			if errorMsgBuilder.Len() > 0 {
+				errorMsgBuilder.WriteString("; ")
 			}
+			errorMsgBuilder.WriteString(currentErrMsg)
 			isPossible = false
-			totalSumOfBestCosts = math.Inf(1)
+			totalSumOfBestCosts = math.Inf(1) // Mark total cost as impossible
 			ingredientDetail.Method = method
-			if errC10M != nil {
+			if errC10M != nil { // If specific error, mark method as ERROR
 				ingredientDetail.Method = "ERROR"
 			}
-		} else {
-			if !math.IsInf(totalSumOfBestCosts, 1) {
+		} else { // Valid cost obtained
+			if !math.IsInf(totalSumOfBestCosts, 1) { // Only add if total cost is still considered possible
 				totalSumOfBestCosts += bestCostRaw
 			}
 			ingredientDetail.BestCost = toJSONFloat64(valueOrNaN(bestCostRaw))
@@ -130,7 +131,8 @@ func calculateDetailedCostsAndFillTimes(
 		}
 		detailedMapOutput[itemID] = ingredientDetail
 
-		buyTimeRaw := 0.0
+		// Fill Time Calculation for Primary method
+		buyTimeRaw := 0.0 // Default for non-Primary or calculable zero time
 		if method == "Primary" {
 			metricsDataForFill, metricsOkForFill := safeGetMetricsData(metricsMap, itemID)
 			if metricsOkForFill {
@@ -138,53 +140,61 @@ func calculateDetailedCostsAndFillTimes(
 				if buyErr == nil && !math.IsNaN(calculatedTime) && !math.IsInf(calculatedTime, 0) && calculatedTime >= 0 {
 					buyTimeRaw = calculatedTime
 				} else {
-					buyTimeRaw = math.Inf(1)
+					buyTimeRaw = math.Inf(1) // Mark this ingredient's time as Inf
 					currentErrMsg := fmt.Sprintf("Fill time calculation error for '%s': Err: %v, Time: %.2f", itemID, buyErr, calculatedTime)
-					if errorMsg == "" {
-						errorMsg = currentErrMsg
-					} else {
-						errorMsg += "; " + currentErrMsg
+					if errorMsgBuilder.Len() > 0 {
+						errorMsgBuilder.WriteString("; ")
 					}
-					isPossible = false
+					errorMsgBuilder.WriteString(currentErrMsg)
+					isPossible = false // Overall calculation no longer possible
 				}
-			} else {
+			} else { // Metrics not found for fill time
 				buyTimeRaw = math.Inf(1)
 				currentErrMsg := fmt.Sprintf("Metrics not found for primary buy fill time of '%s'", itemID)
-				if errorMsg == "" {
-					errorMsg = currentErrMsg
-				} else {
-					errorMsg += "; " + currentErrMsg
+				if errorMsgBuilder.Len() > 0 {
+					errorMsgBuilder.WriteString("; ")
 				}
+				errorMsgBuilder.WriteString(currentErrMsg)
 				isPossible = false
 			}
 		}
-		if math.IsInf(buyTimeRaw, 1) {
-			if !math.IsInf(currentSlowestTimeRaw, 1) {
-				currentSlowestTimeRaw = buyTimeRaw
+		// Update overall slowest time
+		if math.IsInf(buyTimeRaw, 1) { // If current ingredient's time is Inf
+			if !math.IsInf(currentSlowestTimeRaw, 1) { // And overall slowest wasn't Inf yet
+				currentSlowestTimeRaw = buyTimeRaw // Then overall becomes Inf
 				slowestIngName = itemID
 				slowestIngQty = quantity
 			}
-		} else if !math.IsInf(currentSlowestTimeRaw, 1) && buyTimeRaw > currentSlowestTimeRaw {
+		} else if !math.IsInf(currentSlowestTimeRaw, 1) && buyTimeRaw > currentSlowestTimeRaw { // If neither is Inf and current is slower
 			currentSlowestTimeRaw = buyTimeRaw
 			slowestIngName = itemID
 			slowestIngQty = quantity
 		}
 	}
-	return totalSumOfBestCosts, detailedMapOutput, currentSlowestTimeRaw, slowestIngName, sanitizeFloat(slowestIngQty), isPossible, errorMsg
+	return totalSumOfBestCosts, detailedMapOutput, currentSlowestTimeRaw, slowestIngName, sanitizeFloat(slowestIngQty), isPossible, errorMsgBuilder.String()
 }
 
-func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPIResponse, metricsMap map[string]ProductMetrics, itemFilesDir string) (*DualExpansionResult, error) {
+func PerformDualExpansion(
+	itemName string,
+	quantity float64,
+	apiResp *HypixelAPIResponse,
+	metricsMap map[string]ProductMetrics,
+	itemFilesDir string,
+	includeTreeInExpansionResult bool, // New parameter
+) (*DualExpansionResult, error) {
 	itemNameNorm := BAZAAR_ID(itemName)
-	dlog(">>> Performing Dual Expansion for %.2f x %s <<<", quantity, itemNameNorm)
+	dlog(">>> Performing Dual Expansion for %.2f x %s (IncludeTree: %v) <<<", quantity, itemNameNorm, includeTreeInExpansionResult)
 	result := &DualExpansionResult{
 		ItemName: itemNameNorm, Quantity: sanitizeFloat(quantity),
 		PrimaryBased: ExpansionResult{
 			PerspectiveType: "PrimaryBased", CalculationPossible: false, BaseIngredients: make(map[string]BaseIngredientDetail),
 			TotalCost: toJSONFloat64(math.NaN()), TopLevelCost: toJSONFloat64(math.NaN()), TopLevelRR: toJSONFloat64(math.NaN()), SlowestIngredientBuyTimeSeconds: toJSONFloat64(math.NaN()),
+			RecipeTree: nil, // Initialize to nil
 		},
 		SecondaryBased: ExpansionResult{
 			PerspectiveType: "SecondaryBased", CalculationPossible: false, BaseIngredients: make(map[string]BaseIngredientDetail),
 			TotalCost: toJSONFloat64(math.NaN()), TopLevelCost: toJSONFloat64(math.NaN()), TopLevelRR: toJSONFloat64(math.NaN()), SlowestIngredientBuyTimeSeconds: toJSONFloat64(math.NaN()),
+			RecipeTree: nil, // Initialize to nil
 		},
 		TopLevelInstasellTimeSeconds: toJSONFloat64(math.NaN()),
 	}
@@ -231,8 +241,13 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		result.PrimaryBased.ErrorMessage = errMsg
 		result.SecondaryBased.ErrorMessage = errMsg
 		baseAcqError := BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()), RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(math.NaN())}
-		result.PrimaryBased.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: errMsg, IsBaseComponent: true, Acquisition: &baseAcqError}
-		result.SecondaryBased.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: errMsg, IsBaseComponent: true, Acquisition: &baseAcqError}
+
+		// Create minimal error trees if tree is requested, otherwise they stay nil
+		if includeTreeInExpansionResult {
+			result.PrimaryBased.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: errMsg, IsBaseComponent: true, Acquisition: &baseAcqError, Depth: 0, MaxSubTreeDepth: 0}
+			result.SecondaryBased.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: errMsg, IsBaseComponent: true, Acquisition: &baseAcqError, Depth: 0, MaxSubTreeDepth: 0}
+		}
+		// This is an early return, so explicit nilling if !includeTree is not needed beyond initialization.
 		return result, nil
 	}
 
@@ -240,14 +255,14 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 	isApiNotFoundError := errTopC10M != nil && strings.Contains(errTopC10M.Error(), "API data not found")
 
 	costToCraftOptimalRaw := math.Inf(1)
-	var craftRecipeTree *CraftingStepNode
+	var craftRecipeTree *CraftingStepNode // This is the fully expanded tree for crafting
 	craftPossible := false
 	craftErrMsg := ""
 	craftResultedInCycle := false
-	craftSlowestFillTimeRaw := math.Inf(1) // This is float64
+	craftSlowestFillTimeRaw := math.Inf(1)
 	craftSlowestIngName := ""
 	craftSlowestIngQty := 0.0
-	var baseIngredientsFromCraft map[string]BaseIngredientDetail // Values are BaseIngredientDetail using JSONFloat64
+	var baseIngredientsFromCraft map[string]BaseIngredientDetail
 
 	if topLevelRecipeExists {
 		var errExpand error
@@ -255,25 +270,30 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		baseAcqTreeError := BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()), RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(math.NaN())}
 		if errExpand != nil {
 			craftErrMsg = fmt.Sprintf("Expansion to tree failed: %v", errExpand)
-			if craftRecipeTree == nil {
-				craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: craftErrMsg, IsBaseComponent: true, Acquisition: &baseAcqTreeError}
+			if craftRecipeTree == nil { // Ensure craftRecipeTree is not nil if error occurred
+				craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: craftErrMsg, IsBaseComponent: true, Acquisition: &baseAcqTreeError, Depth: 0, MaxSubTreeDepth: 0}
+			} else { // If tree exists but had an error, ensure error message is on it
+				if craftRecipeTree.ErrorMessage == "" {
+					craftRecipeTree.ErrorMessage = craftErrMsg
+				}
 			}
 		}
-		if craftRecipeTree == nil {
+		if craftRecipeTree == nil { // Should be redundant due to above, but safety
 			craftErrMsg = "Expansion to tree resulted in nil root node"
-			craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: craftErrMsg, IsBaseComponent: true, Acquisition: &baseAcqTreeError}
+			craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, ErrorMessage: craftErrMsg, IsBaseComponent: true, Acquisition: &baseAcqTreeError, Depth: 0, MaxSubTreeDepth: 0}
 		} else {
 			if craftRecipeTree.IsBaseComponent && strings.Contains(craftRecipeTree.ErrorMessage, "Cycle detected to top-level item") {
 				craftResultedInCycle = true
 				if craftErrMsg == "" {
 					craftErrMsg = "Expansion resulted in top-level cycle"
+				} else if !strings.Contains(craftErrMsg, "cycle") {
+					craftErrMsg += "; Expansion resulted in top-level cycle"
 				}
 				costToCraftOptimalRaw = math.Inf(1)
 				craftPossible = false
 				craftSlowestFillTimeRaw = math.Inf(1)
 			} else {
 				var analysisErrorMsg string
-				// analyzeTreeForCostsAndTimes returns float64 for cost and time
 				costToCraftOptimalRaw, craftSlowestFillTimeRaw, craftSlowestIngName, craftSlowestIngQty, craftPossible, analysisErrorMsg = analyzeTreeForCostsAndTimes(craftRecipeTree, apiResp, metricsMap)
 				if !craftPossible {
 					if craftErrMsg == "" {
@@ -288,24 +308,26 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 			}
 			baseIngredientsFromCraft = extractBaseIngredientsFromTree(craftRecipeTree)
 		}
-	} else {
+	} else { // No recipe file exists
 		craftErrMsg = "No recipe found for top-level item."
 		costToCraftOptimalRaw = math.Inf(1)
 		craftPossible = false
 		craftSlowestFillTimeRaw = math.Inf(1)
 		baseAcqNoRecipe := BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()), RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(math.NaN())}
-		craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: craftErrMsg, Acquisition: &baseAcqNoRecipe}
+		// Create a minimal tree node for this case
+		craftRecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: craftErrMsg, Acquisition: &baseAcqNoRecipe, Depth: 0, MaxSubTreeDepth: 0}
+		// Try to get C10M for this "base" item if no recipe
 		costRawVal, method, assocCostRawVal, rrValRaw, ifValRaw, deltaValRaw, c10mErr := calculateC10MForNode(itemNameNorm, quantity, apiResp, metricsMap)
 		if c10mErr == nil && !math.IsInf(costRawVal, 0) && !math.IsNaN(costRawVal) && costRawVal >= 0 {
 			craftRecipeTree.Acquisition = &BaseIngredientDetail{
 				Quantity: quantity, BestCost: toJSONFloat64(valueOrNaN(costRawVal)), AssociatedCost: toJSONFloat64(valueOrNaN(assocCostRawVal)), Method: method,
 				RR: toJSONFloat64(valueOrNaN(rrValRaw)), IF: toJSONFloat64(valueOrNaN(ifValRaw)), Delta: toJSONFloat64(valueOrNaN(deltaValRaw)),
 			}
-		} else {
-			if craftRecipeTree.Acquisition == nil {
+		} else { // C10M failed for non-craftable item
+			if craftRecipeTree.Acquisition == nil { // Should not happen if initialized above
 				craftRecipeTree.Acquisition = &BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN())}
 			}
-			craftRecipeTree.Acquisition.BestCost = toJSONFloat64(math.NaN())
+			craftRecipeTree.Acquisition.BestCost = toJSONFloat64(math.NaN()) // Mark cost as NaN
 			craftRecipeTree.Acquisition.Method = "N/A"
 			if c10mErr != nil {
 				if craftRecipeTree.ErrorMessage == "" {
@@ -317,50 +339,61 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		}
 	}
 
+	// --- PrimaryBased (res1) Logic ---
 	res1 := &result.PrimaryBased
 	minCostP1Raw := math.Inf(1)
 	chosenMethodP1 := "N/A"
 
-	if craftPossible && !math.IsInf(costToCraftOptimalRaw, 0) && !math.IsNaN(costToCraftOptimalRaw) && costToCraftOptimalRaw >= 0 && costToCraftOptimalRaw < minCostP1Raw {
-		minCostP1Raw = costToCraftOptimalRaw
-		chosenMethodP1 = "Craft"
+	if craftPossible && !math.IsInf(costToCraftOptimalRaw, 0) && !math.IsNaN(costToCraftOptimalRaw) && costToCraftOptimalRaw >= 0 {
+		if costToCraftOptimalRaw < minCostP1Raw {
+			minCostP1Raw = costToCraftOptimalRaw
+			chosenMethodP1 = "Craft"
+		}
 	}
-	if validTopC10mPrim && topC10mPrimRaw < minCostP1Raw {
-		minCostP1Raw = topC10mPrimRaw
-		chosenMethodP1 = "Primary"
+	if validTopC10mPrim {
+		if topC10mPrimRaw < minCostP1Raw {
+			minCostP1Raw = topC10mPrimRaw
+			chosenMethodP1 = "Primary"
+		}
 	}
-	if validTopC10mSec && topC10mSecRaw < minCostP1Raw {
-		minCostP1Raw = topC10mSecRaw
-		chosenMethodP1 = "Secondary"
+	if validTopC10mSec {
+		if topC10mSecRaw < minCostP1Raw {
+			minCostP1Raw = topC10mSecRaw
+			chosenMethodP1 = "Secondary"
+		}
 	}
 	dlog("  P1 Minimum Cost Choice: %s (Raw Min Cost: %.2f)", chosenMethodP1, minCostP1Raw)
 
 	if chosenMethodP1 == "Craft" {
 		res1.TopLevelAction = "Expanded"
 		res1.BaseIngredients = baseIngredientsFromCraft
-		res1.RecipeTree = craftRecipeTree
+		if includeTreeInExpansionResult {
+			res1.RecipeTree = craftRecipeTree
+		}
 		res1.TotalCost = toJSONFloat64(valueOrNaN(costToCraftOptimalRaw))
 		res1.CalculationPossible = craftPossible
 		res1.FinalCostMethod = "SumBestC10MFromTree"
-		res1.SlowestIngredientBuyTimeSeconds = toJSONFloat64(valueOrNaN(craftSlowestFillTimeRaw)) // craftSlowestFillTimeRaw is float64
+		res1.SlowestIngredientBuyTimeSeconds = toJSONFloat64(valueOrNaN(craftSlowestFillTimeRaw))
 		res1.SlowestIngredientName = craftSlowestIngName
 		res1.SlowestIngredientQuantity = sanitizeFloat(craftSlowestIngQty)
 		if !craftPossible && res1.ErrorMessage == "" {
 			res1.ErrorMessage = craftErrMsg
+		} else if !craftPossible && craftErrMsg != "" && !strings.Contains(res1.ErrorMessage, craftErrMsg) {
+			res1.ErrorMessage += "; " + craftErrMsg
 		}
 	} else if chosenMethodP1 == "Primary" || chosenMethodP1 == "Secondary" {
 		res1.TopLevelAction = "TreatedAsBase"
 		var acqCostRawVal, acqAssocCostRawVal, acqRRRawVal, acqIFRawVal, acqDeltaRawVal float64
 		var acqMethod string
-		fillTimeForBaseRawVal := math.Inf(1) // float64
+		fillTimeForBaseRawVal := math.Inf(1)
 
 		if chosenMethodP1 == "Primary" {
 			acqCostRawVal, acqMethod, acqAssocCostRawVal, acqRRRawVal, acqIFRawVal = topC10mPrimRaw, "Primary", sellP*quantity, topRRRaw, topIFRaw
-			acqDeltaRawVal = math.NaN()
+			acqDeltaRawVal = math.NaN() // Initialize
 			if metricsP.ProductID != "" {
 				acqDeltaRawVal = metricsP.SellSize*metricsP.SellFrequency - metricsP.OrderSize*metricsP.OrderFrequency
 			}
-			if metricsP.ProductID != "" {
+			if metricsP.ProductID != "" { // Check again for fill time specifically
 				fillTimeVal, _, errFill := calculateBuyOrderFillTime(itemNameNorm, quantity, metricsP)
 				if errFill == nil && !math.IsNaN(fillTimeVal) && !math.IsInf(fillTimeVal, 0) && fillTimeVal >= 0 {
 					fillTimeForBaseRawVal = fillTimeVal
@@ -377,14 +410,16 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 			}
 			res1.FinalCostMethod = "FixedTopLevelSecondary"
 			res1.TotalCost = toJSONFloat64(valueOrNaN(topC10mSecRaw))
-			fillTimeForBaseRawVal = 0.0
+			fillTimeForBaseRawVal = 0.0 // Instabuy is instant
 		}
 		currentBaseDetailP1 := BaseIngredientDetail{
 			Quantity: quantity, BestCost: toJSONFloat64(valueOrNaN(acqCostRawVal)), AssociatedCost: toJSONFloat64(valueOrNaN(acqAssocCostRawVal)), Method: acqMethod,
 			RR: toJSONFloat64(valueOrNaN(acqRRRawVal)), IF: toJSONFloat64(valueOrNaN(acqIFRawVal)), Delta: toJSONFloat64(valueOrNaN(acqDeltaRawVal)),
 		}
 		res1.BaseIngredients = map[string]BaseIngredientDetail{itemNameNorm: currentBaseDetailP1}
-		res1.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, Acquisition: &currentBaseDetailP1}
+		if includeTreeInExpansionResult {
+			res1.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, Acquisition: &currentBaseDetailP1, Depth: 0, MaxSubTreeDepth: 0}
+		}
 		res1.CalculationPossible = true
 		res1.SlowestIngredientBuyTimeSeconds = toJSONFloat64(valueOrNaN(fillTimeForBaseRawVal))
 		res1.SlowestIngredientName = itemNameNorm
@@ -397,7 +432,13 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		if res1.ErrorMessage == "" {
 			res1.ErrorMessage = "P1: No valid acquisition method."
 		}
-		// ... (append other error messages) ...
+		if errTopC10M != nil && !strings.Contains(res1.ErrorMessage, errTopC10M.Error()) {
+			res1.ErrorMessage += "; TopC10M Err: " + errTopC10M.Error()
+		}
+		if craftErrMsg != "" && !strings.Contains(res1.ErrorMessage, craftErrMsg) {
+			res1.ErrorMessage += "; Craft Err: " + craftErrMsg
+		}
+
 		acqDeltaUnobtainableRaw := math.NaN()
 		if metricsP.ProductID != "" {
 			acqDeltaUnobtainableRaw = metricsP.SellSize*metricsP.SellFrequency - metricsP.OrderSize*metricsP.OrderFrequency
@@ -406,22 +447,49 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 			Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()),
 			RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(valueOrNaN(acqDeltaUnobtainableRaw)),
 		}
-		res1.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: res1.ErrorMessage, Acquisition: &baseAcqUnobtainable}
-		if craftRecipeTree != nil && (craftResultedInCycle || !craftPossible) {
-			res1.RecipeTree = craftRecipeTree
-			if res1.RecipeTree.ErrorMessage == "" {
-				res1.RecipeTree.ErrorMessage = res1.ErrorMessage
+
+		if includeTreeInExpansionResult {
+			// If crafting was attempted and failed/cycled, use that tree for context
+			if craftRecipeTree != nil && (craftResultedInCycle || !craftPossible || craftRecipeTree.ErrorMessage != "") {
+				res1.RecipeTree = craftRecipeTree
+				if res1.RecipeTree.ErrorMessage == "" { // Ensure error message propagates
+					res1.RecipeTree.ErrorMessage = res1.ErrorMessage
+				} else if res1.ErrorMessage != "" && !strings.Contains(res1.RecipeTree.ErrorMessage, res1.ErrorMessage) {
+					res1.RecipeTree.ErrorMessage += "; " + res1.ErrorMessage
+				}
+			} else { // Otherwise, a simple error node
+				res1.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: res1.ErrorMessage, Acquisition: &baseAcqUnobtainable, Depth: 0, MaxSubTreeDepth: 0}
 			}
 		}
 		res1.SlowestIngredientBuyTimeSeconds = toJSONFloat64(math.NaN())
 	}
-	if chosenMethodP1 != "Craft" && craftResultedInCycle { /* ... */
+	if chosenMethodP1 != "Craft" && craftResultedInCycle {
+		if res1.ErrorMessage == "" {
+			res1.ErrorMessage = "Crafting resulted in a cycle, but another acquisition method was chosen for P1."
+		} else if !strings.Contains(res1.ErrorMessage, "cycle") {
+			res1.ErrorMessage += "; Crafting resulted in a cycle."
+		}
+		if includeTreeInExpansionResult && craftRecipeTree != nil {
+			res1.RecipeTree = craftRecipeTree
+		}
 	}
 
+	// --- SecondaryBased (res2) Logic ---
 	res2 := &result.SecondaryBased
-	chosenMethodP2 := "N/A"
-	// ... (P2 decision logic as before, comparing raw float64 costs) ...
-	if isApiNotFoundError { /* ... */
+	chosenMethodP2 := "N/A" // Default
+
+	if isApiNotFoundError {
+		if craftPossible && !craftResultedInCycle && !math.IsInf(costToCraftOptimalRaw, 0) && !math.IsNaN(costToCraftOptimalRaw) && costToCraftOptimalRaw >= 0 {
+			chosenMethodP2 = "Craft"
+		} else {
+			chosenMethodP2 = "ExpansionFailed"
+			if res2.ErrorMessage == "" {
+				res2.ErrorMessage = "API data missing for top-level item and crafting not viable"
+			}
+			if craftErrMsg != "" && !strings.Contains(res2.ErrorMessage, craftErrMsg) {
+				res2.ErrorMessage += "; " + craftErrMsg
+			}
+		}
 	} else {
 		if craftPossible && !craftResultedInCycle && !math.IsInf(costToCraftOptimalRaw, 0) && !math.IsNaN(costToCraftOptimalRaw) && costToCraftOptimalRaw >= 0 {
 			if validTopC10mPrim {
@@ -435,10 +503,17 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 			}
 		} else if validTopC10mPrim {
 			chosenMethodP2 = "Primary"
-		} else if validTopC10mSec { /* ... */
-			chosenMethodP2 = "Secondary"
 		} else {
-			chosenMethodP2 = "N/A" /* ... */
+			chosenMethodP2 = "ExpansionFailed"
+			if res2.ErrorMessage == "" {
+				res2.ErrorMessage = "P2: Neither Craft nor Primary acquisition is viable."
+			}
+			if craftErrMsg != "" && !strings.Contains(res2.ErrorMessage, craftErrMsg) {
+				res2.ErrorMessage += "; " + craftErrMsg
+			}
+			if errTopC10M != nil && !strings.Contains(res2.ErrorMessage, errTopC10M.Error()) {
+				res2.ErrorMessage += "; TopC10M Err: " + errTopC10M.Error()
+			}
 		}
 	}
 	dlog("  P2 Decision: %s", chosenMethodP2)
@@ -446,7 +521,9 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 	if chosenMethodP2 == "Craft" {
 		res2.TopLevelAction = "Expanded"
 		res2.BaseIngredients = baseIngredientsFromCraft
-		res2.RecipeTree = craftRecipeTree
+		if includeTreeInExpansionResult {
+			res2.RecipeTree = craftRecipeTree
+		}
 		res2.TotalCost = toJSONFloat64(valueOrNaN(costToCraftOptimalRaw))
 		res2.CalculationPossible = craftPossible
 		res2.FinalCostMethod = "SumBestC10MFromTree"
@@ -455,6 +532,8 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		res2.SlowestIngredientQuantity = sanitizeFloat(craftSlowestIngQty)
 		if !craftPossible && res2.ErrorMessage == "" {
 			res2.ErrorMessage = craftErrMsg
+		} else if !craftPossible && craftErrMsg != "" && !strings.Contains(res2.ErrorMessage, craftErrMsg) {
+			res2.ErrorMessage += "; " + craftErrMsg
 		}
 	} else if chosenMethodP2 == "Primary" {
 		res2.TopLevelAction = "TreatedAsBase"
@@ -469,7 +548,9 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 			RR: toJSONFloat64(valueOrNaN(topRRRaw)), IF: toJSONFloat64(valueOrNaN(topIFRaw)), Delta: toJSONFloat64(valueOrNaN(acqDeltaP2PrimRaw)),
 		}
 		res2.BaseIngredients = map[string]BaseIngredientDetail{itemNameNorm: currentBaseDetailP2PrimMethod}
-		res2.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, Acquisition: &currentBaseDetailP2PrimMethod}
+		if includeTreeInExpansionResult {
+			res2.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, Acquisition: &currentBaseDetailP2PrimMethod, Depth: 0, MaxSubTreeDepth: 0}
+		}
 		res2.CalculationPossible = true
 		fillTimeP2PrimRawVal := math.Inf(1)
 		if metricsP.ProductID != "" {
@@ -481,49 +562,54 @@ func PerformDualExpansion(itemName string, quantity float64, apiResp *HypixelAPI
 		res2.SlowestIngredientBuyTimeSeconds = toJSONFloat64(valueOrNaN(fillTimeP2PrimRawVal))
 		res2.SlowestIngredientName = itemNameNorm
 		res2.SlowestIngredientQuantity = sanitizeFloat(quantity)
-	} else if chosenMethodP2 == "Secondary" {
-		res2.TopLevelAction = "TreatedAsBase"
-		res2.TotalCost = toJSONFloat64(valueOrNaN(topC10mSecRaw))
-		res2.FinalCostMethod = "FixedTopLevelSecondary"
-		acqDeltaP2SecRaw := math.NaN()
-		if metricsP.ProductID != "" {
-			acqDeltaP2SecRaw = metricsP.SellSize*metricsP.SellFrequency - metricsP.OrderSize*metricsP.OrderFrequency
-		}
-		currentBaseDetailP2SecMethod := BaseIngredientDetail{
-			Quantity: quantity, BestCost: toJSONFloat64(valueOrNaN(topC10mSecRaw)), AssociatedCost: toJSONFloat64(valueOrNaN(sellP * quantity)), Method: "Secondary",
-			RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(valueOrNaN(acqDeltaP2SecRaw)),
-		}
-		res2.BaseIngredients = map[string]BaseIngredientDetail{itemNameNorm: currentBaseDetailP2SecMethod}
-		res2.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, Acquisition: &currentBaseDetailP2SecMethod}
-		res2.CalculationPossible = true
-		res2.SlowestIngredientBuyTimeSeconds = toJSONFloat64(0.0)
-		res2.SlowestIngredientName = itemNameNorm
-		res2.SlowestIngredientQuantity = sanitizeFloat(quantity)
-	} else { // N/A or ExpansionFailed
+	} else {
 		res2.TopLevelAction = chosenMethodP2
 		res2.TotalCost = toJSONFloat64(math.NaN())
 		res2.CalculationPossible = false
 		res2.FinalCostMethod = "N/A"
-		// ... (error message logic as before) ...
-		if craftRecipeTree != nil && (chosenMethodP2 == "ExpansionFailed" || craftResultedInCycle || !craftPossible) { /* ... */
-		} else {
-			acqDeltaP2NARaw := math.NaN()
-			if metricsP.ProductID != "" {
-				acqDeltaP2NARaw = metricsP.SellSize*metricsP.SellFrequency - metricsP.OrderSize*metricsP.OrderFrequency
+
+		if includeTreeInExpansionResult {
+			if chosenMethodP2 == "ExpansionFailed" && craftRecipeTree != nil {
+				res2.RecipeTree = craftRecipeTree
+				if res2.RecipeTree.ErrorMessage == "" {
+					res2.RecipeTree.ErrorMessage = res2.ErrorMessage
+				} else if res2.ErrorMessage != "" && !strings.Contains(res2.RecipeTree.ErrorMessage, res2.ErrorMessage) {
+					res2.RecipeTree.ErrorMessage += "; " + res2.ErrorMessage
+				}
+			} else {
+				acqDeltaP2NARaw := math.NaN()
+				if metricsP.ProductID != "" {
+					acqDeltaP2NARaw = metricsP.SellSize*metricsP.SellFrequency - metricsP.OrderSize*metricsP.OrderFrequency
+				}
+				baseAcqP2NA := BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()), RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(valueOrNaN(acqDeltaP2NARaw))}
+				res2.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: res2.ErrorMessage, Acquisition: &baseAcqP2NA, Depth: 0, MaxSubTreeDepth: 0}
 			}
-			baseAcqP2NA := BaseIngredientDetail{Quantity: quantity, Method: "N/A", BestCost: toJSONFloat64(math.NaN()), AssociatedCost: toJSONFloat64(math.NaN()), RR: toJSONFloat64(math.NaN()), IF: toJSONFloat64(math.NaN()), Delta: toJSONFloat64(valueOrNaN(acqDeltaP2NARaw))}
-			res2.RecipeTree = &CraftingStepNode{ItemName: itemNameNorm, QuantityNeeded: quantity, IsBaseComponent: true, ErrorMessage: res2.ErrorMessage, Acquisition: &baseAcqP2NA}
 		}
-		res2.SlowestIngredientBuyTimeSeconds = toJSONFloat64(math.NaN())
+
 		if chosenMethodP2 == "ExpansionFailed" {
 			res2.SlowestIngredientBuyTimeSeconds = toJSONFloat64(valueOrNaN(craftSlowestFillTimeRaw))
 			res2.SlowestIngredientName = craftSlowestIngName
 			res2.SlowestIngredientQuantity = sanitizeFloat(craftSlowestIngQty)
+		} else {
+			res2.SlowestIngredientBuyTimeSeconds = toJSONFloat64(math.NaN())
 		}
 	}
 
 	result.PrimaryBased.SlowestIngredientQuantity = sanitizeFloat(result.PrimaryBased.SlowestIngredientQuantity)
 	result.SecondaryBased.SlowestIngredientQuantity = sanitizeFloat(result.SecondaryBased.SlowestIngredientQuantity)
+
+	if !includeTreeInExpansionResult {
+		if result.PrimaryBased.RecipeTree != nil {
+			dlog("  Final Nilling P1 RecipeTree for %s as per request.", itemNameNorm)
+			result.PrimaryBased.RecipeTree = nil
+		}
+		if result.SecondaryBased.RecipeTree != nil {
+			dlog("  Final Nilling P2 RecipeTree for %s as per request.", itemNameNorm)
+			result.SecondaryBased.RecipeTree = nil
+		}
+	} else {
+		dlog("  Retaining P1/P2 RecipeTrees for %s as per request (if they were set).", itemNameNorm)
+	}
 
 	dlog(">>> Dual Expansion Complete for %s <<<", itemNameNorm)
 	return result, nil

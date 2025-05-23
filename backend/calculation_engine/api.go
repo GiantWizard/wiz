@@ -169,6 +169,7 @@ func getApiResponse() (*HypixelAPIResponse, error) {
 	// and the most recent error state (which fetchBazaarData would have set).
 	apiCacheMutex.RLock()
 	currentCache := apiResponseCache
+	// currentError := apiFetchErr // This line was previously here, but fetchAttemptErr is more direct
 	apiCacheMutex.RUnlock()
 
 	if fetchAttemptErr != nil {
@@ -181,6 +182,9 @@ func getApiResponse() (*HypixelAPIResponse, error) {
 	// apiResponseCache should have been updated by fetchBazaarData.
 	if currentCache == nil { // This should ideally not happen if fetch was successful
 		log.Println("[getApiResponse] fetchBazaarData() succeeded but apiResponseCache is still nil. This is unexpected.")
+		// This implies fetchBazaarData succeeded but set apiResponseCache to nil, which it shouldn't.
+		// Or, that another goroutine set it to nil between fetchBazaarData and here.
+		// The most robust error to return here is that data is unavailable.
 		return nil, fmt.Errorf("API data unavailable: cache is nil even after a successful fetch attempt by fetchBazaarData")
 	}
 
@@ -198,6 +202,8 @@ func forceRefreshAPIData() (*HypixelAPIResponse, error) {
 	apiCacheMutex.RLock()
 	currentCacheToReturn := apiResponseCache
 	// The error to return should be the one from the fetchBazaarData call we just made
+	// The global apiFetchErr would have been set by fetchBazaarData.
+	// So, 'err' from fetchBazaarData is the most direct error for this operation.
 	apiCacheMutex.RUnlock()
 
 	if err != nil {
@@ -207,6 +213,14 @@ func forceRefreshAPIData() (*HypixelAPIResponse, error) {
 		}
 		log.Printf("[forceRefreshAPIData] WARN: Failed to refresh API data: %v. Returning current cache (if any, last successful fetch: %s) and this error.", err, lastFetchStr)
 		return currentCacheToReturn, err
+	}
+
+	// If currentCacheToReturn is nil here, it means the successful fetchBazaarData somehow
+	// resulted in a nil cache, or it was nil before and fetchBazaarData didn't populate it.
+	// This would be an unexpected state.
+	if currentCacheToReturn == nil {
+		log.Printf("[forceRefreshAPIData] ERROR: fetchBazaarData() succeeded but apiResponseCache is still nil. This is highly unexpected.")
+		return nil, fmt.Errorf("API data unavailable: cache is nil after explicit successful refresh by forceRefreshAPIData")
 	}
 
 	log.Printf("[forceRefreshAPIData] Successfully refreshed data. LastUpdated in cache: %d", currentCacheToReturn.LastUpdated)
