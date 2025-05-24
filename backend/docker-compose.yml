@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  calculation_engine:
+  calculation_engine: # Top-level service
     build:
       context: ./calculation_engine
       dockerfile: Dockerfile
@@ -12,18 +12,23 @@ services:
       - MEGA_EMAIL=${MEGA_EMAIL}
       - MEGA_PWD=${MEGA_PWD}
       - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
-      - GODEBUG=gctrace=1 go run .
+    # GODEBUG and go run should typically be in the Dockerfile's CMD or ENTRYPOINT
+    # For now, if you intend to run it here, it should be part of a 'command' or handled by an entrypoint script.
+    # If your Dockerfile for calculation_engine already defines a CMD/ENTRYPOINT, remove the line below.
+    # command: sh -c "GODEBUG=gctrace=1 go run ."
 
-    server9:
-     build:
-       context: ./server9
-       dockerfile: Dockerfile
-     container_name: server9_local
-     depends_on:
-       - calculation_engine
-     environment:
-       - MEGA_EMAIL=${MEGA_EMAIL}
-       - MEGA_PWD=${MEGA_PWD}
-       - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
-     ports:
-       - "9000:9000"
+  server9: # CORRECT: Same indentation level as calculation_engine
+    build:
+      context: ./server9
+      dockerfile: Dockerfile
+    container_name: server9_local
+    depends_on:
+      - calculation_engine
+    environment:
+      - MEGA_EMAIL=${MEGA_EMAIL}
+      - MEGA_PWD=${MEGA_PWD}
+      - MEGA_METRICS_FOLDER_PATH=${MEGA_METRICS_FOLDER_PATH}
+    ports:
+      - "9000:9000"
+    # Add a command or ensure Dockerfile has CMD/ENTRYPOINT for server9
+    # command: <command to start server9>
