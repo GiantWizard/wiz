@@ -10,7 +10,8 @@ RUN apt-get update && \
 
 # 2) Compile the Rust app in release mode
 WORKDIR /app/rust_app
-COPY Cargo.toml Cargo.lock ./
+# Copy only the manifest; let Cargo generate a lockfile if missing
+COPY Cargo.toml ./
 COPY src/ ./src/
 RUN cargo build --release
 
