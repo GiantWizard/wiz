@@ -1,3 +1,4 @@
+use axum::{routing::get, Router}; // Added for health check
 use chrono::{Utc, Local};
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -5,6 +6,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::net::SocketAddr; // Added for health check
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -47,16 +49,13 @@ struct ProductMetricsState {
     sum_buy: f64,
     sum_sell: f64,
     count: usize,
-    // For order frequency and order size (from sell orders changes)
     order_frequency_sum: f64,
     order_frequency_count: usize,
     total_new_orders: f64,
     total_new_order_amount: f64,
-    // For sell frequency and sell size (from buy_moving_week changes)
     sell_changes_count: usize,
     sell_size_total: f64,
     windows: usize,
-    // Store previous snapshot for pairwise comparisons.
     prev_snapshot: Option<BazaarInfo>,
 }
 
@@ -77,19 +76,14 @@ impl ProductMetricsState {
         }
     }
 
-    /// Update state with a new snapshot.
     fn update(&mut self, current: &BazaarInfo) {
         self.count += 1;
         self.sum_buy += current.buy_price;
         self.sum_sell += current.sell_price;
 
-        // If a previous snapshot exists, update pairwise metrics.
         if let Some(prev) = &self.prev_snapshot {
-            // --- Order frequency and order size calculation ---
-            // Use the second sell order of the previous snapshot as anchor.
             if prev.sell_orders.len() > 1 && !current.sell_orders.is_empty() {
                 let anchor_order = &prev.sell_orders[1];
-                // Find an order in current snapshot matching the anchor's price.
                 let mut anchored_index = None;
                 for (i, order) in current.sell_orders.iter().enumerate() {
                     if (order.price_per_unit - anchor_order.price_per_unit).abs() < 1e-6 {
@@ -113,7 +107,6 @@ impl ProductMetricsState {
                     }
                 }
             }
-            // --- Sell frequency and sell size calculation ---
             let diff = current.buy_moving_week - prev.buy_moving_week;
             self.windows += 1;
             if diff != 0 {
@@ -121,12 +114,9 @@ impl ProductMetricsState {
                 self.sell_size_total += diff.abs() as f64;
             }
         }
-
-        // Update the previous snapshot.
         self.prev_snapshot = Some(current.clone());
     }
 
-    /// Finalize and compute the analysis metrics.
     fn finalize(&self, product_id: String) -> AnalysisResult {
         let buy_price_average = self.sum_buy / self.count as f64;
         let sell_price_average = self.sum_sell / self.count as f64;
@@ -163,20 +153,15 @@ impl ProductMetricsState {
     }
 }
 
-/// Fetch a snapshot from the Hypixel API and return a vector of BazaarInfo for all products.
-/// This function checks the "last-modified" header; if it’s unchanged from the previous snapshot,
-/// the snapshot is disposed (i.e. returns None).
 async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec<BazaarInfo>>, Box<dyn Error>> {
     let url = "https://api.hypixel.net/v2/skyblock/bazaar";
     let response = reqwest::get(url).await?.error_for_status()?;
 
-    // Extract "last-modified" header.
     let new_last_modified = response
         .headers()
         .get("last-modified")
         .map(|h| h.to_str().unwrap_or("").to_string());
 
-    // If unchanged, dispose of this snapshot.
     if let Some(new_mod) = &new_last_modified {
         if let Some(prev_mod) = last_modified {
             if prev_mod == new_mod {
@@ -186,7 +171,6 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
         }
     }
 
-    // Update stored last_modified value.
     *last_modified = new_last_modified;
 
     let json: Value = response.json().await?;
@@ -237,16 +221,37 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
     Ok(Some(snapshot))
 }
 
+// Simple health check handler
+async fn health_check_handler() -> &'static str {
+    "OK"
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Ensure the "metrics" directory exists.
     fs::create_dir_all("metrics")?;
     
-    let remote_dir = "/remote_metrics"; // Remote directory for export.
+    // --- Start Health Check Server ---
+    // Listen on 0.0.0.0:9000 for health checks.
+    // The port should match what's configured in Koyeb service settings.
+    let health_check_addr = SocketAddr::from(([0, 0, 0, 0], 9000)); 
+    println!("Health check server will listen on {}", health_check_addr);
+    let health_router = Router::new().route("/healthz", get(health_check_handler));
+    
+    // Spawn the health check server as a background task
+    // The `_` before server_handle indicates we don't need to await it directly in main logic
+    let _server_handle = tokio::spawn(async move {
+        match axum::serve(tokio::net::TcpListener::bind(health_check_addr).await.unwrap(), health_router).await {
+            Ok(_) => println!("Health check server shut down gracefully."),
+            Err(e) => eprintln!("Health check server error: {}", e),
+        }
+    });
+    println!("Health check server task spawned.");
+    // --- End Health Check Server ---
+
+    let remote_dir = "/remote_metrics"; 
     let mut product_states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_modified: Option<String> = None;
-    
-    // Start a timer for a one-minute export interval.
     let mut export_timer = Instant::now();
 
     loop {
@@ -273,10 +278,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("No new snapshot processed this round.");
         }
         
-        // Check if one minute has elapsed.
-        if export_timer.elapsed() >= Duration::from_secs(3600) {
+        if export_timer.elapsed() >= Duration::from_secs(3600) { // 1 hour
             if !product_states.is_empty() {
-                // Compute metrics.
                 let mut results = Vec::new();
                 for (pid, state) in &product_states {
                     results.push(state.finalize(pid.clone()));
@@ -287,7 +290,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 fs::write(&metrics_path, output_json)?;
                 println!("Exported metrics to {}", metrics_path);
                 
-                // Call the C++ export engine to upload the metrics file.
                 let export_result = Command::new("./export_engine")
                     .arg(&metrics_path)
                     .arg(remote_dir)
@@ -305,15 +307,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
             } else {
-                println!("No snapshots processed in the last minute; nothing to export.");
+                println!("No snapshots processed in the last hour; nothing to export.");
             }
-            
-            // Reset for the next cycle.
             product_states.clear();
             export_timer = Instant::now();
         }
-        
-        // Wait 5 seconds before the next fetch.
         sleep(Duration::from_secs(5)).await;
     }
+    // Note: The main loop is infinite, so the health check server will run as long as the main app.
+    // If the main loop could exit, you might want to join/abort the server_handle.
 }
