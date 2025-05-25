@@ -40,29 +40,28 @@ RUN apt-get update \
 # ─── STAGE 2: RUNTIME ──────────────────────────────────────────
 FROM gcc:latest
 
-# Copy MEGAcmd binaries
-COPY --from=builder /usr/bin/mega-*                   /usr/bin/
+# 1) Copy the built binaries
+COPY --from=builder /usr/bin/mega-*                                 /usr/bin/
+COPY --from=builder /app/target/release/timestamp_generator        /usr/local/bin/timestamp_generator
+COPY --from=builder /app/export_engine                             /usr/local/bin/export_engine
 
-# Copy our compiled binaries into the path
-COPY --from=builder /app/target/release/timestamp_generator /usr/local/bin/timestamp_generator
-COPY --from=builder /app/export_engine                    /usr/local/bin/export_engine
-
-# Install TLS certs + python3 for HTTP health server
+# 2) Install TLS certs, Python, and MEGAcmd runtime dependencies
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
       python3 \
+      fuse \
+      libfuse2 \
+      ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 EXPOSE 9000
 
-# Run the background worker & HTTP server for health checks
+# 3) Start MEGAcmd server, your worker, and the HTTP health server
 CMD ["sh", "-c", "\
-    # 1) Start the MEGAcmd server so mega-login/put will work \
     mega-cmd-server & \
-    # 2) Run your worker in the background \
     timestamp_generator & \
-    # 3) Serve HTTP on 9000 for health checks \
     exec python3 -m http.server 9000 \
 "]
+
