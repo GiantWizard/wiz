@@ -5,7 +5,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use std::panic;
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -41,10 +40,9 @@ struct AnalysisResult {
     sell_size: f64,
 }
 
-/// Incremental state for each product.
+/// Incremental state for each product; updated on each new snapshot.
 #[derive(Debug)]
 struct ProductMetricsState {
-    // … fields unchanged …
     sum_buy: f64,
     sum_sell: f64,
     count: usize,
@@ -60,7 +58,6 @@ struct ProductMetricsState {
 
 impl ProductMetricsState {
     fn new(first: &BazaarInfo) -> Self {
-        // … unchanged …
         Self {
             sum_buy: first.buy_price,
             sum_sell: first.sell_price,
@@ -77,13 +74,12 @@ impl ProductMetricsState {
     }
 
     fn update(&mut self, current: &BazaarInfo) {
-        // … unchanged …
         self.count += 1;
         self.sum_buy += current.buy_price;
         self.sum_sell += current.sell_price;
 
         if let Some(prev) = &self.prev_snapshot {
-            // order-frequency logic…
+            // Order frequency & size
             if prev.sell_orders.len() > 1 && !current.sell_orders.is_empty() {
                 let anchor = &prev.sell_orders[1];
                 if let Some(idx) = current
@@ -95,18 +91,18 @@ impl ProductMetricsState {
                     self.order_frequency_sum += new_orders as f64;
                     self.order_frequency_count += 1;
                     if new_orders > 0 {
-                        let sum_amount: i64 = current
+                        let amount: i64 = current
                             .sell_orders
                             .iter()
                             .take(new_orders)
                             .map(|o| o.amount)
                             .sum();
-                        self.total_new_order_amount += sum_amount as f64;
+                        self.total_new_order_amount += amount as f64;
                         self.total_new_orders += new_orders as f64;
                     }
                 }
             }
-            // sell-frequency logic…
+            // Sell frequency & size
             let diff = current.buy_moving_week - prev.buy_moving_week;
             self.windows += 1;
             if diff != 0 {
@@ -119,7 +115,6 @@ impl ProductMetricsState {
     }
 
     fn finalize(&self, product_id: String) -> AnalysisResult {
-        // … unchanged …
         let buy_price_average = self.sum_buy / self.count as f64;
         let sell_price_average = self.sum_sell / self.count as f64;
         let order_frequency_average = if self.order_frequency_count > 0 {
@@ -155,10 +150,7 @@ impl ProductMetricsState {
     }
 }
 
-async fn fetch_snapshot(
-    last_modified: &mut Option<String>,
-) -> Result<Option<Vec<BazaarInfo>>, Box<dyn Error>> {
-    // … unchanged …
+async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec<BazaarInfo>>, Box<dyn Error>> {
     let url = "https://api.hypixel.net/v2/skyblock/bazaar";
     let resp = reqwest::get(url).await?.error_for_status()?;
 
@@ -177,26 +169,16 @@ async fn fetch_snapshot(
     *last_modified = new_mod;
 
     let json: Value = resp.json().await?;
-    let products = json["products"]
-        .as_object()
-        .ok_or("Products field missing or not an object")?;
+    let products = json["products"].as_object().ok_or("Invalid products")?;
     let mut tasks = Vec::new();
+
     for (pid, prod) in products {
         let pid = pid.clone();
         let prod = prod.clone();
         tasks.push(tokio::spawn(async move {
-            let sell_price = prod["sell_summary"][0]["pricePerUnit"]
-                .as_f64()
-                .unwrap_or_default();
-            let buy_price = prod["buy_summary"][0]["pricePerUnit"]
-                .as_f64()
-                .unwrap_or_default();
-            let buy_moving_week = prod["quick_status"]["buyMovingWeek"]
-                .as_i64()
-                .unwrap_or_default();
-            let sell_volume = prod["quick_status"]["sellVolume"]
-                .as_i64()
-                .unwrap_or_default();
+            let sell_price = prod["sell_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
+            let buy_price = prod["buy_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
+            let buy_moving_week = prod["quick_status"]["buyMovingWeek"].as_i64().unwrap_or_default();
 
             let mut sell_orders = Vec::new();
             if let Some(arr) = prod["sell_summary"].as_array() {
@@ -214,74 +196,55 @@ async fn fetch_snapshot(
                 sell_price,
                 buy_price,
                 buy_moving_week,
-                sell_volume,
+                sell_volume: prod["quick_status"]["sellVolume"].as_i64().unwrap_or_default(),
                 sell_orders,
             }
         }));
     }
 
-    let mut out = Vec::new();
+    let mut snapshot = Vec::new();
     for t in tasks {
         if let Ok(info) = t.await {
-            out.push(info);
+            snapshot.push(info);
         }
     }
-    println!("Fetched snapshot with {} products", out.len());
-    Ok(Some(out))
+    println!("Fetched snapshot with {} products", snapshot.len());
+    Ok(Some(snapshot))
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // Ensure metrics dir exists
     fs::create_dir_all("metrics")?;
-
     let remote_dir = "/remote_metrics";
     let mut states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_mod: Option<String> = None;
 
-    // Start a back‐dated timer so we export immediately:
+    // Pretend 5 minutes have passed so we export immediately
     let mut export_timer = Instant::now() - Duration::from_secs(300);
 
     loop {
-        // 💓 heartbeat so we know the loop is alive
+        // heartbeat
         println!("💓 heartbeat at Local: {}  UTC: {}", Local::now(), Utc::now());
 
-        // Wrap the iteration in catch_unwind so a panic can’t kill us silently
-        let iter_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            // We need a block to use async, so we block on the future here:
-            // (This is a simple sync wrapper; if everything inside panics, we'll catch it)
-            let rt = tokio::runtime::Handle::current();
-            rt.block_on(async {
-                match fetch_snapshot(&mut last_mod).await {
-                    Ok(Some(snap)) => {
-                        for info in snap {
-                            states
-                                .entry(info.product_id.clone())
-                                .and_modify(|st| st.update(&info))
-                                .or_insert_with(|| ProductMetricsState::new(&info));
-                        }
-                        println!("Updated product states with new snapshot.");
-                    }
-                    Ok(None) => {
-                        println!("No new snapshot processed this round.");
-                    }
-                    Err(e) => {
-                        eprintln!("Error fetching snapshot: {}", e);
-                    }
+        // fetch & update
+        match fetch_snapshot(&mut last_mod).await {
+            Ok(Some(snap)) => {
+                for info in snap {
+                    states
+                        .entry(info.product_id.clone())
+                        .and_modify(|st| st.update(&info))
+                        .or_insert_with(|| ProductMetricsState::new(&info));
                 }
-            });
-        }));
-
-        if let Err(err) = iter_result {
-            eprintln!("‼️ Caught panic in iteration: {:#?}", err);
+                println!("Updated product states with new snapshot.");
+            }
+            Ok(None) => println!("No new snapshot processed this round."),
+            Err(e) => eprintln!("Error fetching snapshot: {}", e),
         }
 
-        // Check export every 5 minutes
+        // every 5 minutes?
         if export_timer.elapsed() >= Duration::from_secs(300) {
             println!(">>> Exporting metrics after {} seconds…", export_timer.elapsed().as_secs());
-
             if !states.is_empty() {
-                // Compute & write JSON
                 let results: Vec<_> = states
                     .iter()
                     .map(|(pid, st)| st.finalize(pid.clone()))
@@ -291,24 +254,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 fs::write(&path, serde_json::to_string_pretty(&results)?)?;
                 println!("Exported metrics to {}", path);
 
-                // Upload
-                match Command::new("export_engine")
+                if let Ok(output) = Command::new("export_engine")
                     .arg(&path)
                     .arg(remote_dir)
                     .output()
                 {
-                    Ok(o) => {
-                        println!("Export engine output:\n{}", String::from_utf8_lossy(&o.stdout));
-                        if !o.stderr.is_empty() {
-                            eprintln!("Export engine errors:\n{}", String::from_utf8_lossy(&o.stderr));
-                        }
+                    println!("Export engine output:\n{}", String::from_utf8_lossy(&output.stdout));
+                    if !output.stderr.is_empty() {
+                        eprintln!("Export errors:\n{}", String::from_utf8_lossy(&output.stderr));
                     }
-                    Err(e) => eprintln!("Failed to run export engine: {}", e),
+                } else {
+                    eprintln!("Failed to execute export_engine");
                 }
             } else {
-                println!("No snapshots in the last interval; skipping export.");
+                println!("No snapshots to export this round.");
             }
-
             states.clear();
             export_timer = Instant::now();
         }
