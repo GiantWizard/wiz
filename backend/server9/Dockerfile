@@ -59,6 +59,10 @@ EXPOSE 9000
 
 # Run the background worker & HTTP server for health checks
 CMD ["sh", "-c", "\
+    # 1) Start the MEGAcmd server so mega-login/put will work \
+    mega-cmd-server & \
+    # 2) Run your worker in the background \
     timestamp_generator & \
+    # 3) Serve HTTP on 9000 for health checks \
     exec python3 -m http.server 9000 \
 "]
