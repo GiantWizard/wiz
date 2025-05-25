@@ -274,7 +274,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         
         // Check if one minute has elapsed.
-        if export_timer.elapsed() >= Duration::from_secs(3600) {
+        if export_timer.elapsed() >= Duration::from_secs(300) {
             if !product_states.is_empty() {
                 // Compute metrics.
                 let mut results = Vec::new();
