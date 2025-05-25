@@ -36,7 +36,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # 7) (Optional) platform config
-COPY railway.toml .
+COPY koyeb.toml .
 
 
 
