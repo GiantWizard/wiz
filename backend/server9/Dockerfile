@@ -1,4 +1,4 @@
-# ─── STAGE 1: BUILD ───────────────────────────────────────────
+# ─── STAGE 1: BUILD ────────────────────────────────────────────
 FROM gcc:latest AS builder
 
 # 1) Install ca-certificates + curl
@@ -12,7 +12,7 @@ RUN apt-get update \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# 3) Fetch & install MEGAcmd .deb (dpkg is already in base), fix deps
+# 3) Fetch & install MEGAcmd .deb, fix deps
 RUN curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb \
       -o /tmp/megacmd.deb \
  && dpkg -i /tmp/megacmd.deb || (apt-get update && apt-get -f install -y) \
@@ -29,26 +29,25 @@ RUN cargo build --release
 COPY export.cpp .
 RUN g++ -std=c++11 -O2 -o export_engine export.cpp
 
-# 6) Purge curl now that builder steps are done
+# 6) Purge curl (done with builder steps)
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get purge -y curl \
  && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
-
-# 7) (Optional) platform config
-COPY koyeb.toml .
 
 
 
 # ─── STAGE 2: RUNTIME ──────────────────────────────────────────
 FROM gcc:latest
 
-# Copy runtime binaries from builder
-COPY --from=builder /usr/bin/mega-*                                 /usr/bin/
-COPY --from=builder /app/target/release/timestamp_generator        /usr/local/bin/timestamp_generator
-COPY --from=builder /app/export_engine                             /usr/local/bin/export_engine
+# Copy MEGAcmd binaries
+COPY --from=builder /usr/bin/mega-*                   /usr/bin/
 
-# Install TLS certs + python3 for a lightweight HTTP server
+# Copy our compiled binaries into the path
+COPY --from=builder /app/target/release/timestamp_generator /usr/local/bin/timestamp_generator
+COPY --from=builder /app/export_engine                    /usr/local/bin/export_engine
+
+# Install TLS certs + python3 for HTTP health server
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -56,11 +55,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Expose port 9000 for the HTTP health check
 EXPOSE 9000
 
-# Start your background worker and a simple HTTP server on 9000
+# Run the background worker & HTTP server for health checks
 CMD ["sh", "-c", "\
     timestamp_generator & \
     exec python3 -m http.server 9000 \
