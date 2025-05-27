@@ -35,8 +35,8 @@ void validateLogin(const string& remote_dir) {
     safeSystem("mega-whoami", false);
     safeSystem("mega-logout", false);
     
-    const char* username = getenv("MEGA_USERNAME");
-    const char* password = getenv("MEGA_PASSWORD");
+    const char* username = getenv("MEGA_EMAIL");
+    const char* password = getenv("MEGA_PWD");
     if (!username || !password) {
         throw runtime_error("Missing environment variables for login");
     }
