@@ -10,9 +10,14 @@ COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /app/calculation_service .
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
-FROM rust:stable-slim-bookworm AS rust-cpp-builder
+# Go to https://hub.docker.com/_/rust/tags and find the latest stable version tag
+# that is >= 1.82.0 and preferably uses a -slim-bookworm or -slim base.
+# For example, if 1.79.0 is a recent stable version (check current latest):
+FROM rust:1.79.0-slim-bookworm AS rust-cpp-builder # <<< TRY THIS SPECIFIC VERSION
+                                                # If this specific tag is not found, or if it's < 1.82,
+                                                # you MUST find a newer one on Docker Hub.
+                                                # Example: rust:1.82.0-slim-bookworm or rust:latest-slim-bookworm
 LABEL stage=rust-cpp-builder
-# ENV CACHE_BUSTER_RUST=somerandomvalue123 # Optional: uncomment if cache is still an issue
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ make curl ca-certificates pkg-config libssl-dev \
