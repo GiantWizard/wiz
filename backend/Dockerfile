@@ -1,19 +1,15 @@
 # STAGE 1: Go Builder for Calculation Engine
 FROM golang:1.23-alpine AS go-builder
-LABEL stage=go-builder
-WORKDIR /app/calculation_engine
-
+# ... (rest of Go stage is fine) ...
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download && go mod verify
-
 COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /app/calculation_service .
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
-# Go to https://hub.docker.com/_/rust/tags and find the latest stable version tag
-# that is >= 1.82.0 and preferably uses a -slim-bookworm or -slim base.
-# For example, if 1.79.0 is a recent stable version (check current latest):
-FROM rust:1.79.0-slim-bookworm AS rust-cpp-builder 
+# Check Docker Hub for the latest available tag that provides Rust >= 1.82.0
+# For example:
+FROM rust:1.82.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,6 +23,7 @@ RUN cargo fetch
 COPY server9/src ./src
 RUN cargo build --release
 
+# ... (rest of Dockerfile is fine, C++ build, megacmd install, final stage) ...
 WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app/export_engine export.cpp
