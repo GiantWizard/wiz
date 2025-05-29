@@ -2,19 +2,15 @@
 FROM golang:1.23-alpine AS go-builder
 LABEL stage=go-builder
 WORKDIR /app
-
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download
 RUN go mod verify
-
 COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /go_app_binary .
-
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ make curl ca-certificates pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -30,18 +26,25 @@ WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app_export_engine export.cpp
 
+# MEGA CMD INSTALLATION AND VERIFICATION IN BUILDER
 RUN curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends /tmp/megacmd.deb \
     && rm /tmp/megacmd.deb \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "--- MEGA tools in builder /usr/bin: ---" \
+    && ls -l /usr/bin/mega* \
+    && echo "--- Which mega-cmd-server: ---" \
+    && which mega-cmd-server || echo "mega-cmd-server not found in PATH" \
+    && echo "--- Listing /usr/bin for mega-cmd-server explicitly: ---" \
+    && ls -l /usr/bin/mega-cmd-server || echo "/usr/bin/mega-cmd-server not found"
 
 # STAGE 3: Final Runtime Image
 FROM debian:bookworm-slim AS final
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    supervisor ca-certificates libfuse2 libssl3 \
+    supervisor ca-certificates libfuse2 libssl3 \ 
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -54,21 +57,31 @@ RUN mkdir -p /app /data/metrics_archive /var/log/supervisor \
 WORKDIR /app
 
 COPY --from=go-builder --chown=appuser:appgroup /go_app_binary /app/calculation_service
-RUN chmod +x /app/calculation_service # Ensure Go app is executable
+RUN chmod +x /app/calculation_service
 
 COPY --chown=appuser:appgroup calculation_engine/dependencies /app/dependencies
 
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app/metrics_generator/target/release/timestamp_generator /app/metrics_generator
-RUN chmod +x /app/metrics_generator # Ensure Rust app is executable
+RUN chmod +x /app/metrics_generator
 
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/export_engine
-RUN chmod +x /app/export_engine # Ensure C++ app is executable
+RUN chmod +x /app/export_engine
 
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-* /usr/local/bin/
-RUN chmod +x /usr/local/bin/mega-* # Ensure mega tools are executable (already done in previous snippet, but good to have)
+# More robustly copy MEGA tools - copy all of /usr/bin from builder if it's clean,
+# or be very explicit. Let's try copying specific known tools + server.
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megals /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaget /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megalogin /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaput /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-ipc /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-whoami /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-logout /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-mkdir /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd-server /usr/local/bin/
+RUN chmod +x /usr/local/bin/mega* # Make all of them executable
 
 COPY supervisor.conf /etc/supervisor/supervisord.conf
 
-EXPOSE 9000 
+EXPOSE 9000
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf", "-n"]
