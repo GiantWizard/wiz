@@ -2,22 +2,15 @@
 FROM golang:1.23-alpine AS go-builder
 LABEL stage=go-builder
 WORKDIR /app
-
-# Copy go.mod and go.sum first to leverage Docker cache for dependencies
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download
 RUN go mod verify
-
-# Copy the rest of the Go application source code
 COPY calculation_engine/ ./
-# Build the Go application.
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /go_app_binary .
-
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         g++ \
@@ -39,7 +32,7 @@ WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app_export_engine export.cpp
 
-# MEGA CMD INSTALLATION AND VERIFICATION IN BUILDER STAGE
+# Install megacmd in the builder stage. The scripts/symlinks will point to /usr/bin/mega-cmd.
 RUN echo "Installing MEGAcmd in builder stage..." && \
     curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb && \
     apt-get update && \
@@ -48,15 +41,7 @@ RUN echo "Installing MEGAcmd in builder stage..." && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     echo "--- [BUILDER STAGE] Verifying MEGA tools in /usr/bin/ ---" && \
-    ls -l /usr/bin/mega* && \
-    echo "--- [BUILDER STAGE] Attempting 'which megals': ---" && \
-    (which megals || echo "[BUILDER INFO] 'megals' not found in PATH by 'which'") && \
-    echo "--- [BUILDER STAGE] Attempting 'which megaget': ---" && \
-    (which megaget || echo "[BUILDER INFO] 'megaget' not found in PATH by 'which'") && \
-    echo "--- [BUILDER STAGE] Attempting 'which mega-cmd-server': ---" && \
-    (which mega-cmd-server || echo "[BUILDER INFO] 'mega-cmd-server' not found in PATH by 'which'") && \
-    echo "--- [BUILDER STAGE] Explicit ls for /usr/bin/mega-cmd-server: ---" && \
-    (ls -l /usr/bin/mega-cmd-server || echo "[BUILDER INFO] /usr/bin/mega-cmd-server does not exist")
+    ls -l /usr/bin/mega*
 
 
 # STAGE 3: Final Runtime Image
@@ -91,29 +76,17 @@ RUN chmod +x /app/metrics_generator
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/export_engine
 RUN chmod +x /app/export_engine
 
-# Copy MEGA tools from the builder stage to /usr/local/bin in the final image
-# These COPY commands will fail the build if the source file does not exist in the builder stage.
-# Check the output of 'ls -l /usr/bin/mega*' from the builder stage log to confirm these files exist there.
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megals /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaget /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megalogin /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaput /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-ipc /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-whoami /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-logout /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-mkdir /usr/local/bin/
+# Copy the main MEGA binaries and all the wrapper scripts/symlinks
+# The `mega-*` wildcard will get all the small scripts.
+# Then explicitly copy the two main binaries identified from the builder logs.
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-* /usr/local/bin/
+COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd /usr/local/bin/
 COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd-server /usr/local/bin/
 
-# Ensure all copied mega tools are executable
-RUN chmod +x /usr/local/bin/megals \
-             /usr/local/bin/megaget \
-             /usr/local/bin/megalogin \
-             /usr/local/bin/megaput \
-             /usr/local/bin/mega-ipc \
-             /usr/local/bin/mega-whoami \
-             /usr/local/bin/mega-logout \
-             /usr/local/bin/mega-mkdir \
-             /usr/local/bin/mega-cmd-server
+# Ensure all copied mega tools (scripts and binaries) in /usr/local/bin are executable
+RUN find /usr/local/bin -maxdepth 1 -type f -name 'mega*' -exec chmod +x {} \; \
+    && if [ -f /usr/local/bin/mega-cmd ]; then chmod +x /usr/local/bin/mega-cmd; fi \
+    && if [ -f /usr/local/bin/mega-cmd-server ]; then chmod +x /usr/local/bin/mega-cmd-server; fi
 
 COPY supervisor.conf /etc/supervisor/supervisord.conf
 
