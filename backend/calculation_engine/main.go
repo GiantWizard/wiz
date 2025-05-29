@@ -38,7 +38,7 @@ func toJSONFloat64(v float64) JSONFloat64 {
 	return JSONFloat64(v)
 }
 
-// --- Constants ---
+// calculation_engine/main.go Constants
 const (
 	metricsFilename             = "latest_metrics.json"
 	itemFilesDir                = "dependencies/items"
@@ -46,8 +46,8 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second
 	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "megals"  // Use command name directly
-	megaGetCmd                  = "megaget" // Use command name directly
+	megaLsCmd                   = "/usr/local/bin/megals"  // Use absolute path
+	megaGetCmd                  = "/usr/local/bin/megaget" // Use absolute path
 )
 
 // --- Struct Definitions for main.go orchestration ---
