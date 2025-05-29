@@ -21,7 +21,6 @@ import (
 )
 
 // --- Custom JSONFloat64 Type ---
-// Keep this here or move to a utils.go if preferred
 type JSONFloat64 float64
 
 func (f JSONFloat64) MarshalJSON() ([]byte, error) {
@@ -41,17 +40,17 @@ func toJSONFloat64(v float64) JSONFloat64 {
 
 // --- Constants ---
 const (
-	metricsFilename             = "latest_metrics.json" // Local cache filename
-	itemFilesDir                = "dependencies/items"  // Used by optimizer
-	megaCmdTimeout              = 90 * time.Second      // Increased timeout for MEGA operations
-	initialMetricsDownloadDelay = 15 * time.Second      // Slightly longer delay for services to settle
-	initialOptimizationDelay    = 30 * time.Second      // Slightly longer delay
+	metricsFilename             = "latest_metrics.json"
+	itemFilesDir                = "dependencies/items"
+	megaCmdTimeout              = 90 * time.Second
+	initialMetricsDownloadDelay = 15 * time.Second
+	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
 	megaLsCmd                   = "/usr/local/bin/megals"  // Absolute path
 	megaGetCmd                  = "/usr/local/bin/megaget" // Absolute path
 )
 
-// --- Struct Definitions specific to main.go's orchestration ---
+// --- Struct Definitions ---
 type OptimizationRunOutput struct {
 	Summary OptimizationSummary   `json:"summary"`
 	Results []OptimizedItemResult `json:"results"` // OptimizedItemResult is defined in optimizer.go
@@ -59,12 +58,12 @@ type OptimizationRunOutput struct {
 
 type OptimizationSummary struct {
 	RunTimestamp                string      `json:"run_timestamp"`
-	APILastUpdatedTimestamp     string      `json:"api_last_updated_timestamp,omitempty"` // From Hypixel API
+	APILastUpdatedTimestamp     string      `json:"api_last_updated_timestamp,omitempty"`
 	TotalItemsConsidered        int         `json:"total_items_considered"`
 	ItemsSuccessfullyCalculated int         `json:"items_successfully_calculated"`
 	ItemsWithCalculationErrors  int         `json:"items_with_calculation_errors"`
-	MaxAllowedCycleTimeSecs     JSONFloat64 `json:"max_allowed_cycle_time_seconds"` // Uses JSONFloat64
-	MaxInitialSearchQuantity    JSONFloat64 `json:"max_initial_search_quantity"`    // Uses JSONFloat64
+	MaxAllowedCycleTimeSecs     JSONFloat64 `json:"max_allowed_cycle_time_seconds"`
+	MaxInitialSearchQuantity    JSONFloat64 `json:"max_initial_search_quantity"`
 }
 
 type FailedItemDetail struct {
@@ -72,9 +71,10 @@ type FailedItemDetail struct {
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
-// --- Global Variables for main.go orchestration ---
-// Global variables related to API caching (apiResponseCache, apiFetchErr, etc.)
-// are assumed to be defined in api.go
+// NOTE: HypixelAPIResponse, ProductMetrics, etc., are assumed to be in their respective .go files (api.go, metrics.go)
+
+// --- Global Variables ---
+// apiResponseCache, apiFetchErr, etc. are assumed to be in api.go
 var (
 	latestOptimizerResultsJSON []byte
 	optimizerResultsMutex      sync.RWMutex
@@ -86,19 +86,18 @@ var (
 	lastOptimizationTime    time.Time
 	optimizationStatusMutex sync.RWMutex
 
-	latestMetricsData          []byte // Raw bytes of the latest metrics JSON from MEGA
+	latestMetricsData          []byte
 	metricsDataMutex           sync.RWMutex
 	lastMetricsDownloadStatus  string
 	lastMetricsDownloadTime    time.Time
 	metricsDownloadStatusMutex sync.RWMutex
 
-	isOptimizing      bool // Flag to prevent concurrent full optimization runs
+	isOptimizing      bool
 	isOptimizingMutex sync.Mutex
 
 	metricsFileRegex = regexp.MustCompile(`^metrics_(\d{14})\.json$`)
 )
 
-// downloadMetricsFromMega attempts to download the latest metrics file from MEGA.
 func downloadMetricsFromMega(localTargetFilename string) error {
 	megaEmail := os.Getenv("MEGA_EMAIL")
 	megaPassword := os.Getenv("MEGA_PWD")
@@ -128,6 +127,22 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 
+	// Debug: Check if megals exists and is executable from Go's perspective
+	log.Printf("Debug: Checking for %s...", megaLsCmd)
+	if _, err := os.Stat(megaLsCmd); os.IsNotExist(err) {
+		log.Printf("Debug: %s does NOT exist.", megaLsCmd)
+		// Also check /usr/bin as a fallback location if COPY was to there
+		if _, err2 := os.Stat("/usr/bin/megals"); os.IsNotExist(err2) {
+			log.Printf("Debug: /usr/bin/megals also does NOT exist.")
+		} else {
+			log.Printf("Debug: /usr/bin/megals DOES exist. Consider using this path if /usr/local/bin/megals fails.")
+		}
+		return fmt.Errorf("megals command '%s' not found at specified path", megaLsCmd)
+	} else {
+		log.Printf("Debug: %s found. Checking permissions...", megaLsCmd)
+		// Further permission checks could be added if needed, but os.Stat not finding it is primary.
+	}
+
 	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, megaLsCmd)
 	ctxLs, cancelLs := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelLs()
@@ -147,6 +162,11 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 
 	if lsErr != nil {
+		// Check for ExitError to get more details if it's an exec failure
+		if exitErr, ok := lsErr.(*exec.ExitError); ok {
+			log.Printf("'%s' command exited with error: %v. Stderr: %s", megaLsCmd, lsErr, string(exitErr.Stderr))
+			return fmt.Errorf("'%s' command failed: %v. Stderr: %s. Full Output: %s", megaLsCmd, lsErr, string(exitErr.Stderr), lsOut)
+		}
 		return fmt.Errorf("'%s' command failed: %v. Output: %s", megaLsCmd, lsErr, lsOut)
 	}
 	if strings.Contains(lsOut, "Unable to connect to service") || strings.Contains(lsOut, "Please ensure mega-cmd-server is running") {
@@ -215,6 +235,10 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	getOut := string(getOutBytes)
 	log.Printf("downloadMetricsFromMega: '%s' Output (first 500 chars): %.500s", megaGetCmd, getOut)
 	if getErr != nil {
+		if exitErr, ok := getErr.(*exec.ExitError); ok {
+			log.Printf("'%s' command exited with error: %v. Stderr: %s", megaGetCmd, getErr, string(exitErr.Stderr))
+			return fmt.Errorf("failed to download '%s' with '%s': %v. Stderr: %s. Full Output: %s", remoteFilePathFull, megaGetCmd, getErr, string(exitErr.Stderr), getOut)
+		}
 		return fmt.Errorf("failed to download '%s' with '%s': %v. Output: %s", remoteFilePathFull, megaGetCmd, getErr, getOut)
 	}
 	if strings.Contains(getOut, "Unable to connect to service") || strings.Contains(getOut, "Please ensure mega-cmd-server is running") {
@@ -232,11 +256,39 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 			return fmt.Errorf("failed to move downloaded file from '%s' to '%s': %w", tempDownloadPath, localTargetFilename, err)
 		}
 	}
-
 	log.Printf("Successfully downloaded and prepared metrics file at '%s'.", localTargetFilename)
 	return nil
 }
 
+// --- downloadAndStoreMetrics, downloadMetricsPeriodically, parseProductMetricsData ---
+// --- performOptimizationCycleNow, runSingleOptimizationAndUpdateResults, optimizePeriodically ---
+// --- HTTP Handlers, main() ---
+// (These functions remain the same as the previous complete main.go version,
+// ensure they are present in your actual main.go file)
+// The stubs/placeholders for types like HypixelAPIResponse, ProductMetrics, OptimizedItemResult,
+// and functions like getApiResponse, BAZAAR_ID, RunFullOptimization should be REMOVED
+// from this main.go and be correctly defined in their respective api.go, metrics.go, optimizer.go, utils.go files)
+
+// (Make sure to include the rest of your main.go functions here,
+// ensuring all necessary types like ProductMetrics, HypixelAPIResponse, OptimizedItemResult,
+// and functions like getApiResponse, BAZAAR_ID, RunFullOptimization are defined in other files
+// in package main and NOT duplicated here.)
+// For example, you'd need to copy the definitions of:
+// downloadAndStoreMetrics()
+// downloadMetricsPeriodically()
+// parseProductMetricsData()
+// performOptimizationCycleNow()
+// runSingleOptimizationAndUpdateResults()
+// optimizePeriodically()
+// optimizerResultsHandler()
+// failedItemsReportHandler()
+// statusHandler()
+// formatTimeIfNotZero()
+// rootHandler()
+// min()
+// main()
+// from the previous full main.go answer.
+// --- The following is the rest of the main.go content from the previous "good" version ---
 func downloadAndStoreMetrics() {
 	log.Println("downloadAndStoreMetrics: Initiating metrics download...")
 	tempMetricsFilename := filepath.Join(os.TempDir(), fmt.Sprintf("metrics_%d.downloading.tmp", time.Now().UnixNano()))
@@ -282,7 +334,7 @@ func downloadAndStoreMetrics() {
 		log.Println(newStatus)
 		return
 	}
-	var tempMetricsSlice []ProductMetrics // ProductMetrics type should be defined in metrics.go
+	var tempMetricsSlice []ProductMetrics
 	if jsonErr := json.Unmarshal(data, &tempMetricsSlice); jsonErr != nil {
 		newStatus := fmt.Sprintf("Error: downloaded metrics data was NOT A VALID JSON ARRAY of ProductMetrics at %s: %v. Body(first 200): %.200s", lastMetricsDownloadTime.Format(time.RFC3339), jsonErr, string(data))
 		metricsDownloadStatusMutex.Lock()
@@ -309,7 +361,6 @@ func downloadAndStoreMetrics() {
 	log.Println(newStatus)
 }
 
-// THIS FUNCTION IS NOW DEFINED
 func downloadMetricsPeriodically() {
 	go func() {
 		log.Printf("downloadMetricsPeriodically: Waiting %v before initial download...", initialMetricsDownloadDelay)
@@ -317,7 +368,7 @@ func downloadMetricsPeriodically() {
 
 		downloadAndStoreMetrics()
 
-		ticker := time.NewTicker(1 * time.Hour) // Check for new metrics hourly
+		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -337,7 +388,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 		return nil, fmt.Errorf("cannot unmarshal JSON object into []ProductMetrics")
 	}
 
-	var productMetricsSlice []ProductMetrics // ProductMetrics type should be defined in metrics.go
+	var productMetricsSlice []ProductMetrics
 	if err := json.Unmarshal(jsonData, &productMetricsSlice); err != nil {
 		sample := string(jsonData)
 		if len(sample) > 200 {
@@ -354,7 +405,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 			skippedCount++
 			continue
 		}
-		normalizedID := BAZAAR_ID(metric.ProductID) // BAZAAR_ID should be defined in utils.go
+		normalizedID := BAZAAR_ID(metric.ProductID)
 		metric.ProductID = normalizedID
 		productMetricsMap[normalizedID] = metric
 	}
@@ -369,10 +420,10 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	runStartTime := time.Now()
 	log.Println("performOptimizationCycleNow: Starting new optimization cycle...")
 
-	if apiResp == nil || apiResp.Products == nil { // HypixelAPIResponse is defined in api.go
+	if apiResp == nil || apiResp.Products == nil {
 		return nil, nil, fmt.Errorf("CRITICAL: API data is nil or has no products in performOptimizationCycleNow")
 	}
-	if productMetrics == nil { // ProductMetrics is defined in metrics.go
+	if productMetrics == nil {
 		return nil, nil, fmt.Errorf("CRITICAL: Product metrics map is nil in performOptimizationCycleNow")
 	}
 	if len(productMetrics) == 0 && len(apiResp.Products) > 0 {
@@ -395,7 +446,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 			ItemsSuccessfullyCalculated: 0, ItemsWithCalculationErrors: 0,
 			MaxAllowedCycleTimeSecs: toJSONFloat64(0), MaxInitialSearchQuantity: toJSONFloat64(0),
 		}
-		emptyOutput := OptimizationRunOutput{Summary: emptySummary, Results: []OptimizedItemResult{}} // OptimizedItemResult from optimizer.go
+		emptyOutput := OptimizationRunOutput{Summary: emptySummary, Results: []OptimizedItemResult{}}
 		mainJSON, _ := json.MarshalIndent(emptyOutput, "", "  ")
 		return mainJSON, []byte("[]"), nil
 	}
@@ -419,7 +470,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	log.Printf("performOptimizationCycleNow: Parameters - MaxCycleTime: %.0fs, MaxInitialSearchQty: %.0f, ChunkSize: %d, Pause: %v",
 		maxAllowedCycleTimePerItemRaw, maxInitialSearchQtyRaw, itemsPerChunk, pauseBetweenChunks)
 
-	var allOptimizedResults []OptimizedItemResult // OptimizedItemResult from optimizer.go
+	var allOptimizedResults []OptimizedItemResult
 	for i := 0; i < len(itemIDs); i += itemsPerChunk {
 		end := i + itemsPerChunk
 		if end > len(itemIDs) {
@@ -432,7 +483,6 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 		log.Printf("performOptimizationCycleNow: Optimizing chunk %d/%d (items %d to %d of %d total)",
 			(i/itemsPerChunk)+1, (len(itemIDs)+itemsPerChunk-1)/itemsPerChunk, i, end-1, len(itemIDs))
 
-		// RunFullOptimization is defined in optimizer.go
 		chunkResults := RunFullOptimization(currentChunkItemIDs, maxAllowedCycleTimePerItemRaw, apiResp, productMetrics, itemFilesDir, maxInitialSearchQtyRaw)
 		allOptimizedResults = append(allOptimizedResults, chunkResults...)
 
@@ -509,7 +559,7 @@ func runSingleOptimizationAndUpdateResults() {
 		return
 	}
 
-	productMetrics, parseErr := parseProductMetricsData(currentMetricsBytes) // ProductMetrics from metrics.go
+	productMetrics, parseErr := parseProductMetricsData(currentMetricsBytes)
 	if parseErr != nil {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: Metrics parsing failed: %v", time.Now().Format(time.RFC3339), parseErr)
 		optimizationStatusMutex.Lock()
@@ -527,7 +577,7 @@ func runSingleOptimizationAndUpdateResults() {
 		return
 	}
 
-	apiResp, apiErr := getApiResponse() // getApiResponse from api.go
+	apiResp, apiErr := getApiResponse()
 	if apiErr != nil {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: API data load failed: %v", time.Now().Format(time.RFC3339), apiErr)
 		optimizationStatusMutex.Lock()
@@ -536,7 +586,7 @@ func runSingleOptimizationAndUpdateResults() {
 		log.Println(newStatus)
 		return
 	}
-	if apiResp == nil || len(apiResp.Products) == 0 { // HypixelAPIResponse from api.go
+	if apiResp == nil || len(apiResp.Products) == 0 {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: API response is nil or contains no products.", time.Now().Format(time.RFC3339))
 		optimizationStatusMutex.Lock()
 		lastOptimizationStatus = newStatus
@@ -668,7 +718,6 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	currentIsOptimizing := isOptimizing
 	isOptimizingMutex.Unlock()
 
-	// apiCacheMutex, apiFetchErr, apiResponseCache, lastAPIFetchTime are from api.go
 	apiCacheMutex.RLock()
 	apiCacheStatus := "OK"
 	if apiFetchErr != nil {
@@ -761,7 +810,7 @@ func main() {
 	metricsDataMutex.Lock()
 	initialMetricsBytes, err := os.ReadFile(metricsFilename)
 	if err == nil && len(initialMetricsBytes) > 0 {
-		var tempMetricsSlice []ProductMetrics // ProductMetrics from metrics.go
+		var tempMetricsSlice []ProductMetrics
 		if parseErr := json.Unmarshal(initialMetricsBytes, &tempMetricsSlice); parseErr == nil {
 			latestMetricsData = initialMetricsBytes
 			log.Printf("Main: Successfully loaded initial metrics from %s (%d bytes)", metricsFilename, len(initialMetricsBytes))
