@@ -5,16 +5,16 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <sys/wait.h> // For WIFEXITED, WEXITSTATUS, WTERMSIG (on POSIX systems)
-// #include <unistd.h> // For sleep, if you re-add it
+// #include <unistd.h> // For sleep
 
 using namespace std;
 
 // Executes a shell command and captures its output.
-// Throws runtime_error on failure if checkError is true.
-void safeSystem(const string& cmd, bool checkError = true) {
+// Allows specifying a vector of exit codes that should NOT be treated as errors.
+void safeSystem(const string& cmd, bool checkError = true, const vector<int>& allowedExitCodes = {}) {
     string effective_cmd = cmd;
-    // For all mega-* commands, prepend "env HOME=/home/appuser" to force context
     if (cmd.rfind("mega-", 0) == 0) {
         effective_cmd = "env HOME=/home/appuser " + cmd;
     }
@@ -39,7 +39,7 @@ void safeSystem(const string& cmd, bool checkError = true) {
     string cmd_output_str = output_stream.str();
 
     int status = pclose(pipe);
-    int exit_code = -1; // Default for non-normal exit
+    int exit_code = -1;
 
     if (WIFEXITED(status)) {
         exit_code = WEXITSTATUS(status);
@@ -56,34 +56,36 @@ void safeSystem(const string& cmd, bool checkError = true) {
         cout << "Export Engine: Command produced no direct output to stdout via pipe." << endl;
     }
 
-    // Specific handling for MEGA exit codes if needed, e.g., 54 for "already exists" might not be an error
-    // For now, any non-zero is treated as an error if checkError is true.
-    if (checkError && exit_code != 0) {
+    bool isAllowedExitCode = false;
+    for (int allowed_code : allowedExitCodes) {
+        if (exit_code == allowed_code) {
+            isAllowedExitCode = true;
+            break;
+        }
+    }
+
+    if (checkError && exit_code != 0 && !isAllowedExitCode) {
         string error_msg = "Export Engine: Command [" + effective_cmd + "] failed ";
-        if (exit_code != -1) { // If we have a valid exit code
+        if (exit_code != -1) {
             error_msg += "with exit code " + to_string(exit_code);
-        } else { // If termination was due to a signal or other non-standard exit
+        } else {
             error_msg += "(abnormal termination, status: " + to_string(status) + ")";
         }
-        if(!cmd_output_str.empty()) { // Append output if it exists
+        if(!cmd_output_str.empty()) {
              error_msg += ". Output: " + cmd_output_str;
         }
         throw runtime_error(error_msg);
     }
 }
 
-
 void validateLoginAndPrepareRemoteDir(const string& remote_dir) {
     cout << "Export Engine: Attempting to clear previous MEGA session state..." << endl;
-    safeSystem("mega-logout", false);      // Try explicit logout first
+    safeSystem("mega-logout", false);      // Try explicit logout first. checkError=false means we don't care if it fails (e.g. not logged in)
     safeSystem("mega-ipc killserver", false); // Try to kill any lingering server
     safeSystem("mega-ipc wipeme", false);   // Wipe local IPC state
-    // Consider a brief sleep if server needs time to fully shut down before restarting
-    // sleep(1); // Requires #include <unistd.h> for POSIX sleep
 
     const char* email_env = getenv("MEGA_EMAIL");
     const char* password_env = getenv("MEGA_PWD");
-
     string email = email_env ? string(email_env) : "";
     string password = password_env ? string(password_env) : "";
 
@@ -93,34 +95,34 @@ void validateLoginAndPrepareRemoteDir(const string& remote_dir) {
     cout << "Export Engine: Attempting MEGA login for user: " << email << endl;
     string loginCmd = "mega-login \"" + email + "\" \"" + password + "\"";
     try {
-        safeSystem(loginCmd); // checkError is true by default
-        cout << "Export Engine: MEGA login successful." << endl;
+        // Allow exit code 54 for login if it means "already logged in"
+        safeSystem(loginCmd, true, {54}); 
+        cout << "Export Engine: MEGA login command processed." << endl;
     } catch (const runtime_error &e) {
         string errMsg = e.what();
-        // MEGAcmd exit code 54 for login can mean "Already logged in"
-        if (errMsg.find("Already logged in") != string::npos || 
-            (errMsg.find("exit code 54") != string::npos && errMsg.find("Already logged in") != string::npos) ) { // Check for specific stderr message too
-            cout << "Export Engine: Already logged in or login reported benign existing session. Proceeding." << endl;
+        // If it failed with exit 54 AND the output confirms "Already logged in", it's fine.
+        if (errMsg.find("exit code 54") != string::npos && errMsg.find("Already logged in") != string::npos) {
+            cout << "Export Engine: Confirmed already logged in. Proceeding." << endl;
         } else {
+            // Any other error during login is critical
             cerr << "Export Engine: Critical error during mega-login: " << errMsg << endl;
-            throw; // Re-throw if it's a different, critical error
+            throw;
         }
     }
 
+
     cout << "Export Engine: Attempting to create/verify MEGA remote directory: " << remote_dir << endl;
+    string mkdirCmd = "mega-mkdir -p \"" + remote_dir + "\"";
     try {
-        safeSystem("mega-mkdir -p \"" + remote_dir + "\"");
-        cout << "Export Engine: MEGA remote directory check/creation command executed for " << remote_dir << endl;
+        // Allow exit code 54 for mkdir if it means "folder already exists"
+        safeSystem(mkdirCmd, true, {54});
+        cout << "Export Engine: MEGA remote directory check/creation command processed." << endl;
     } catch (const runtime_error &e) {
         string errMsg = e.what();
-        // MEGAcmd exit code 54 for mkdir can mean "Folder already exists".
-        // Check the actual output string for confirmation as exit codes can be overloaded.
-        if (errMsg.find("Object (usually, a folder) already exists") != string::npos ||
-            errMsg.find("Folder already exists") != string::npos || // Check for this specific string
-            (errMsg.find("exit code 54") != string::npos && (errMsg.find("Folder already exists") != string::npos || errMsg.find("Object (usually, a folder) already exists") != string::npos )) ||
-            errMsg.find("EEXIST") != string::npos || // General system error for "exists"
-            errMsg.find("error code: -9") != string::npos ) { // MEGA specific internal code for "already exists"
-            cout << "Export Engine: Remote directory " << remote_dir << " likely already exists. Proceeding." << endl;
+        // If it failed with exit 54 AND the output confirms "Folder already exists", it's fine.
+        if (errMsg.find("exit code 54") != string::npos && 
+            (errMsg.find("Folder already exists") != string::npos || errMsg.find("Object (usually, a folder) already exists") != string::npos)) {
+            cout << "Export Engine: Remote directory " << remote_dir << " confirmed to already exist. Proceeding." << endl;
         } else {
             cerr << "Export Engine: Critical error during mega-mkdir: " << errMsg << endl;
             throw;
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
         validateLoginAndPrepareRemoteDir(remote_mega_dir);
 
         string uploadCmd = "mega-put -v \"" + local_filepath + "\" \"" + remote_mega_dir + "\"";
-        safeSystem(uploadCmd);
+        safeSystem(uploadCmd); // Standard error checking for put
         cout << "Export Engine: Successfully uploaded local file: " << local_filepath << " to MEGA directory: " << remote_mega_dir << endl;
 
         cout << "Export Engine: Attempting to delete local file: " << local_filepath << endl;
@@ -153,12 +155,8 @@ int main(int argc, char* argv[]) {
         } else {
             cout << "Export Engine: Successfully deleted local file: " << local_filepath << endl;
         }
-        // Optional: Logout after successful operations
-        // safeSystem("mega-logout", false);
     } catch (const exception& e) {
         cerr << "Export Engine: FATAL ERROR: " << e.what() << endl;
-        // Attempt logout on error too, but don't let its failure mask the original error.
-        // safeSystem("mega-logout", false);
         return EXIT_FAILURE;
     }
     cout << "Export Engine finished successfully." << endl;
