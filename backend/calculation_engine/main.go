@@ -40,14 +40,17 @@ func toJSONFloat64(v float64) JSONFloat64 {
 
 // --- Constants ---
 const (
-	metricsFilename             = "latest_metrics.json"
+	metricsFilename             = "latest_metrics.json" // Local cache filename
 	itemFilesDir                = "dependencies/items"
-	megaCmdTimeout              = 90 * time.Second
-	initialMetricsDownloadDelay = 15 * time.Second
-	initialOptimizationDelay    = 30 * time.Second
+	megaCmdTimeout              = 90 * time.Second // Increased timeout for MEGA operations
+	initialMetricsDownloadDelay = 15 * time.Second // Slightly longer delay for services to settle
+	initialOptimizationDelay    = 30 * time.Second // Slightly longer delay
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "/usr/local/bin/megals"
-	megaGetCmd                  = "/usr/local/bin/megaget"
+
+	// MEGA commands - use command names directly as they should be in PATH
+	// if megacmd is installed system-wide in the final Docker image.
+	megaLsCmd  = "megals"
+	megaGetCmd = "megaget"
 )
 
 // --- Struct Definitions for main.go orchestration ---

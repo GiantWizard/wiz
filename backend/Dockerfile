@@ -2,19 +2,15 @@
 FROM golang:1.23-alpine AS go-builder
 LABEL stage=go-builder
 WORKDIR /app
-
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download
 RUN go mod verify
-
 COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /go_app_binary .
-
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         g++ \
@@ -35,22 +31,7 @@ RUN cargo build --release
 WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app_export_engine export.cpp
-
-# MEGA CMD INSTALLATION AND VERIFICATION IN BUILDER
-RUN curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends /tmp/megacmd.deb && \
-    rm /tmp/megacmd.deb && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "--- [BUILDER] MEGA tools in /usr/bin: ---" && \
-    ls -l /usr/bin/mega* && \
-    echo "--- [BUILDER] Which megals: ---" && \
-    (which megals || echo "megals not found in PATH via 'which'") && \
-    echo "--- [BUILDER] Which mega-cmd-server: ---" && \
-    (which mega-cmd-server || echo "mega-cmd-server not found in PATH via 'which'") && \
-    echo "--- [BUILDER] Listing /usr/bin/mega-cmd-server explicitly: ---" && \
-    (ls -l /usr/bin/mega-cmd-server || echo "/usr/bin/mega-cmd-server does not exist in builder")
+# No need to install megacmd in this builder stage if we install it in final
 
 # STAGE 3: Final Runtime Image
 FROM debian:bookworm-slim AS final
@@ -61,9 +42,21 @@ RUN apt-get update && \
         ca-certificates \
         libfuse2 \
         libssl3 \
-        dbus && \
+        dbus \
+        curl && \
+    # Install megacmd directly in the final stage
+    echo "Installing MEGAcmd in final stage..." && \
+    curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb && \
+    apt-get install -y --no-install-recommends /tmp/megacmd.deb && \
+    rm /tmp/megacmd.deb && \
+    apt-get autoremove -y && \ 
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    echo "--- [FINAL] Which megals: ---" && \
+    (which megals || echo "megals not found in PATH via 'which' in final stage") && \
+    echo "--- [FINAL] Which mega-cmd-server: ---" && \
+    (which mega-cmd-server || echo "mega-cmd-server not found in PATH via 'which' in final stage")
+
 
 RUN groupadd --gid 999 appgroup && useradd --uid 999 --gid appgroup --shell /bin/bash --create-home appuser
 
@@ -83,22 +76,6 @@ RUN chmod +x /app/metrics_generator
 
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/export_engine
 RUN chmod +x /app/export_engine
-
-# Explicitly copy known MEGA tools
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megals /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaget /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megalogin /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/megaput /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-ipc /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-whoami /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-logout /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-mkdir /usr/local/bin/
-# Try to copy mega-cmd-server. If this line causes the build to fail (source not found),
-# then remove this line and rely on client tools to manage/spawn the server.
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd-server /usr/local/bin/
-
-# Make all copied mega* files in /usr/local/bin executable
-RUN find /usr/local/bin -maxdepth 1 -type f -name 'mega*' -exec chmod +x {} \;
 
 COPY supervisor.conf /etc/supervisor/supervisord.conf
 
