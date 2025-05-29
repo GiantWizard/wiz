@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/wait.h> // For WIFEXITED, WEXITSTATUS, WTERMSIG (on POSIX systems)
+// #include <unistd.h> // For sleep, if you re-add it
 
 using namespace std;
 
@@ -70,9 +71,12 @@ void safeSystem(const string& cmd, bool checkError = true) {
 }
 
 void validateLoginAndPrepareRemoteDir(const string& remote_dir) {
-    safeSystem("mega-ipc wipeme", false); // Attempt to clear stale MEGAcmd server state FIRST.
-    safeSystem("mega-whoami", false);
-    safeSystem("mega-logout", false);
+    // Attempt to clear stale MEGAcmd server state FIRST.
+    // Call with checkError=false as it might fail if no server was running, which is fine.
+    safeSystem("mega-ipc wipeme", false);
+    // These are optional for debugging, also call with checkError=false.
+    // safeSystem("mega-whoami", false);
+    // safeSystem("mega-logout", false);
 
     const char* email_env = getenv("MEGA_EMAIL");
     const char* password_env = getenv("MEGA_PWD");
@@ -85,10 +89,8 @@ void validateLoginAndPrepareRemoteDir(const string& remote_dir) {
     }
     cout << "Export Engine: Attempting MEGA login for user: " << email << endl;
     
-    // Try wiping again just before login, in case first call didn't clear a running-but-stuck server
-    safeSystem("mega-ipc wipeme", false); 
     string loginCmd = "mega-login \"" + email + "\" \"" + password + "\"";
-    safeSystem(loginCmd);
+    safeSystem(loginCmd); // This will throw if login fails
     cout << "Export Engine: MEGA login command executed successfully." << endl;
 
     cout << "Export Engine: Attempting to create/verify MEGA remote directory: " << remote_dir << endl;
@@ -99,7 +101,7 @@ void validateLoginAndPrepareRemoteDir(const string& remote_dir) {
         string errMsg = e.what();
         if (errMsg.find("Object (usually, a folder) already exists") != string::npos ||
             errMsg.find("EEXIST") != string::npos ||
-            errMsg.find("error code: -9") != string::npos ||
+            errMsg.find("error code: -9") != string::npos || // MEGA specific error for already exists
             errMsg.find("Already exists") != string::npos ) {
             cout << "Export Engine: Remote directory " << remote_dir << " likely already exists. Proceeding." << endl;
         } else {
@@ -134,12 +136,8 @@ int main(int argc, char* argv[]) {
         } else {
             cout << "Export Engine: Successfully deleted local file: " << local_filepath << endl;
         }
-        // Optional: Logout after successful operations
-        // safeSystem("mega-logout", false); 
     } catch (const exception& e) {
         cerr << "Export Engine: FATAL ERROR: " << e.what() << endl;
-        // Attempt logout on error too, but don't let its failure mask the original error.
-        // safeSystem("mega-logout", false);
         return EXIT_FAILURE;
     }
     cout << "Export Engine finished successfully." << endl;

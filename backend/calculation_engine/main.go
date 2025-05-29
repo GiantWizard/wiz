@@ -46,14 +46,14 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second
 	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "/usr/local/bin/megals"  // Absolute path
-	megaGetCmd                  = "/usr/local/bin/megaget" // Absolute path
+	megaLsCmd                   = "/usr/local/bin/megals"
+	megaGetCmd                  = "/usr/local/bin/megaget"
 )
 
-// --- Struct Definitions ---
+// --- Struct Definitions for main.go orchestration ---
 type OptimizationRunOutput struct {
 	Summary OptimizationSummary   `json:"summary"`
-	Results []OptimizedItemResult `json:"results"` // OptimizedItemResult is defined in optimizer.go
+	Results []OptimizedItemResult `json:"results"` // Expects OptimizedItemResult from optimizer.go
 }
 
 type OptimizationSummary struct {
@@ -71,10 +71,8 @@ type FailedItemDetail struct {
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
-// NOTE: HypixelAPIResponse, ProductMetrics, etc., are assumed to be in their respective .go files (api.go, metrics.go)
-
-// --- Global Variables ---
-// apiResponseCache, apiFetchErr, etc. are assumed to be in api.go
+// --- Global Variables for main.go orchestration ---
+// Global variables for API cache (apiResponseCache, etc.) are in api.go
 var (
 	latestOptimizerResultsJSON []byte
 	optimizerResultsMutex      sync.RWMutex
@@ -127,21 +125,35 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 
-	// Debug: Check if megals exists and is executable from Go's perspective
-	log.Printf("Debug: Checking for %s...", megaLsCmd)
+	// --- Debugging file existence and PATH ---
+	log.Printf("Debug: Checking for command '%s'...", megaLsCmd)
 	if _, err := os.Stat(megaLsCmd); os.IsNotExist(err) {
-		log.Printf("Debug: %s does NOT exist.", megaLsCmd)
-		// Also check /usr/bin as a fallback location if COPY was to there
-		if _, err2 := os.Stat("/usr/bin/megals"); os.IsNotExist(err2) {
-			log.Printf("Debug: /usr/bin/megals also does NOT exist.")
+		log.Printf("Debug: Command '%s' does NOT exist at specified path.", megaLsCmd)
+		// Check common alternative if specific copy failed
+		altPath := "/usr/bin/megals"
+		if _, err2 := os.Stat(altPath); os.IsNotExist(err2) {
+			log.Printf("Debug: Alternative path '%s' also does NOT exist.", altPath)
 		} else {
-			log.Printf("Debug: /usr/bin/megals DOES exist. Consider using this path if /usr/local/bin/megals fails.")
+			log.Printf("Debug: Alternative path '%s' DOES exist. Consider updating megaLsCmd constant.", altPath)
 		}
-		return fmt.Errorf("megals command '%s' not found at specified path", megaLsCmd)
+		// Log current PATH for the Go process
+		currentPath := os.Getenv("PATH")
+		log.Printf("Debug: Current PATH for Go process: %s", currentPath)
+		// Try `which` equivalent
+		foundPath, lookErr := exec.LookPath("megals")
+		if lookErr != nil {
+			log.Printf("Debug: 'megals' not found in PATH by exec.LookPath: %v", lookErr)
+		} else {
+			log.Printf("Debug: 'megals' found by exec.LookPath at: %s", foundPath)
+		}
+		return fmt.Errorf("megals command '%s' not found at specified path (os.Stat failed)", megaLsCmd)
+	} else if err != nil {
+		log.Printf("Debug: Error stating '%s': %v", megaLsCmd, err) // Other error like permission denied
+		return fmt.Errorf("error stating megals command '%s': %v", megaLsCmd, err)
 	} else {
-		log.Printf("Debug: %s found. Checking permissions...", megaLsCmd)
-		// Further permission checks could be added if needed, but os.Stat not finding it is primary.
+		log.Printf("Debug: Command '%s' found. Proceeding with execution.", megaLsCmd)
 	}
+	// --- End Debugging ---
 
 	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, megaLsCmd)
 	ctxLs, cancelLs := context.WithTimeout(context.Background(), megaCmdTimeout)
@@ -162,7 +174,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 
 	if lsErr != nil {
-		// Check for ExitError to get more details if it's an exec failure
 		if exitErr, ok := lsErr.(*exec.ExitError); ok {
 			log.Printf("'%s' command exited with error: %v. Stderr: %s", megaLsCmd, lsErr, string(exitErr.Stderr))
 			return fmt.Errorf("'%s' command failed: %v. Stderr: %s. Full Output: %s", megaLsCmd, lsErr, string(exitErr.Stderr), lsOut)
@@ -260,35 +271,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	return nil
 }
 
-// --- downloadAndStoreMetrics, downloadMetricsPeriodically, parseProductMetricsData ---
-// --- performOptimizationCycleNow, runSingleOptimizationAndUpdateResults, optimizePeriodically ---
-// --- HTTP Handlers, main() ---
-// (These functions remain the same as the previous complete main.go version,
-// ensure they are present in your actual main.go file)
-// The stubs/placeholders for types like HypixelAPIResponse, ProductMetrics, OptimizedItemResult,
-// and functions like getApiResponse, BAZAAR_ID, RunFullOptimization should be REMOVED
-// from this main.go and be correctly defined in their respective api.go, metrics.go, optimizer.go, utils.go files)
-
-// (Make sure to include the rest of your main.go functions here,
-// ensuring all necessary types like ProductMetrics, HypixelAPIResponse, OptimizedItemResult,
-// and functions like getApiResponse, BAZAAR_ID, RunFullOptimization are defined in other files
-// in package main and NOT duplicated here.)
-// For example, you'd need to copy the definitions of:
-// downloadAndStoreMetrics()
-// downloadMetricsPeriodically()
-// parseProductMetricsData()
-// performOptimizationCycleNow()
-// runSingleOptimizationAndUpdateResults()
-// optimizePeriodically()
-// optimizerResultsHandler()
-// failedItemsReportHandler()
-// statusHandler()
-// formatTimeIfNotZero()
-// rootHandler()
-// min()
-// main()
-// from the previous full main.go answer.
-// --- The following is the rest of the main.go content from the previous "good" version ---
 func downloadAndStoreMetrics() {
 	log.Println("downloadAndStoreMetrics: Initiating metrics download...")
 	tempMetricsFilename := filepath.Join(os.TempDir(), fmt.Sprintf("metrics_%d.downloading.tmp", time.Now().UnixNano()))
@@ -334,7 +316,7 @@ func downloadAndStoreMetrics() {
 		log.Println(newStatus)
 		return
 	}
-	var tempMetricsSlice []ProductMetrics
+	var tempMetricsSlice []ProductMetrics // Expects ProductMetrics from metrics.go
 	if jsonErr := json.Unmarshal(data, &tempMetricsSlice); jsonErr != nil {
 		newStatus := fmt.Sprintf("Error: downloaded metrics data was NOT A VALID JSON ARRAY of ProductMetrics at %s: %v. Body(first 200): %.200s", lastMetricsDownloadTime.Format(time.RFC3339), jsonErr, string(data))
 		metricsDownloadStatusMutex.Lock()
@@ -365,12 +347,9 @@ func downloadMetricsPeriodically() {
 	go func() {
 		log.Printf("downloadMetricsPeriodically: Waiting %v before initial download...", initialMetricsDownloadDelay)
 		time.Sleep(initialMetricsDownloadDelay)
-
 		downloadAndStoreMetrics()
-
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
-
 		for range ticker.C {
 			log.Println("downloadMetricsPeriodically: Triggering periodic metrics download.")
 			downloadAndStoreMetrics()
@@ -378,7 +357,7 @@ func downloadMetricsPeriodically() {
 	}()
 }
 
-func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error) {
+func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error) { // Expects ProductMetrics from metrics.go
 	if len(jsonData) == 0 {
 		log.Println("parseProductMetricsData: jsonData is empty, returning empty map.")
 		return make(map[string]ProductMetrics), nil
@@ -387,7 +366,6 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 		log.Println("parseProductMetricsData: jsonData is '{}', which cannot be unmarshaled into []ProductMetrics.")
 		return nil, fmt.Errorf("cannot unmarshal JSON object into []ProductMetrics")
 	}
-
 	var productMetricsSlice []ProductMetrics
 	if err := json.Unmarshal(jsonData, &productMetricsSlice); err != nil {
 		sample := string(jsonData)
@@ -397,7 +375,6 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 		log.Printf("parseProductMetricsData: Failed to unmarshal metrics JSON. Error: %v. Sample: %s", err, sample)
 		return nil, fmt.Errorf("failed to unmarshal metrics JSON: %w. Sample: %s", err, sample)
 	}
-
 	productMetricsMap := make(map[string]ProductMetrics, len(productMetricsSlice))
 	skippedCount := 0
 	for _, metric := range productMetricsSlice {
@@ -405,7 +382,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 			skippedCount++
 			continue
 		}
-		normalizedID := BAZAAR_ID(metric.ProductID)
+		normalizedID := BAZAAR_ID(metric.ProductID) // Expects BAZAAR_ID from utils.go
 		metric.ProductID = normalizedID
 		productMetricsMap[normalizedID] = metric
 	}
@@ -416,10 +393,9 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 	return productMetricsMap, nil
 }
 
-func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiResp *HypixelAPIResponse) ([]byte, []byte, error) {
+func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiResp *HypixelAPIResponse) ([]byte, []byte, error) { // Expects types from metrics.go and api.go
 	runStartTime := time.Now()
 	log.Println("performOptimizationCycleNow: Starting new optimization cycle...")
-
 	if apiResp == nil || apiResp.Products == nil {
 		return nil, nil, fmt.Errorf("CRITICAL: API data is nil or has no products in performOptimizationCycleNow")
 	}
@@ -429,28 +405,21 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	if len(productMetrics) == 0 && len(apiResp.Products) > 0 {
 		log.Println("performOptimizationCycleNow: Product metrics map is empty, but API has products. This may lead to limited optimization.")
 	}
-
 	var apiLastUpdatedStr string
 	if apiResp.LastUpdated > 0 {
 		apiLastUpdatedStr = time.Unix(apiResp.LastUpdated/1000, 0).UTC().Format(time.RFC3339Nano)
 	}
-
 	var itemIDs []string
 	for id := range apiResp.Products {
 		itemIDs = append(itemIDs, id)
 	}
 	if len(itemIDs) == 0 {
 		log.Println("performOptimizationCycleNow: No item IDs from API response to optimize.")
-		emptySummary := OptimizationSummary{
-			RunTimestamp: runStartTime.Format(time.RFC3339Nano), APILastUpdatedTimestamp: apiLastUpdatedStr, TotalItemsConsidered: 0,
-			ItemsSuccessfullyCalculated: 0, ItemsWithCalculationErrors: 0,
-			MaxAllowedCycleTimeSecs: toJSONFloat64(0), MaxInitialSearchQuantity: toJSONFloat64(0),
-		}
+		emptySummary := OptimizationSummary{RunTimestamp: runStartTime.Format(time.RFC3339Nano), APILastUpdatedTimestamp: apiLastUpdatedStr, TotalItemsConsidered: 0, ItemsSuccessfullyCalculated: 0, ItemsWithCalculationErrors: 0, MaxAllowedCycleTimeSecs: toJSONFloat64(0), MaxInitialSearchQuantity: toJSONFloat64(0)}
 		emptyOutput := OptimizationRunOutput{Summary: emptySummary, Results: []OptimizedItemResult{}}
 		mainJSON, _ := json.MarshalIndent(emptyOutput, "", "  ")
 		return mainJSON, []byte("[]"), nil
 	}
-
 	itemsPerChunk := 50
 	if ipcStr := os.Getenv("ITEMS_PER_CHUNK"); ipcStr != "" {
 		if val, err := strconv.Atoi(ipcStr); err == nil && val > 0 {
@@ -467,10 +436,8 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 		maxAllowedCycleTimePerItemRaw = 3600.0
 		maxInitialSearchQtyRaw        = 1000000.0
 	)
-	log.Printf("performOptimizationCycleNow: Parameters - MaxCycleTime: %.0fs, MaxInitialSearchQty: %.0f, ChunkSize: %d, Pause: %v",
-		maxAllowedCycleTimePerItemRaw, maxInitialSearchQtyRaw, itemsPerChunk, pauseBetweenChunks)
-
-	var allOptimizedResults []OptimizedItemResult
+	log.Printf("performOptimizationCycleNow: Parameters - MaxCycleTime: %.0fs, MaxInitialSearchQty: %.0f, ChunkSize: %d, Pause: %v", maxAllowedCycleTimePerItemRaw, maxInitialSearchQtyRaw, itemsPerChunk, pauseBetweenChunks)
+	var allOptimizedResults []OptimizedItemResult // Expects OptimizedItemResult from optimizer.go
 	for i := 0; i < len(itemIDs); i += itemsPerChunk {
 		end := i + itemsPerChunk
 		if end > len(itemIDs) {
@@ -480,12 +447,9 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 		if len(currentChunkItemIDs) == 0 {
 			continue
 		}
-		log.Printf("performOptimizationCycleNow: Optimizing chunk %d/%d (items %d to %d of %d total)",
-			(i/itemsPerChunk)+1, (len(itemIDs)+itemsPerChunk-1)/itemsPerChunk, i, end-1, len(itemIDs))
-
-		chunkResults := RunFullOptimization(currentChunkItemIDs, maxAllowedCycleTimePerItemRaw, apiResp, productMetrics, itemFilesDir, maxInitialSearchQtyRaw)
+		log.Printf("performOptimizationCycleNow: Optimizing chunk %d/%d (items %d to %d of %d total)", (i/itemsPerChunk)+1, (len(itemIDs)+itemsPerChunk-1)/itemsPerChunk, i, end-1, len(itemIDs))
+		chunkResults := RunFullOptimization(currentChunkItemIDs, maxAllowedCycleTimePerItemRaw, apiResp, productMetrics, itemFilesDir, maxInitialSearchQtyRaw) // Expects RunFullOptimization from optimizer.go
 		allOptimizedResults = append(allOptimizedResults, chunkResults...)
-
 		if end < len(itemIDs) && pauseBetweenChunks > 0 {
 			log.Printf("Pausing for %v before next chunk...", pauseBetweenChunks)
 			time.Sleep(pauseBetweenChunks)
@@ -493,7 +457,6 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	}
 	optimizedResults := allOptimizedResults
 	log.Printf("performOptimizationCycleNow: Optimization complete for all chunks. Generated %d total results.", len(optimizedResults))
-
 	var successCount int
 	var failDetails []FailedItemDetail
 	for _, r := range optimizedResults {
@@ -503,24 +466,13 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 			failDetails = append(failDetails, FailedItemDetail{ItemName: r.ItemName, ErrorMessage: r.ErrorMessage})
 		}
 	}
-
-	summary := OptimizationSummary{
-		RunTimestamp:                runStartTime.Format(time.RFC3339Nano),
-		APILastUpdatedTimestamp:     apiLastUpdatedStr,
-		TotalItemsConsidered:        len(itemIDs),
-		ItemsSuccessfullyCalculated: successCount,
-		ItemsWithCalculationErrors:  len(failDetails),
-		MaxAllowedCycleTimeSecs:     toJSONFloat64(maxAllowedCycleTimePerItemRaw),
-		MaxInitialSearchQuantity:    toJSONFloat64(maxInitialSearchQtyRaw),
-	}
+	summary := OptimizationSummary{RunTimestamp: runStartTime.Format(time.RFC3339Nano), APILastUpdatedTimestamp: apiLastUpdatedStr, TotalItemsConsidered: len(itemIDs), ItemsSuccessfullyCalculated: successCount, ItemsWithCalculationErrors: len(failDetails), MaxAllowedCycleTimeSecs: toJSONFloat64(maxAllowedCycleTimePerItemRaw), MaxInitialSearchQuantity: toJSONFloat64(maxInitialSearchQtyRaw)}
 	mainOutput := OptimizationRunOutput{Summary: summary, Results: optimizedResults}
-
 	mainJSON, err := json.MarshalIndent(mainOutput, "", "  ")
 	if err != nil {
 		log.Printf("CRITICAL: Failed to marshal main optimization output: %v.", err)
 		return nil, nil, fmt.Errorf("CRITICAL: Failed to marshal main optimization output: %w", err)
 	}
-
 	var failedJSON []byte
 	if len(failDetails) > 0 {
 		if b, errMarshal := json.MarshalIndent(failDetails, "", "  "); errMarshal != nil {
@@ -541,7 +493,6 @@ func runSingleOptimizationAndUpdateResults() {
 	currentMetricsBytes := make([]byte, len(latestMetricsData))
 	copy(currentMetricsBytes, latestMetricsData)
 	metricsDataMutex.RUnlock()
-
 	if len(currentMetricsBytes) == 0 || string(currentMetricsBytes) == "[]" {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: Metrics data is not ready or is empty.", time.Now().Format(time.RFC3339))
 		optimizationStatusMutex.Lock()
@@ -558,7 +509,6 @@ func runSingleOptimizationAndUpdateResults() {
 		log.Println(newStatus)
 		return
 	}
-
 	productMetrics, parseErr := parseProductMetricsData(currentMetricsBytes)
 	if parseErr != nil {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: Metrics parsing failed: %v", time.Now().Format(time.RFC3339), parseErr)
@@ -576,8 +526,7 @@ func runSingleOptimizationAndUpdateResults() {
 		log.Println(newStatus)
 		return
 	}
-
-	apiResp, apiErr := getApiResponse()
+	apiResp, apiErr := getApiResponse() // Expects getApiResponse from api.go
 	if apiErr != nil {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: API data load failed: %v", time.Now().Format(time.RFC3339), apiErr)
 		optimizationStatusMutex.Lock()
@@ -594,7 +543,6 @@ func runSingleOptimizationAndUpdateResults() {
 		log.Println(newStatus)
 		return
 	}
-
 	mainJSON, failedJSON, optErr := performOptimizationCycleNow(productMetrics, apiResp)
 	mainLen, failLen := 0, 0
 	if mainJSON != nil {
@@ -603,7 +551,6 @@ func runSingleOptimizationAndUpdateResults() {
 	if failedJSON != nil {
 		failLen = len(failedJSON)
 	}
-
 	optimizationStatusMutex.Lock()
 	lastOptimizationTime = time.Now()
 	if optErr != nil {
@@ -650,7 +597,6 @@ func optimizePeriodically() {
 		isOptimizingMutex.Unlock()
 		log.Println("optimizePeriodically (initial): Initial optimization run finished.")
 	}()
-
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for t := range ticker.C {
@@ -717,37 +663,24 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	isOptimizingMutex.Lock()
 	currentIsOptimizing := isOptimizing
 	isOptimizingMutex.Unlock()
-
 	apiCacheMutex.RLock()
-	apiCacheStatus := "OK"
+	apiCacheSt := "OK"
 	if apiFetchErr != nil {
-		apiCacheStatus = fmt.Sprintf("Error: %v", apiFetchErr)
+		apiCacheSt = fmt.Sprintf("Error: %v", apiFetchErr)
 	}
-	apiLastFetch := lastAPIFetchTime
-	apiCacheLastUpdated := int64(0)
+	apiLF := lastAPIFetchTime
+	apiCLU := int64(0)
 	if apiResponseCache != nil {
-		apiCacheLastUpdated = apiResponseCache.LastUpdated
+		apiCLU = apiResponseCache.LastUpdated
 	}
 	apiCacheMutex.RUnlock()
-
 	if optSt == "" {
 		optSt = "Service initializing; optimization pending."
 	}
 	if metSt == "" {
 		metSt = "Service initializing; metrics download pending."
 	}
-	resp := map[string]interface{}{
-		"service_status":                         "active",
-		"current_utc_time":                       time.Now().UTC().Format(time.RFC3339Nano),
-		"optimization_process_status":            optSt,
-		"last_optimization_attempt_utc":          formatTimeIfNotZero(optT),
-		"metrics_download_process_status":        metSt,
-		"last_metrics_download_attempt_utc":      formatTimeIfNotZero(metT),
-		"is_currently_optimizing":                currentIsOptimizing,
-		"hypixel_api_cache_status":               apiCacheStatus,
-		"hypixel_api_last_successful_fetch_utc":  formatTimeIfNotZero(apiLastFetch),
-		"hypixel_api_data_last_updated_epoch_ms": apiCacheLastUpdated,
-	}
+	resp := map[string]interface{}{"service_status": "active", "current_utc_time": time.Now().UTC().Format(time.RFC3339Nano), "optimization_process_status": optSt, "last_optimization_attempt_utc": formatTimeIfNotZero(optT), "metrics_download_process_status": metSt, "last_metrics_download_attempt_utc": formatTimeIfNotZero(metT), "is_currently_optimizing": currentIsOptimizing, "hypixel_api_cache_status": apiCacheSt, "hypixel_api_last_successful_fetch_utc": formatTimeIfNotZero(apiLF), "hypixel_api_data_last_updated_epoch_ms": apiCLU}
 	b, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		http.Error(w, `{"error":"Failed to marshal status"}`, http.StatusInternalServerError)
@@ -767,19 +700,7 @@ func formatTimeIfNotZero(t time.Time) string {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	fmt.Fprintln(w, "<html><head><title>Optimizer Microservice</title></head><body>")
-	fmt.Fprintln(w, "<h1>Optimizer Microservice</h1>")
-	fmt.Fprintln(w, "<p>Available endpoints:</p>")
-	fmt.Fprintln(w, "<ul>")
-	fmt.Fprintln(w, "<li><a href='/status'>/status</a> - Current service status</li>")
-	fmt.Fprintln(w, "<li><a href='/optimizer_results.json'>/optimizer_results.json</a> - Latest optimization results</li>")
-	fmt.Fprintln(w, "<li><a href='/failed_items_report.json'>/failed_items_report.json</a> - Report of items that failed optimization</li>")
-	fmt.Fprintln(w, "<li><a href='/healthz'>/healthz</a> - Health check (returns 200 OK)</li>")
-	fmt.Fprintln(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a> - Go profiling tools</li>")
-	fmt.Fprintln(w, "<li><a href='/debug/memstats'>/debug/memstats</a> - Go runtime memory statistics</li>")
-	fmt.Fprintln(w, "<li><a href='/debug/forcegc'>/debug/forcegc</a> - Force garbage collection</li>")
-	fmt.Fprintln(w, "</ul>")
-	fmt.Fprintln(w, "</body></html>")
+	fmt.Fprintln(w, "<html><head><title>Optimizer Microservice</title></head><body><h1>Optimizer Microservice</h1><p>Available endpoints:</p><ul><li><a href='/status'>/status</a></li><li><a href='/optimizer_results.json'>/optimizer_results.json</a></li><li><a href='/failed_items_report.json'>/failed_items_report.json</a></li><li><a href='/healthz'>/healthz</a></li><li><a href='/debug/pprof/'>/debug/pprof/</a></li><li><a href='/debug/memstats'>/debug/memstats</a></li><li><a href='/debug/forcegc'>/debug/forcegc</a></li></ul></body></html>")
 }
 
 func min(a, b int) int {
@@ -787,26 +708,23 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
+} // Not essential for current core logic
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	log.Println("Main: Optimizer service starting...")
-
 	optimizationStatusMutex.Lock()
 	lastOptimizationStatus = "Service starting; initial optimization pending."
 	optimizationStatusMutex.Unlock()
 	metricsDownloadStatusMutex.Lock()
 	lastMetricsDownloadStatus = "Service starting; initial metrics download pending."
 	metricsDownloadStatusMutex.Unlock()
-
 	optimizerResultsMutex.Lock()
 	latestOptimizerResultsJSON = []byte(`{"summary":{"run_timestamp":"N/A","total_items_considered":0,"items_successfully_calculated":0,"items_with_calculation_errors":0,"max_allowed_cycle_time_seconds":null,"max_initial_search_quantity":null,"message":"Initializing..."},"results":[]}`)
 	optimizerResultsMutex.Unlock()
 	failedItemsMutex.Lock()
 	latestFailedItemsJSON = []byte("[]")
 	failedItemsMutex.Unlock()
-
 	metricsDataMutex.Lock()
 	initialMetricsBytes, err := os.ReadFile(metricsFilename)
 	if err == nil && len(initialMetricsBytes) > 0 {
@@ -836,7 +754,6 @@ func main() {
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK); w.Write([]byte("OK\n")) })
-
 	http.HandleFunc("/debug/memstats", func(w http.ResponseWriter, r *http.Request) {
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
@@ -852,11 +769,37 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "9000" // Default to 9000 to match supervisor.conf
-	}
+		port = "9000"
+	} // Default to 9000
 	addr := "0.0.0.0:" + port
 	log.Printf("Main: Starting HTTP server on %s", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("FATAL: Failed to start HTTP server on %s: %v", addr, err)
 	}
 }
+
+// Ensure these types are defined in their respective files (api.go, metrics.go, optimizer.go, utils.go)
+// and not duplicated in main.go
+//
+// In api.go:
+// type OrderSummary struct { ... }
+// type QuickStatus struct { ... }
+// type HypixelProduct struct { ... }
+// type HypixelAPIResponse struct { ... }
+// var apiResponseCache *HypixelAPIResponse
+// var apiFetchErr error
+// var apiCacheMutex sync.RWMutex
+// var lastAPIFetchTime time.Time
+// func fetchBazaarData() error { ... } // Make sure this is correctly defined in api.go
+// func getApiResponse() (*HypixelAPIResponse, error) { ... } // Make sure this is correctly defined in api.go
+//
+// In metrics.go:
+// type ProductMetrics struct { ... }
+//
+// In optimizer.go:
+// type OptimizedItemResult struct { ... } // Make sure fields match usage in main.go
+// func RunFullOptimization(...) []OptimizedItemResult { ... }
+//
+// In utils.go:
+// func BAZAAR_ID(id string) string { ... }
+// func dlog(format string, args ...interface{}) { ... }
