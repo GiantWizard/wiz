@@ -46,8 +46,8 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second
 	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "megals"  // Rely on PATH
-	megaGetCmd                  = "megaget" // Rely on PATH
+	megaLsCmd                   = "megals"  // Should be found via PATH due to symlinks in /usr/local/bin
+	megaGetCmd                  = "megaget" // Should be found via PATH
 )
 
 // --- Struct Definitions for main.go orchestration ---
