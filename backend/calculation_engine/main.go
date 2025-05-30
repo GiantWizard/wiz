@@ -93,11 +93,16 @@ var (
 
 func downloadMetricsFromMega(localTargetFilename string) error {
 	megaEmail := os.Getenv("MEGA_EMAIL")
-	megaPassword := os.Getenv("MEGA_PWD")
+	megaPassword := os.Getenv("MEGA_PWD") // Ensure this is the var name your Go app uses
 	megaRemoteFolderPath := os.Getenv("MEGA_METRICS_FOLDER_PATH")
+
+	// Your Go app reads MEGA_PWD, your Koyeb config shows MEGA_PASSWORD and MEGA_PWD.
+	// Let's assume MEGA_PWD is the one being effectively used by the Go app.
+	// If it's actually MEGA_PASSWORD, change os.Getenv("MEGA_PWD") to os.Getenv("MEGA_PASSWORD") below.
 
 	if megaEmail == "" || megaPassword == "" || megaRemoteFolderPath == "" {
 		log.Println("downloadMetricsFromMega: MEGA environment variables not fully set. Skipping MEGA download.")
+		log.Printf("Debug: MEGA_EMAIL empty: %t, MEGA_PWD empty: %t, MEGA_METRICS_FOLDER_PATH empty: %t", megaEmail == "", megaPassword == "", megaRemoteFolderPath == "")
 		if _, err := os.Stat(metricsFilename); !os.IsNotExist(err) {
 			log.Printf("downloadMetricsFromMega: Using existing local cache '%s' as fallback.", metricsFilename)
 			data, readErr := os.ReadFile(metricsFilename)
@@ -110,7 +115,8 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 			log.Printf("downloadMetricsFromMega: Successfully used local cache for '%s'.", localTargetFilename)
 			return nil
 		}
-		return fmt.Errorf("MEGA download skipped (missing env config), and no local cache '%s' found", metricsFilename)
+		return fmt.Errorf("MEGA download skipped (missing env config: EMAIL_SET:%t, PWD_SET:%t, PATH_SET:%t), and no local cache '%s' found",
+			megaEmail != "", megaPassword != "", megaRemoteFolderPath != "", metricsFilename)
 	}
 
 	targetDir := filepath.Dir(localTargetFilename)
@@ -120,7 +126,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 
-	// Determine path for megals command
 	var foundMegaLsPath string
 	log.Printf("Debug: Attempting to find '%s' in PATH for Go process (using exec.LookPath)...", megaLsCmd)
 	pathViaLookPathLs, lookErrLs := exec.LookPath(megaLsCmd)
@@ -131,7 +136,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("Debug: Command '%s' not found in PATH using exec.LookPath: %v", megaLsCmd, lookErrLs)
 		currentPath := os.Getenv("PATH")
 		log.Printf("Debug: Current PATH for Go process: %s", currentPath)
-
 		fallbackPath := filepath.Join(megaCmdFallbackDir, megaLsCmd)
 		log.Printf("Debug: Attempting fallback for '%s' at known location: %s", megaLsCmd, fallbackPath)
 		if _, statErr := os.Stat(fallbackPath); statErr == nil {
@@ -149,12 +153,9 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	defer cancelLs()
 
 	lsCmdObj := exec.CommandContext(ctxLs, foundMegaLsPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
-	// Ensure HOME is set for mega-cmd-server communication, Docker usually sets this
-	// but if running in a minimal env, it might be missing.
-	// Default to /tmp or user's actual home if known. For 'appuser', it's /home/appuser.
 	homeEnv := os.Getenv("HOME")
 	if homeEnv == "" {
-		homeEnv = "/home/appuser" // As per Dockerfile useradd
+		homeEnv = "/home/appuser"
 		log.Printf("Debug: HOME env not set, defaulting to %s for mega command", homeEnv)
 	}
 	lsCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
@@ -186,47 +187,121 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	var latestTimestamp time.Time
 	foundFile := false
 
+	// --- MODIFIED PARSING LOGIC START ---
 	scanner := bufio.NewScanner(strings.NewReader(lsOut))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
-		if strings.Contains(strings.ToUpper(line), "WRN:") || strings.Contains(strings.ToUpper(line), "ERR:") || strings.Contains(line, "[Initiating MEGAcmd server") {
-			log.Printf("MEGA LS Info/Warning/ServerMsg: %s", line)
+
+		// Heuristic to skip banner, warnings, errors, and pure prompt lines
+		// Pure prompt line: contains the user@domain:/$ pattern but does NOT contain a metrics file pattern
+		isLikelyPromptLine := strings.Contains(line, megaEmail+":/$") // More specific prompt check
+		if !isLikelyPromptLine && strings.Contains(line, ":/$") {     // Generic prompt for other users/cases
+			isLikelyPromptLine = true
+		}
+
+		if strings.Contains(strings.ToUpper(line), "WRN:") ||
+			strings.Contains(strings.ToUpper(line), "ERR:") ||
+			strings.Contains(line, "[Initiating MEGAcmd server") ||
+			strings.Contains(line, "MEGAcmd!") || // Banner keyword
+			strings.HasPrefix(line, ".") || // Banner structure
+			strings.HasPrefix(line, "|") || // Banner structure
+			strings.HasPrefix(line, "`") || // Banner structure
+			(isLikelyPromptLine && !metricsFileRegex.MatchString(line)) { // Skip prompt line ONLY if it doesn't also contain a metrics file pattern
+			log.Printf("MEGA LS Info/Warning/Banner/Prompt (Skipping): %s", line)
 			continue
 		}
-		filenameToParse := filepath.Base(line)
+
+		filenameCandidate := line
+		// If the line still contains the prompt but also a filename, try to extract the filename part.
+		// Example: "bobofrogoo@gmail.com:/$ metrics_20230101120000.json"
+		if isLikelyPromptLine { // Check if it was a prompt-like line that passed the filter above
+			// Attempt to split by common prompt terminators like ':/$' or just '$'
+			// This needs to be robust. Let's find the last occurrence of ':/$' or '$ '
+			// and take the substring after it.
+			promptEndMarkerPos := -1
+			specificPromptMarker := megaEmail + ":/$"
+			genericPromptMarker1 := ":/$" // Common for mega-cmd
+			genericPromptMarker2 := "$ "  // Common for shell prompts if somehow mixed
+
+			pos1 := strings.LastIndex(line, specificPromptMarker)
+			if pos1 != -1 {
+				promptEndMarkerPos = pos1 + len(specificPromptMarker)
+			} else {
+				pos2 := strings.LastIndex(line, genericPromptMarker1)
+				if pos2 != -1 {
+					promptEndMarkerPos = pos2 + len(genericPromptMarker1)
+				} else {
+					pos3 := strings.LastIndex(line, genericPromptMarker2)
+					if pos3 != -1 {
+						promptEndMarkerPos = pos3 + len(genericPromptMarker2)
+					}
+				}
+			}
+
+			if promptEndMarkerPos != -1 && promptEndMarkerPos < len(line) {
+				extracted := strings.TrimSpace(line[promptEndMarkerPos:])
+				// Further check if the extracted part contains spaces, typical filenames don't.
+				// If it has spaces and isn't a quoted filename, it might be multiple files or garbage.
+				if !strings.Contains(extracted, " ") || (strings.HasPrefix(extracted, "\"") && strings.HasSuffix(extracted, "\"")) {
+					filenameCandidate = extracted
+					log.Printf("Debug: Extracted filename candidate '%s' from prompt-like line '%s'", filenameCandidate, line)
+				} else {
+					log.Printf("Debug: Prompt-like line '%s' had complex content after prompt marker, using original line for filepath.Base.", line)
+				}
+			}
+		}
+
+		// filepath.Base is good for extracting the last component of a path.
+		// If filenameCandidate is "metrics_....json", it returns "metrics_....json".
+		// If filenameCandidate is "/some/path/metrics_....json", it returns "metrics_....json".
+		filenameToParse := filepath.Base(filenameCandidate)
+
+		log.Printf("Debug: Processing line: '%s' -> candidate: '%s' -> base for regex: '%s'", line, filenameCandidate, filenameToParse)
+
 		match := metricsFileRegex.FindStringSubmatch(filenameToParse)
 		if len(match) == 2 {
 			timestampStr := match[1]
 			t, parseErr := time.Parse(timestampFormat, timestampStr)
 			if parseErr != nil {
-				log.Printf("Warning: could not parse timestamp in filename '%s': %v", filenameToParse, parseErr)
+				log.Printf("Warning: could not parse timestamp in filename '%s' (from line '%s', candidate '%s'): %v", filenameToParse, line, filenameCandidate, parseErr)
 				continue
 			}
+			log.Printf("Debug: Matched metrics file: '%s' with timestamp %s", filenameToParse, t.Format(time.RFC3339))
 			if !foundFile || t.After(latestTimestamp) {
+				log.Printf("Debug: New latest file found: %s (old: %s, timestamp %s)", filenameToParse, latestFilename, t.Format(time.RFC3339))
 				foundFile = true
 				latestTimestamp = t
-				latestFilename = filenameToParse
+				latestFilename = filenameToParse // This should be just the filename
+			}
+		} else {
+			// Only log if it wasn't an explicitly skipped line type
+			if !(strings.Contains(strings.ToUpper(line), "WRN:") || strings.Contains(strings.ToUpper(line), "ERR:") /* etc. */) {
+				log.Printf("Debug: Line did not match metrics regex after processing: '%s' (candidate '%s', base '%s')", line, filenameCandidate, filenameToParse)
 			}
 		}
 	}
+	// --- MODIFIED PARSING LOGIC END ---
+
 	if scanErr := scanner.Err(); scanErr != nil {
 		log.Printf("Warning: error scanning '%s' output: %v", foundMegaLsPath, scanErr)
 	}
 
 	if !foundFile {
-		return fmt.Errorf("no metrics file matching pattern '%s' found in MEGA folder '%s'. Review 'megals' output above.", metricsFileRegex.String(), megaRemoteFolderPath)
+		return fmt.Errorf("no metrics file matching pattern '%s' found in MEGA folder '%s'. Review 'megals' output and debug logs above.", metricsFileRegex.String(), megaRemoteFolderPath)
 	}
 
 	remoteFilePathFull := strings.TrimRight(megaRemoteFolderPath, "/") + "/" + latestFilename
-	log.Printf("Identified latest metrics file: '%s'", remoteFilePathFull)
+	log.Printf("Identified latest metrics file for download: '%s' (will be fetched as '%s')", latestFilename, remoteFilePathFull)
 
-	tempDownloadPath := filepath.Join(targetDir, latestFilename)
+	tempDownloadPath := filepath.Join(targetDir, latestFilename) // Use latestFilename directly as it's just the base name
 	if localTargetFilename == tempDownloadPath {
+		log.Printf("Debug: Target and temp download path are the same: %s. Removing if exists.", localTargetFilename)
 		_ = os.Remove(localTargetFilename)
 	} else {
+		log.Printf("Debug: Temp download path: %s. Removing if exists.", tempDownloadPath)
 		_ = os.Remove(tempDownloadPath)
 	}
 
@@ -234,7 +309,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	ctxGet, cancelGet := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelGet()
 
-	// Determine path for megaget command
 	var foundMegaGetPath string
 	log.Printf("Debug: Attempting to find '%s' in PATH for Go process (for get operation using exec.LookPath)...", megaGetCmd)
 	pathViaLookPathGet, lookErrGet := exec.LookPath(megaGetCmd)
@@ -245,7 +319,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("Debug: Command '%s' not found in PATH using exec.LookPath for get operation: %v", megaGetCmd, lookErrGet)
 		currentPath := os.Getenv("PATH")
 		log.Printf("Debug: Current PATH for Go process (get op): %s", currentPath)
-
 		fallbackPath := filepath.Join(megaCmdFallbackDir, megaGetCmd)
 		log.Printf("Debug: Attempting fallback for '%s' (get op) at known location: %s", megaGetCmd, fallbackPath)
 		if _, statErr := os.Stat(fallbackPath); statErr == nil {
@@ -259,17 +332,17 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 	log.Printf("Debug: Using command '%s' (resolved to '%s') for get operation.", megaGetCmd, foundMegaGetPath)
 
+	// For megaget, the remote path should be the full path, and --path specifies the local directory.
 	getCmdObj := exec.CommandContext(ctxGet, foundMegaGetPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", remoteFilePathFull, "--path", targetDir)
-	// Reuse homeEnv from ls command
 	getCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
 	getOutBytes, getErr := getCmdObj.CombinedOutput()
 
 	if ctxGet.Err() == context.DeadlineExceeded {
-		log.Printf("ERROR: '%s' command timed out for %s after %v. Output: %s", foundMegaGetPath, latestFilename, megaCmdTimeout, string(getOutBytes))
-		return fmt.Errorf("'%s' command timed out for %s. Output: %s", foundMegaGetPath, latestFilename, string(getOutBytes))
+		log.Printf("ERROR: '%s' command timed out for %s after %v. Output: %s", foundMegaGetPath, remoteFilePathFull, megaCmdTimeout, string(getOutBytes))
+		return fmt.Errorf("'%s' command timed out for %s. Output: %s", foundMegaGetPath, remoteFilePathFull, string(getOutBytes))
 	}
 	getOut := string(getOutBytes)
-	log.Printf("downloadMetricsFromMega: '%s' Output (first 500 chars): %.500s", foundMegaGetPath, getOut)
+	log.Printf("downloadMetricsFromMega: '%s' Output (first 500 chars): %.500s", foundMegaGetPath, getOut) // Log output for get command
 	if getErr != nil {
 		if exitErr, ok := getErr.(*exec.ExitError); ok {
 			log.Printf("'%s' command exited with error: %v. Stderr: %s", foundMegaGetPath, getErr, string(exitErr.Stderr))
@@ -281,13 +354,17 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get: %s. Ensure mega-cmd-server is running and accessible by user '%s' with HOME='%s'", foundMegaGetPath, getOut, os.Getenv("USER"), homeEnv)
 	}
 
+	// megaget places the file named `latestFilename` (which is the basename) into `targetDir`.
+	// So, `tempDownloadPath` (which is `filepath.Join(targetDir, latestFilename)`) is the correct path to check.
 	if _, statErr := os.Stat(tempDownloadPath); os.IsNotExist(statErr) {
 		return fmt.Errorf("'%s' command appeared to succeed for '%s', but downloaded file '%s' is missing. Output: %s", foundMegaGetPath, latestFilename, tempDownloadPath, getOut)
 	}
+	log.Printf("Debug: Successfully found downloaded file at temp path: %s", tempDownloadPath)
 
 	if localTargetFilename != tempDownloadPath {
 		log.Printf("Moving downloaded file from '%s' to '%s'", tempDownloadPath, localTargetFilename)
 		if err := os.Rename(tempDownloadPath, localTargetFilename); err != nil {
+			// Try to remove temp file on failure to move
 			_ = os.Remove(tempDownloadPath)
 			return fmt.Errorf("failed to move downloaded file from '%s' to '%s': %w", tempDownloadPath, localTargetFilename, err)
 		}
