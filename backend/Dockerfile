@@ -2,15 +2,19 @@
 FROM golang:1.23-alpine AS go-builder
 LABEL stage=go-builder
 WORKDIR /app
+
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download
 RUN go mod verify
+
 COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /go_app_binary .
+
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         g++ \
@@ -31,18 +35,7 @@ RUN cargo build --release
 WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app_export_engine export.cpp
-
-# Install megacmd in the builder stage. The scripts/symlinks will point to /usr/bin/mega-cmd.
-RUN echo "Installing MEGAcmd in builder stage..." && \
-    curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends /tmp/megacmd.deb && \
-    rm /tmp/megacmd.deb && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "--- [BUILDER STAGE] Verifying MEGA tools in /usr/bin/ ---" && \
-    ls -l /usr/bin/mega*
-
+# No separate megacmd install needed in builder if only used by final stage or export_engine (which is copied)
 
 # STAGE 3: Final Runtime Image
 FROM debian:bookworm-slim AS final
@@ -53,9 +46,28 @@ RUN apt-get update && \
         ca-certificates \
         libfuse2 \
         libssl3 \
-        dbus && \
+        dbus \
+        curl && \
+    # Install megacmd directly in the final stage
+    echo "Installing MEGAcmd in final stage..." && \
+    curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb -o /tmp/megacmd.deb && \
+    apt-get update && \ 
+    apt-get install -y /tmp/megacmd.deb && \
+    rm /tmp/megacmd.deb && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    echo "--- [FINAL STAGE] Verification after megacmd install ---" && \
+    echo "--- [FINAL STAGE] which megals: ---" && \
+    (which megals || echo "[FINAL INFO] 'megals' not found in PATH by 'which'") && \
+    echo "--- [FINAL STAGE] ls -l /usr/bin/megals: ---" && \
+    (ls -l /usr/bin/megals || echo "[FINAL INFO] '/usr/bin/megals' does not exist") && \
+    echo "--- [FINAL STAGE] which mega-cmd-server: ---" && \
+    (which mega-cmd-server || echo "[FINAL INFO] 'mega-cmd-server' not found in PATH by 'which'") && \
+    echo "--- [FINAL STAGE] ls -l /usr/bin/mega-cmd-server: ---" && \
+    (ls -l /usr/bin/mega-cmd-server || echo "[FINAL INFO] '/usr/bin/mega-cmd-server' does not exist") && \
+    echo "--- [FINAL STAGE] dpkg -L megacmd (listing files installed by package): ---" && \
+    (dpkg -L megacmd || echo "[FINAL INFO] 'dpkg -L megacmd' failed or package not found by that name")
+
 
 RUN groupadd --gid 999 appgroup && useradd --uid 999 --gid appgroup --shell /bin/bash --create-home appuser
 
@@ -76,17 +88,8 @@ RUN chmod +x /app/metrics_generator
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/export_engine
 RUN chmod +x /app/export_engine
 
-# Copy the main MEGA binaries and all the wrapper scripts/symlinks
-# The `mega-*` wildcard will get all the small scripts.
-# Then explicitly copy the two main binaries identified from the builder logs.
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-* /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd /usr/local/bin/
-COPY --from=rust-cpp-builder --chown=root:root /usr/bin/mega-cmd-server /usr/local/bin/
-
-# Ensure all copied mega tools (scripts and binaries) in /usr/local/bin are executable
-RUN find /usr/local/bin -maxdepth 1 -type f -name 'mega*' -exec chmod +x {} \; \
-    && if [ -f /usr/local/bin/mega-cmd ]; then chmod +x /usr/local/bin/mega-cmd; fi \
-    && if [ -f /usr/local/bin/mega-cmd-server ]; then chmod +x /usr/local/bin/mega-cmd-server; fi
+# mega-* tools are now installed system-wide in this stage by apt-get,
+# so no explicit COPY needed for them from the builder.
 
 COPY supervisor.conf /etc/supervisor/supervisord.conf
 
