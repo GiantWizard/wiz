@@ -46,8 +46,9 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second
 	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "megals"  // Should be found via PATH due to symlinks in /usr/local/bin
-	megaGetCmd                  = "megaget" // Should be found via PATH
+	megaLsCmd                   = "megals"          // Should be found via PATH due to symlinks in /usr/local/bin or fallback
+	megaGetCmd                  = "megaget"         // Should be found via PATH or fallback
+	megaCmdFallbackDir          = "/usr/local/bin/" // Fallback directory for MEGA commands based on Dockerfile
 )
 
 // --- Struct Definitions for main.go orchestration ---
@@ -119,37 +120,45 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 
-	log.Printf("Debug: Attempting to find '%s' in PATH for Go process...", megaLsCmd)
-	foundMegaLsPath, lookErr := exec.LookPath(megaLsCmd)
-	if lookErr != nil {
-		log.Printf("Debug: '%s' not found in PATH by exec.LookPath: %v", megaLsCmd, lookErr)
+	// Determine path for megals command
+	var foundMegaLsPath string
+	log.Printf("Debug: Attempting to find '%s' in PATH for Go process (using exec.LookPath)...", megaLsCmd)
+	pathViaLookPathLs, lookErrLs := exec.LookPath(megaLsCmd)
+	if lookErrLs == nil {
+		log.Printf("Debug: Command '%s' found by LookPath at: '%s'. This path will be used.", megaLsCmd, pathViaLookPathLs)
+		foundMegaLsPath = pathViaLookPathLs
+	} else {
+		log.Printf("Debug: Command '%s' not found in PATH using exec.LookPath: %v", megaLsCmd, lookErrLs)
 		currentPath := os.Getenv("PATH")
 		log.Printf("Debug: Current PATH for Go process: %s", currentPath)
-		// Fallback: Check common absolute paths explicitly for more debug info
-		commonPaths := []string{"/usr/local/bin/" + megaLsCmd, "/usr/bin/" + megaLsCmd, "/bin/" + megaLsCmd, "/app/" + megaLsCmd}
-		foundAtAbs := false
-		for _, p := range commonPaths {
-			if _, statErr := os.Stat(p); statErr == nil {
-				log.Printf("Debug: Found '%s' at absolute path: %s", megaLsCmd, p)
-				foundAtAbs = true
-				// If you want to use this found path, you could assign it to a variable here
-				// e.g., megaLsCmd = p // but megaLsCmd is a const, so this needs different handling
-				break
-			}
-		}
-		if !foundAtAbs {
-			log.Printf("Debug: '%s' also not found at common absolute paths.", megaLsCmd)
-		}
-		return fmt.Errorf("command '%s' not found in PATH via LookPath: %w", megaLsCmd, lookErr)
-	}
-	log.Printf("Debug: Command '%s' found by LookPath at: '%s'. Proceeding with execution.", megaLsCmd, foundMegaLsPath)
 
-	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, foundMegaLsPath) // Use foundMegaLsPath
+		fallbackPath := filepath.Join(megaCmdFallbackDir, megaLsCmd)
+		log.Printf("Debug: Attempting fallback for '%s' at known location: %s", megaLsCmd, fallbackPath)
+		if _, statErr := os.Stat(fallbackPath); statErr == nil {
+			log.Printf("Debug: Command '%s' successfully found at fallback location: '%s'. This path will be used.", megaLsCmd, fallbackPath)
+			foundMegaLsPath = fallbackPath
+		} else {
+			log.Printf("Debug: Command '%s' also not found or not executable at fallback location '%s': %v", megaLsCmd, fallbackPath, statErr)
+			return fmt.Errorf("command '%s' not found: LookPath error (%w), and fallback '%s' also unusable (stat error: %v)",
+				megaLsCmd, lookErrLs, fallbackPath, statErr)
+		}
+	}
+
+	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, foundMegaLsPath)
 	ctxLs, cancelLs := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelLs()
 
-	lsCmd := exec.CommandContext(ctxLs, foundMegaLsPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
-	lsOutBytes, lsErr := lsCmd.CombinedOutput()
+	lsCmdObj := exec.CommandContext(ctxLs, foundMegaLsPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
+	// Ensure HOME is set for mega-cmd-server communication, Docker usually sets this
+	// but if running in a minimal env, it might be missing.
+	// Default to /tmp or user's actual home if known. For 'appuser', it's /home/appuser.
+	homeEnv := os.Getenv("HOME")
+	if homeEnv == "" {
+		homeEnv = "/home/appuser" // As per Dockerfile useradd
+		log.Printf("Debug: HOME env not set, defaulting to %s for mega command", homeEnv)
+	}
+	lsCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
+	lsOutBytes, lsErr := lsCmdObj.CombinedOutput()
 
 	if ctxLs.Err() == context.DeadlineExceeded {
 		log.Printf("ERROR: '%s' command timed out after %v. Output: %s", foundMegaLsPath, megaCmdTimeout, string(lsOutBytes))
@@ -170,7 +179,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("'%s' command failed: %v. Output: %s", foundMegaLsPath, lsErr, lsOut)
 	}
 	if strings.Contains(lsOut, "Unable to connect to service") || strings.Contains(lsOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue: %s", foundMegaLsPath, lsOut)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue: %s. Ensure mega-cmd-server is running and accessible by user '%s' with HOME='%s'", foundMegaLsPath, lsOut, os.Getenv("USER"), homeEnv)
 	}
 
 	var latestFilename string
@@ -225,15 +234,35 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	ctxGet, cancelGet := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelGet()
 
-	foundMegaGetPath, lookErrGet := exec.LookPath(megaGetCmd)
-	if lookErrGet != nil {
-		log.Printf("Debug: '%s' not found in PATH by exec.LookPath for get operation: %v", megaGetCmd, lookErrGet)
-		return fmt.Errorf("command '%s' not found in PATH for get operation: %w", megaGetCmd, lookErrGet)
-	}
-	log.Printf("Debug: Using '%s' for get operation.", foundMegaGetPath)
+	// Determine path for megaget command
+	var foundMegaGetPath string
+	log.Printf("Debug: Attempting to find '%s' in PATH for Go process (for get operation using exec.LookPath)...", megaGetCmd)
+	pathViaLookPathGet, lookErrGet := exec.LookPath(megaGetCmd)
+	if lookErrGet == nil {
+		log.Printf("Debug: Command '%s' found by LookPath at: '%s' for get operation. This path will be used.", megaGetCmd, pathViaLookPathGet)
+		foundMegaGetPath = pathViaLookPathGet
+	} else {
+		log.Printf("Debug: Command '%s' not found in PATH using exec.LookPath for get operation: %v", megaGetCmd, lookErrGet)
+		currentPath := os.Getenv("PATH")
+		log.Printf("Debug: Current PATH for Go process (get op): %s", currentPath)
 
-	getCmd := exec.CommandContext(ctxGet, foundMegaGetPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", remoteFilePathFull, "--path", targetDir)
-	getOutBytes, getErr := getCmd.CombinedOutput()
+		fallbackPath := filepath.Join(megaCmdFallbackDir, megaGetCmd)
+		log.Printf("Debug: Attempting fallback for '%s' (get op) at known location: %s", megaGetCmd, fallbackPath)
+		if _, statErr := os.Stat(fallbackPath); statErr == nil {
+			log.Printf("Debug: Command '%s' (get op) successfully found at fallback location: '%s'. This path will be used.", megaGetCmd, fallbackPath)
+			foundMegaGetPath = fallbackPath
+		} else {
+			log.Printf("Debug: Command '%s' (get op) also not found or not executable at fallback location '%s': %v", megaGetCmd, fallbackPath, statErr)
+			return fmt.Errorf("command '%s' (for get op) not found: LookPath error (%w), and fallback '%s' also unusable (stat error: %v)",
+				megaGetCmd, lookErrGet, fallbackPath, statErr)
+		}
+	}
+	log.Printf("Debug: Using command '%s' (resolved to '%s') for get operation.", megaGetCmd, foundMegaGetPath)
+
+	getCmdObj := exec.CommandContext(ctxGet, foundMegaGetPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", remoteFilePathFull, "--path", targetDir)
+	// Reuse homeEnv from ls command
+	getCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
+	getOutBytes, getErr := getCmdObj.CombinedOutput()
 
 	if ctxGet.Err() == context.DeadlineExceeded {
 		log.Printf("ERROR: '%s' command timed out for %s after %v. Output: %s", foundMegaGetPath, latestFilename, megaCmdTimeout, string(getOutBytes))
@@ -249,7 +278,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("failed to download '%s' with '%s': %v. Output: %s", remoteFilePathFull, foundMegaGetPath, getErr, getOut)
 	}
 	if strings.Contains(getOut, "Unable to connect to service") || strings.Contains(getOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get: %s", foundMegaGetPath, getOut)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get: %s. Ensure mega-cmd-server is running and accessible by user '%s' with HOME='%s'", foundMegaGetPath, getOut, os.Getenv("USER"), homeEnv)
 	}
 
 	if _, statErr := os.Stat(tempDownloadPath); os.IsNotExist(statErr) {
@@ -267,14 +296,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	return nil
 }
 
-// --- downloadAndStoreMetrics, downloadMetricsPeriodically, parseProductMetricsData ---
-// --- performOptimizationCycleNow, runSingleOptimizationAndUpdateResults, optimizePeriodically ---
-// --- HTTP Handlers, main() ---
-// (These functions remain the same as the previous complete main.go version,
-// ensure they are present in your actual main.go file.
-// Remember to have HypixelAPIResponse, ProductMetrics, OptimizedItemResult types
-// and functions like getApiResponse, BAZAAR_ID, RunFullOptimization
-// defined in their respective api.go, metrics.go, optimizer.go, utils.go files)
 func downloadAndStoreMetrics() {
 	log.Println("downloadAndStoreMetrics: Initiating metrics download...")
 	tempMetricsFilename := filepath.Join(os.TempDir(), fmt.Sprintf("metrics_%d.downloading.tmp", time.Now().UnixNano()))
@@ -320,7 +341,7 @@ func downloadAndStoreMetrics() {
 		log.Println(newStatus)
 		return
 	}
-	var tempMetricsSlice []ProductMetrics
+	var tempMetricsSlice []ProductMetrics // This type should come from metrics.go
 	if jsonErr := json.Unmarshal(data, &tempMetricsSlice); jsonErr != nil {
 		newStatus := fmt.Sprintf("Error: downloaded metrics data was NOT A VALID JSON ARRAY of ProductMetrics at %s: %v. Body(first 200): %.200s", lastMetricsDownloadTime.Format(time.RFC3339), jsonErr, string(data))
 		metricsDownloadStatusMutex.Lock()
@@ -373,7 +394,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 		log.Println("parseProductMetricsData: jsonData is '{}', which cannot be unmarshaled into []ProductMetrics.")
 		return nil, fmt.Errorf("cannot unmarshal JSON object into []ProductMetrics")
 	}
-	var productMetricsSlice []ProductMetrics
+	var productMetricsSlice []ProductMetrics // This type should come from metrics.go
 	if err := json.Unmarshal(jsonData, &productMetricsSlice); err != nil {
 		sample := string(jsonData)
 		if len(sample) > 200 {
@@ -389,7 +410,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 			skippedCount++
 			continue
 		}
-		normalizedID := BAZAAR_ID(metric.ProductID)
+		normalizedID := BAZAAR_ID(metric.ProductID) // This function should come from utils.go
 		metric.ProductID = normalizedID
 		productMetricsMap[normalizedID] = metric
 	}
@@ -400,7 +421,7 @@ func parseProductMetricsData(jsonData []byte) (map[string]ProductMetrics, error)
 	return productMetricsMap, nil
 }
 
-func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiResp *HypixelAPIResponse) ([]byte, []byte, error) {
+func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiResp *HypixelAPIResponse) ([]byte, []byte, error) { // HypixelAPIResponse from api.go
 	runStartTime := time.Now()
 	log.Println("performOptimizationCycleNow: Starting new optimization cycle...")
 	if apiResp == nil || apiResp.Products == nil {
@@ -423,7 +444,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 	if len(itemIDs) == 0 {
 		log.Println("performOptimizationCycleNow: No item IDs from API response to optimize.")
 		emptySummary := OptimizationSummary{RunTimestamp: runStartTime.Format(time.RFC3339Nano), APILastUpdatedTimestamp: apiLastUpdatedStr, TotalItemsConsidered: 0, ItemsSuccessfullyCalculated: 0, ItemsWithCalculationErrors: 0, MaxAllowedCycleTimeSecs: toJSONFloat64(0), MaxInitialSearchQuantity: toJSONFloat64(0)}
-		emptyOutput := OptimizationRunOutput{Summary: emptySummary, Results: []OptimizedItemResult{}}
+		emptyOutput := OptimizationRunOutput{Summary: emptySummary, Results: []OptimizedItemResult{}} // OptimizedItemResult from optimizer.go
 		mainJSON, _ := json.MarshalIndent(emptyOutput, "", "  ")
 		return mainJSON, []byte("[]"), nil
 	}
@@ -444,7 +465,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 		maxInitialSearchQtyRaw        = 1000000.0
 	)
 	log.Printf("performOptimizationCycleNow: Parameters - MaxCycleTime: %.0fs, MaxInitialSearchQty: %.0f, ChunkSize: %d, Pause: %v", maxAllowedCycleTimePerItemRaw, maxInitialSearchQtyRaw, itemsPerChunk, pauseBetweenChunks)
-	var allOptimizedResults []OptimizedItemResult
+	var allOptimizedResults []OptimizedItemResult // OptimizedItemResult from optimizer.go
 	for i := 0; i < len(itemIDs); i += itemsPerChunk {
 		end := i + itemsPerChunk
 		if end > len(itemIDs) {
@@ -455,6 +476,7 @@ func performOptimizationCycleNow(productMetrics map[string]ProductMetrics, apiRe
 			continue
 		}
 		log.Printf("performOptimizationCycleNow: Optimizing chunk %d/%d (items %d to %d of %d total)", (i/itemsPerChunk)+1, (len(itemIDs)+itemsPerChunk-1)/itemsPerChunk, i, end-1, len(itemIDs))
+		// RunFullOptimization should come from optimizer.go
 		chunkResults := RunFullOptimization(currentChunkItemIDs, maxAllowedCycleTimePerItemRaw, apiResp, productMetrics, itemFilesDir, maxInitialSearchQtyRaw)
 		allOptimizedResults = append(allOptimizedResults, chunkResults...)
 		if end < len(itemIDs) && pauseBetweenChunks > 0 {
@@ -533,7 +555,7 @@ func runSingleOptimizationAndUpdateResults() {
 		log.Println(newStatus)
 		return
 	}
-	apiResp, apiErr := getApiResponse()
+	apiResp, apiErr := getApiResponse() // This function should come from api.go
 	if apiErr != nil {
 		newStatus := fmt.Sprintf("Optimization skipped at %s: API data load failed: %v", time.Now().Format(time.RFC3339), apiErr)
 		optimizationStatusMutex.Lock()
@@ -670,14 +692,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	isOptimizingMutex.Lock()
 	currentIsOptimizing := isOptimizing
 	isOptimizingMutex.Unlock()
-	apiCacheMutex.RLock()
+	apiCacheMutex.RLock() // apiCacheMutex from api.go
 	apiCacheSt := "OK"
-	if apiFetchErr != nil {
+	if apiFetchErr != nil { // apiFetchErr from api.go
 		apiCacheSt = fmt.Sprintf("Error: %v", apiFetchErr)
 	}
-	apiLF := lastAPIFetchTime
+	apiLF := lastAPIFetchTime // lastAPIFetchTime from api.go
 	apiCLU := int64(0)
-	if apiResponseCache != nil {
+	if apiResponseCache != nil { // apiResponseCache from api.go
 		apiCLU = apiResponseCache.LastUpdated
 	}
 	apiCacheMutex.RUnlock()
@@ -735,7 +757,7 @@ func main() {
 	metricsDataMutex.Lock()
 	initialMetricsBytes, err := os.ReadFile(metricsFilename)
 	if err == nil && len(initialMetricsBytes) > 0 {
-		var tempMetricsSlice []ProductMetrics
+		var tempMetricsSlice []ProductMetrics // This type should come from metrics.go
 		if parseErr := json.Unmarshal(initialMetricsBytes, &tempMetricsSlice); parseErr == nil {
 			latestMetricsData = initialMetricsBytes
 			log.Printf("Main: Successfully loaded initial metrics from %s (%d bytes)", metricsFilename, len(initialMetricsBytes))
