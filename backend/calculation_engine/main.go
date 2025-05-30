@@ -38,7 +38,7 @@ func toJSONFloat64(v float64) JSONFloat64 {
 	return JSONFloat64(v)
 }
 
-// calculation_engine/main.go Constants
+// --- Constants ---
 const (
 	metricsFilename             = "latest_metrics.json"
 	itemFilesDir                = "dependencies/items"
@@ -46,8 +46,8 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second
 	initialOptimizationDelay    = 30 * time.Second
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "/usr/local/bin/megals"  // Use absolute path
-	megaGetCmd                  = "/usr/local/bin/megaget" // Use absolute path
+	megaLsCmd                   = "megals"  // Rely on PATH
+	megaGetCmd                  = "megaget" // Rely on PATH
 )
 
 // --- Struct Definitions for main.go orchestration ---
@@ -75,24 +75,19 @@ type FailedItemDetail struct {
 var (
 	latestOptimizerResultsJSON []byte
 	optimizerResultsMutex      sync.RWMutex
-
-	latestFailedItemsJSON []byte
-	failedItemsMutex      sync.RWMutex
-
-	lastOptimizationStatus  string
-	lastOptimizationTime    time.Time
-	optimizationStatusMutex sync.RWMutex
-
+	latestFailedItemsJSON      []byte
+	failedItemsMutex           sync.RWMutex
+	lastOptimizationStatus     string
+	lastOptimizationTime       time.Time
+	optimizationStatusMutex    sync.RWMutex
 	latestMetricsData          []byte
 	metricsDataMutex           sync.RWMutex
 	lastMetricsDownloadStatus  string
 	lastMetricsDownloadTime    time.Time
 	metricsDownloadStatusMutex sync.RWMutex
-
-	isOptimizing      bool
-	isOptimizingMutex sync.Mutex
-
-	metricsFileRegex = regexp.MustCompile(`^metrics_(\d{14})\.json$`)
+	isOptimizing               bool
+	isOptimizingMutex          sync.Mutex
+	metricsFileRegex           = regexp.MustCompile(`^metrics_(\d{14})\.json$`)
 )
 
 func downloadMetricsFromMega(localTargetFilename string) error {
@@ -101,7 +96,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	megaRemoteFolderPath := os.Getenv("MEGA_METRICS_FOLDER_PATH")
 
 	if megaEmail == "" || megaPassword == "" || megaRemoteFolderPath == "" {
-		log.Println("downloadMetricsFromMega: MEGA environment variables (MEGA_EMAIL, MEGA_PWD, MEGA_METRICS_FOLDER_PATH) not fully set. Skipping MEGA download.")
+		log.Println("downloadMetricsFromMega: MEGA environment variables not fully set. Skipping MEGA download.")
 		if _, err := os.Stat(metricsFilename); !os.IsNotExist(err) {
 			log.Printf("downloadMetricsFromMega: Using existing local cache '%s' as fallback.", metricsFilename)
 			data, readErr := os.ReadFile(metricsFilename)
@@ -124,51 +119,58 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 
-	// Debug: Check if megals can be found by LookPath
-	log.Printf("Debug: Attempting to find '%s' in PATH...", megaLsCmd)
+	log.Printf("Debug: Attempting to find '%s' in PATH for Go process...", megaLsCmd)
 	foundMegaLsPath, lookErr := exec.LookPath(megaLsCmd)
 	if lookErr != nil {
 		log.Printf("Debug: '%s' not found in PATH by exec.LookPath: %v", megaLsCmd, lookErr)
 		currentPath := os.Getenv("PATH")
 		log.Printf("Debug: Current PATH for Go process: %s", currentPath)
-		// Check common locations directly as a fallback debug step
-		if _, statErr := os.Stat("/usr/bin/" + megaLsCmd); statErr == nil {
-			log.Printf("Debug: Found at /usr/bin/%s. Consider using absolute path if LookPath fails.", megaLsCmd)
-		} else if _, statErr := os.Stat("/usr/local/bin/" + megaLsCmd); statErr == nil {
-			log.Printf("Debug: Found at /usr/local/bin/%s. Consider using absolute path if LookPath fails.", megaLsCmd)
+		// Fallback: Check common absolute paths explicitly for more debug info
+		commonPaths := []string{"/usr/local/bin/" + megaLsCmd, "/usr/bin/" + megaLsCmd, "/bin/" + megaLsCmd, "/app/" + megaLsCmd}
+		foundAtAbs := false
+		for _, p := range commonPaths {
+			if _, statErr := os.Stat(p); statErr == nil {
+				log.Printf("Debug: Found '%s' at absolute path: %s", megaLsCmd, p)
+				foundAtAbs = true
+				// If you want to use this found path, you could assign it to a variable here
+				// e.g., megaLsCmd = p // but megaLsCmd is a const, so this needs different handling
+				break
+			}
+		}
+		if !foundAtAbs {
+			log.Printf("Debug: '%s' also not found at common absolute paths.", megaLsCmd)
 		}
 		return fmt.Errorf("command '%s' not found in PATH via LookPath: %w", megaLsCmd, lookErr)
 	}
-	log.Printf("Debug: Command '%s' found by LookPath at: %s. Proceeding with execution.", megaLsCmd, foundMegaLsPath)
+	log.Printf("Debug: Command '%s' found by LookPath at: '%s'. Proceeding with execution.", megaLsCmd, foundMegaLsPath)
 
-	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, megaLsCmd)
+	log.Printf("Listing files in MEGA folder: %s (using '%s')", megaRemoteFolderPath, foundMegaLsPath) // Use foundMegaLsPath
 	ctxLs, cancelLs := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelLs()
 
-	// Use megaLsCmd which should now be just "megals"
-	lsCmd := exec.CommandContext(ctxLs, megaLsCmd, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
+	lsCmd := exec.CommandContext(ctxLs, foundMegaLsPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
 	lsOutBytes, lsErr := lsCmd.CombinedOutput()
 
 	if ctxLs.Err() == context.DeadlineExceeded {
-		log.Printf("ERROR: '%s' command timed out after %v. Output: %s", megaLsCmd, megaCmdTimeout, string(lsOutBytes))
-		return fmt.Errorf("'%s' command timed out. Output: %s", megaLsCmd, string(lsOutBytes))
+		log.Printf("ERROR: '%s' command timed out after %v. Output: %s", foundMegaLsPath, megaCmdTimeout, string(lsOutBytes))
+		return fmt.Errorf("'%s' command timed out. Output: %s", foundMegaLsPath, string(lsOutBytes))
 	}
 	lsOut := string(lsOutBytes)
 	if len(lsOut) > 1000 {
-		log.Printf("downloadMetricsFromMega: '%s' Output (first 1000 chars of %d): %.1000s...", megaLsCmd, len(lsOut), lsOut)
+		log.Printf("downloadMetricsFromMega: '%s' Output (first 1000 chars of %d): %.1000s...", foundMegaLsPath, len(lsOut), lsOut)
 	} else {
-		log.Printf("downloadMetricsFromMega: '%s' Output: %s", megaLsCmd, lsOut)
+		log.Printf("downloadMetricsFromMega: '%s' Output: %s", foundMegaLsPath, lsOut)
 	}
 
 	if lsErr != nil {
 		if exitErr, ok := lsErr.(*exec.ExitError); ok {
-			log.Printf("'%s' command exited with error: %v. Stderr: %s", megaLsCmd, lsErr, string(exitErr.Stderr))
-			return fmt.Errorf("'%s' command failed: %v. Stderr: %s. Full Output: %s", megaLsCmd, lsErr, string(exitErr.Stderr), lsOut)
+			log.Printf("'%s' command exited with error: %v. Stderr: %s", foundMegaLsPath, lsErr, string(exitErr.Stderr))
+			return fmt.Errorf("'%s' command failed: %v. Stderr: %s. Full Output: %s", foundMegaLsPath, lsErr, string(exitErr.Stderr), lsOut)
 		}
-		return fmt.Errorf("'%s' command failed: %v. Output: %s", megaLsCmd, lsErr, lsOut)
+		return fmt.Errorf("'%s' command failed: %v. Output: %s", foundMegaLsPath, lsErr, lsOut)
 	}
 	if strings.Contains(lsOut, "Unable to connect to service") || strings.Contains(lsOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue: %s", megaLsCmd, lsOut)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue: %s", foundMegaLsPath, lsOut)
 	}
 
 	var latestFilename string
@@ -202,7 +204,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 	if scanErr := scanner.Err(); scanErr != nil {
-		log.Printf("Warning: error scanning '%s' output: %v", megaLsCmd, scanErr)
+		log.Printf("Warning: error scanning '%s' output: %v", foundMegaLsPath, scanErr)
 	}
 
 	if !foundFile {
@@ -223,29 +225,35 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	ctxGet, cancelGet := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelGet()
 
-	// Use megaGetCmd which should now be just "megaget"
-	getCmd := exec.CommandContext(ctxGet, megaGetCmd, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", remoteFilePathFull, "--path", targetDir)
+	foundMegaGetPath, lookErrGet := exec.LookPath(megaGetCmd)
+	if lookErrGet != nil {
+		log.Printf("Debug: '%s' not found in PATH by exec.LookPath for get operation: %v", megaGetCmd, lookErrGet)
+		return fmt.Errorf("command '%s' not found in PATH for get operation: %w", megaGetCmd, lookErrGet)
+	}
+	log.Printf("Debug: Using '%s' for get operation.", foundMegaGetPath)
+
+	getCmd := exec.CommandContext(ctxGet, foundMegaGetPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", remoteFilePathFull, "--path", targetDir)
 	getOutBytes, getErr := getCmd.CombinedOutput()
 
 	if ctxGet.Err() == context.DeadlineExceeded {
-		log.Printf("ERROR: '%s' command timed out for %s after %v. Output: %s", megaGetCmd, latestFilename, megaCmdTimeout, string(getOutBytes))
-		return fmt.Errorf("'%s' command timed out for %s. Output: %s", megaGetCmd, latestFilename, string(getOutBytes))
+		log.Printf("ERROR: '%s' command timed out for %s after %v. Output: %s", foundMegaGetPath, latestFilename, megaCmdTimeout, string(getOutBytes))
+		return fmt.Errorf("'%s' command timed out for %s. Output: %s", foundMegaGetPath, latestFilename, string(getOutBytes))
 	}
 	getOut := string(getOutBytes)
-	log.Printf("downloadMetricsFromMega: '%s' Output (first 500 chars): %.500s", megaGetCmd, getOut)
+	log.Printf("downloadMetricsFromMega: '%s' Output (first 500 chars): %.500s", foundMegaGetPath, getOut)
 	if getErr != nil {
 		if exitErr, ok := getErr.(*exec.ExitError); ok {
-			log.Printf("'%s' command exited with error: %v. Stderr: %s", megaGetCmd, getErr, string(exitErr.Stderr))
-			return fmt.Errorf("failed to download '%s' with '%s': %v. Stderr: %s. Full Output: %s", remoteFilePathFull, megaGetCmd, getErr, string(exitErr.Stderr), getOut)
+			log.Printf("'%s' command exited with error: %v. Stderr: %s", foundMegaGetPath, getErr, string(exitErr.Stderr))
+			return fmt.Errorf("failed to download '%s' with '%s': %v. Stderr: %s. Full Output: %s", remoteFilePathFull, foundMegaGetPath, getErr, string(exitErr.Stderr), getOut)
 		}
-		return fmt.Errorf("failed to download '%s' with '%s': %v. Output: %s", remoteFilePathFull, megaGetCmd, getErr, getOut)
+		return fmt.Errorf("failed to download '%s' with '%s': %v. Output: %s", remoteFilePathFull, foundMegaGetPath, getErr, getOut)
 	}
 	if strings.Contains(getOut, "Unable to connect to service") || strings.Contains(getOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get: %s", megaGetCmd, getOut)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get: %s", foundMegaGetPath, getOut)
 	}
 
 	if _, statErr := os.Stat(tempDownloadPath); os.IsNotExist(statErr) {
-		return fmt.Errorf("'%s' command appeared to succeed for '%s', but downloaded file '%s' is missing. Output: %s", megaGetCmd, latestFilename, tempDownloadPath, getOut)
+		return fmt.Errorf("'%s' command appeared to succeed for '%s', but downloaded file '%s' is missing. Output: %s", foundMegaGetPath, latestFilename, tempDownloadPath, getOut)
 	}
 
 	if localTargetFilename != tempDownloadPath {
@@ -776,26 +784,3 @@ func main() {
 		log.Fatalf("FATAL: Failed to start HTTP server on %s: %v", addr, err)
 	}
 }
-
-// Ensure these types are defined in their respective files (api.go, metrics.go, optimizer.go, utils.go)
-// and not duplicated in main.go
-//
-// In api.go:
-// type OrderSummary struct { ... }
-// type QuickStatus struct { ... }
-// type HypixelProduct struct { ... }
-// type HypixelAPIResponse struct { ... }
-// var apiResponseCache *HypixelAPIResponse // (and other api related globals)
-// func fetchBazaarData() error { ... }
-// func getApiResponse() (*HypixelAPIResponse, error) { ... }
-//
-// In metrics.go:
-// type ProductMetrics struct { ... }
-//
-// In optimizer.go:
-// type OptimizedItemResult struct { ... }
-// func RunFullOptimization(...) []OptimizedItemResult { ... }
-//
-// In utils.go:
-// func BAZAAR_ID(id string) string { ... }
-// func dlog(format string, args ...interface{}) { ... } // (if used)
