@@ -95,86 +95,133 @@ var (
 )
 
 func downloadMetricsFromMega(localTargetFilename string) error {
-	// ── 1) Read credentials + remote folder path from environment ─────────────
+	// ── 1) Read required environment variables ─────────────────────────────────
 	megaEmail := os.Getenv("MEGA_EMAIL")
 	megaPassword := os.Getenv("MEGA_PWD")
 	megaRemoteFolderPath := os.Getenv("MEGA_METRICS_FOLDER_PATH") // e.g. "/remote_metrics"
+
 	if megaEmail == "" || megaPassword == "" || megaRemoteFolderPath == "" {
-		return fmt.Errorf("environment variables MEGA_EMAIL, MEGA_PWD, or MEGA_METRICS_FOLDER_PATH are not set")
+		return fmt.Errorf("MEGA_EMAIL, MEGA_PWD, or MEGA_METRICS_FOLDER_PATH is not set")
 	}
 
-	// ── 2) Ensure HOME is set so MEGAcmd can write $HOME/.megaCmd ─────────────
+	// ── 2) Ensure HOME is set so MEGAcmd can store its session in $HOME/.megaCmd ──
 	homeEnv := os.Getenv("HOME")
 	if homeEnv == "" {
-		// On most containers (e.g. Koyeb), "/home/appuser" is the default home directory.
+		// On most Koyeb containers, "/home/appuser" is the default home directory.
 		homeEnv = "/home/appuser"
 		log.Printf("DEBUG: HOME not set; defaulting to %s", homeEnv)
 	}
 
-	// ── 3) Kill any existing mega-cmd-server (ignore errors if none) ───────────
+	// ── 3) Kill any existing mega-cmd-server (ignore errors if none) ────────────
+	// We call "mega-cmd ipc killserver" by name, trusting that "mega-cmd" is on PATH.
 	exec.Command("mega-cmd", "ipc", "killserver").Run()
-	time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second) // brief pause to let it shut down
 
-	// ── 4) Perform a fresh login to MEGA ───────────────────────────────────────
-	loginCmd := exec.Command("mega-login",
-		megaEmail, megaPassword, "--no-ask-password",
-	)
+	// ── 4) Log in to MEGA ──────────────────────────────────────────────────────
+	// Note: We do NOT pass "--no-ask-password" here, because your C++ logs showed that
+	//       "mega-login <email> <password>" is the correct form.
+	loginCmd := exec.Command("mega-login", megaEmail, megaPassword)
 	loginCmd.Env = append(os.Environ(), "HOME="+homeEnv)
+
 	outLogin, errLogin := loginCmd.CombinedOutput()
 	if errLogin != nil {
-		return fmt.Errorf("mega-login failed: %v\n%s", errLogin, string(outLogin))
+		// Show both the error and any stdout/stderr from mega-login
+		return fmt.Errorf(
+			"mega-login failed (exit %v):\n%s",
+			errLogin,
+			string(outLogin),
+		)
 	}
 	// Give MEGAcmd a few seconds to finalize the session on disk
 	time.Sleep(5 * time.Second)
 
-	// ── 5) (Optional) Double-check we’re actually logged in ────────────────────
+	// ── 5) Verify we’re logged in (optional but recommended) ────────────────────
 	whoamiCmd := exec.Command("mega-whoami")
 	whoamiCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outWhoami, errWhoami := whoamiCmd.CombinedOutput()
 	if errWhoami != nil {
-		return fmt.Errorf("mega-whoami failed: %v\n%s", errWhoami, string(outWhoami))
+		return fmt.Errorf(
+			"mega-whoami failed: %v\nOutput: %s",
+			errWhoami,
+			string(outWhoami),
+		)
 	}
 	loggedInAs := strings.TrimSpace(string(outWhoami))
 	if !strings.EqualFold(loggedInAs, megaEmail) {
-		return fmt.Errorf("mega-whoami did not return expected email; got: %q", loggedInAs)
+		return fmt.Errorf("mega-whoami returned %q, expected %q", loggedInAs, megaEmail)
 	}
 
-	// ── 6) List the remote folder, forcing “non-interactive” so it prints + exits ─
+	// ── 6) Ensure the remote folder exists: mega-mkdir -p <folder> ─────────────
+	// We allow exit code 0 (created) or 54 (“already exists”), but anything else is fatal.
+	mkdirCmd := exec.Command("mega-mkdir", "-p", megaRemoteFolderPath)
+	mkdirCmd.Env = append(os.Environ(), "HOME="+homeEnv)
+	outMkdir, errMkdir := mkdirCmd.CombinedOutput()
+	if errMkdir != nil {
+		// If exit code is 54, MEGAcmd often means “folder already exists.” Let’s check:
+		if exitErr, ok := errMkdir.(*exec.ExitError); ok && exitErr.ExitCode() == 54 {
+			// In many MEGAcmd versions, “exit code 54” + “already exists” text is expected.
+			// We’ll peek at stdout/stderr to confirm “already exists.”
+			lower := strings.ToLower(string(outMkdir))
+			if strings.Contains(lower, "already exists") {
+				log.Printf("DEBUG: remote folder %q already exists", megaRemoteFolderPath)
+			} else {
+				return fmt.Errorf(
+					"mega-mkdir reported exit code 54 but did not say \"already exists\". Full output:\n%s",
+					string(outMkdir),
+				)
+			}
+		} else {
+			return fmt.Errorf(
+				"mega-mkdir -p %s failed (exit %v):\n%s",
+				megaRemoteFolderPath,
+				errMkdir,
+				string(outMkdir),
+			)
+		}
+	} else {
+		// exit code 0 → created successfully (or was immediate no-op). Fine.
+		log.Printf("DEBUG: mega-mkdir succeeded: %s", string(outMkdir))
+	}
+
+	// ── 7) List the remote folder non-interactively ─────────────────────────────
+	// We use “megals --non-interactive” so it prints just the filenames and exits immediately.
 	lsCmd := exec.Command("megals",
-		"--no-ask-password",
 		"--username", megaEmail,
 		"--password", megaPassword,
-		"--non-interactive",  // critical: do not drop into an interactive prompt
-		megaRemoteFolderPath, // e.g. "/remote_metrics"
+		"--non-interactive", // critical: do not open an interactive prompt
+		megaRemoteFolderPath,
 	)
 	lsCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outLs, errLs := lsCmd.CombinedOutput()
 	if errLs != nil {
-		return fmt.Errorf("megals failed: %v\n%s", errLs, string(outLs))
+		return fmt.Errorf(
+			"megals failed (exit %v):\n%s",
+			errLs,
+			string(outLs),
+		)
 	}
 	lsOut := string(outLs)
 
-	// ── 7) Parse “metrics_<YYYYMMDDhhmmss>.json” lines ─────────────────────────
+	// ── 8) Parse “metrics_<YYYYMMDDhhmmss>.json” lines to find the newest ────────
 	scanner := bufio.NewScanner(strings.NewReader(lsOut))
 	var latestFilename string
 	var latestTimestamp time.Time
-	timestampLayout := "20060102150405" // the “YYYYMMDDhhmmss” format
+	layout := "20060102150405" // YYYYMMDDhhmmss
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
-		// Expect exactly "metrics_<14 digits>.json"
+		// We expect exactly "metrics_<14 digits>.json"
 		if !strings.HasPrefix(line, "metrics_") || !strings.HasSuffix(line, ".json") {
 			continue
 		}
-		// Extract the timestamp portion
 		tsPart := strings.TrimSuffix(strings.TrimPrefix(line, "metrics_"), ".json")
 		if len(tsPart) != 14 {
 			continue
 		}
-		t, errParse := time.Parse(timestampLayout, tsPart)
+		t, errParse := time.Parse(layout, tsPart)
 		if errParse != nil {
 			continue
 		}
@@ -187,17 +234,18 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("WARNING: error scanning megals output: %v", scanErr)
 	}
 	if latestFilename == "" {
-		return fmt.Errorf("no metrics file found in %s; megals output:\n%s",
-			megaRemoteFolderPath, lsOut)
+		return fmt.Errorf(
+			"no metrics file found in %s; megals output:\n%s",
+			megaRemoteFolderPath, lsOut,
+		)
 	}
 
-	// ── 8) Download that single “latestFilename” ─────────────────────────────────
+	// ── 9) Download that single “latestFilename” with megaget ────────────────────
 	remoteFile := strings.TrimRight(megaRemoteFolderPath, "/") + "/" + latestFilename
 	targetDir := filepath.Dir(localTargetFilename)
 	tempPath := filepath.Join(targetDir, latestFilename)
 
 	getCmd := exec.Command("megaget",
-		"--no-ask-password",
 		"--username", megaEmail,
 		"--password", megaPassword,
 		remoteFile,
@@ -206,13 +254,23 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	getCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outGet, errGet := getCmd.CombinedOutput()
 	if errGet != nil {
-		return fmt.Errorf("megaget failed: %v\n%s", errGet, string(outGet))
+		return fmt.Errorf(
+			"megaget failed (exit %v) for %s:\n%s",
+			errGet,
+			remoteFile,
+			string(outGet),
+		)
 	}
 
-	// ── 9) Rename/move the downloaded file to the desired target name ───────────
+	// ── 10) Rename the downloaded file to localTargetFilename ──────────────────
 	if tempPath != localTargetFilename {
 		if errRename := os.Rename(tempPath, localTargetFilename); errRename != nil {
-			return fmt.Errorf("failed to rename %s → %s: %v", tempPath, localTargetFilename, errRename)
+			return fmt.Errorf(
+				"failed to rename %s → %s: %v",
+				tempPath,
+				localTargetFilename,
+				errRename,
+			)
 		}
 	}
 
