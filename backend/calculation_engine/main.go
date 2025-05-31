@@ -171,11 +171,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	// ── 7) List the remote folder ───────────────────────────────────────────────
 	// Note: We omit any “--non-interactive” flag; on your container, “megals <folder>” simply prints and exits.
-	lsCmd := exec.Command("megals",
-		"--username", megaEmail,
-		"--password", megaPassword,
-		megaRemoteFolderPath,
-	)
+	lsCmd := exec.Command("megals", megaRemoteFolderPath) // e.g. "/remote_metrics"
 	lsCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outLs, errLs := lsCmd.CombinedOutput()
 	lsOutput := string(outLs)
