@@ -45,8 +45,8 @@ const (
 	initialMetricsDownloadDelay = 15 * time.Second // Shortened for testing, can revert
 	initialOptimizationDelay    = 30 * time.Second // Shortened for testing, can revert
 	timestampFormat             = "20060102150405"
-	megaLsCmd                   = "megals"
-	megaGetCmd                  = "megaget"
+	megaLsCmd                   = "mega-ls"
+	megaGetCmd                  = "mega-get"
 	megaCmdFallbackDir          = "/usr/local/bin/"
 )
 
@@ -172,7 +172,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	var lsOutput, folderInUse string
 	for _, folder := range candidates {
-		out, err := runRawMega("megals", folder)
+		out, err := runRawMega("mega-ls", folder)
 		if err == nil && strings.Contains(out, "metrics_") {
 			lsOutput = out
 			folderInUse = folder
@@ -182,11 +182,11 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	if folderInUse == "" {
 		return fmt.Errorf(
-			"no metrics file found under any of %v; last megals output:\n%s",
+			"no metrics file found under any of %v; last mega-ls output:\n%s",
 			candidates, lsOutput,
 		)
 	}
-	log.Printf("DEBUG: using MEGA folder path %q; `megals` returned:\n%s", folderInUse, lsOutput)
+	log.Printf("DEBUG: using MEGA folder path %q; `mega-ls` returned:\n%s", folderInUse, lsOutput)
 
 	// ── 7) Parse the listing for the newest “metrics_<YYYYMMDDhhmmss>.json” ─────
 	var latestFilename string
@@ -208,7 +208,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Printf("WARNING: error scanning megals output: %v", err)
+		log.Printf("WARNING: error scanning mega-ls output: %v", err)
 	}
 	if latestFilename == "" {
 		return fmt.Errorf(
@@ -217,15 +217,15 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		)
 	}
 
-	// ── 8) Download via “megaget” ───────────────────────────────────────────────
+	// ── 8) Download via “mega-get” ───────────────────────────────────────────────
 	remoteFile := filepath.Join(folderInUse, latestFilename)
 	targetDir := filepath.Dir(localTargetFilename)
 	tempPath := filepath.Join(targetDir, latestFilename)
 
 	log.Printf("DEBUG: downloading %q → %q", remoteFile, tempPath)
-	getOut, getErr := runRawMega("megaget", remoteFile, "--path", targetDir)
+	getOut, getErr := runRawMega("mega-get", remoteFile, "--path", targetDir)
 	if getErr != nil {
-		return fmt.Errorf("megaget %q failed: %v\nOutput:\n%s", remoteFile, getErr, getOut)
+		return fmt.Errorf("mega-get %q failed: %v\nOutput:\n%s", remoteFile, getErr, getOut)
 	}
 
 	// ── 9) Rename the downloaded file into place ────────────────────────────────
