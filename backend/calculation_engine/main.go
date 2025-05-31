@@ -150,37 +150,18 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 	time.Sleep(5 * time.Second) // let MEGAcmd write session file
 
-	// ── 6) Parse mega-whoami output, ignoring banner lines ──────────────────────
-	whoamiCmd := exec.Command("mega-whoami", "--non-interactive")
+	// ── 6) Use "mega-whoami --script" to get exactly the email ─────────────────
+	whoamiCmd := exec.Command("mega-whoami", "--script")
 	whoamiCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outWhoamiBytes, errWhoami := whoamiCmd.CombinedOutput()
 	if errWhoami != nil {
-		return fmt.Errorf("mega-whoami failed: %v\nOutput:\n%s", errWhoami, string(outWhoamiBytes))
+		return fmt.Errorf("mega-whoami --script failed: %v\nOutput:\n%s", errWhoami, string(outWhoamiBytes))
 	}
-	whoamiOutput := string(outWhoamiBytes)
-
-	var foundEmail string
-	scanner := bufio.NewScanner(strings.NewReader(whoamiOutput))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Skip blank lines or lines that look like the banner:
-		if line == "" {
-			continue
-		}
-		if strings.HasPrefix(line, ".") || strings.HasPrefix(line, "|") ||
-			strings.Contains(line, "Welcome to MEGAcmd") {
-			continue
-		}
-		// Any remaining non-empty, non-banner line is assumed to be the email
-		foundEmail = line
-		break
-	}
-	if scanErr := scanner.Err(); scanErr != nil {
-		log.Printf("WARNING: error scanning mega-whoami output: %v", scanErr)
-	}
+	foundEmail := strings.TrimSpace(string(outWhoamiBytes))
 	if !strings.EqualFold(foundEmail, megaEmail) {
 		return fmt.Errorf("mega-whoami returned %q, expected %q", foundEmail, megaEmail)
 	}
+	log.Printf("DEBUG: mega-whoami confirmed email: %s", foundEmail)
 
 	// ── 7) Ensure the remote folder exists: mega-mkdir -p <remoteFolder> ───────
 	mkdirCmd := exec.Command("mega-mkdir", "-p", megaRemoteFolderPath)
@@ -222,7 +203,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	var latestTimestamp time.Time
 	const timeLayout = "20060102150405" // “YYYYMMDDhhmmss”
 
-	scanner = bufio.NewScanner(strings.NewReader(lsOutput))
+	scanner := bufio.NewScanner(strings.NewReader(lsOutput))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
