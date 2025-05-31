@@ -173,7 +173,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	var lsOutput, folderInUse string
 	for _, folder := range candidates {
-		out, err := runCmd("megals", folder)
+		out, err := runCmd("mega-ls", folder)
 		if err == nil && strings.Contains(out, "metrics_") {
 			lsOutput = out
 			folderInUse = folder
