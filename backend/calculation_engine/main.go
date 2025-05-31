@@ -104,7 +104,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	if megaEmail == "" || megaPassword == "" || megaRemoteFolderPath == "" {
 		log.Println("downloadMetricsFromMega: MEGA environment variables not fully set. Skipping MEGA download.")
-		// ... (fallback logic as before) ...
 		if _, err := os.Stat(metricsFilename); !os.IsNotExist(err) {
 			log.Printf("downloadMetricsFromMega: Using existing local cache '%s' as fallback.", metricsFilename)
 			data, readErr := os.ReadFile(metricsFilename)
@@ -130,32 +129,63 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	homeEnv := os.Getenv("HOME")
 	if homeEnv == "" {
-		homeEnv = "/home/appuser" // Default for appuser in Docker
+		homeEnv = "/home/appuser"
 		log.Printf("Debug: HOME env not set, defaulting to %s for mega commands", homeEnv)
 	}
 
-	// --- Attempt to kill any existing mega-cmd-server ---
-	megaCmdBinPath := "/usr/bin/mega-cmd" // Based on Dockerfile ln -sf /usr/bin/mega-cmd ...
-	log.Printf("Debug downloadMetricsFromMega: Attempting '%s ipc killserver'...", megaCmdBinPath)
-	killCtx, killCancel := context.WithTimeout(context.Background(), 20*time.Second) // Timeout for killserver
+	megaCmdBinPath := "/usr/bin/mega-cmd" // Main binary path
 
+	// --- 1. Attempt to kill any existing mega-cmd-server ---
+	log.Printf("Debug downloadMetricsFromMega: Attempting '%s ipc killserver'...", megaCmdBinPath)
+	killCtx, killCancel := context.WithTimeout(context.Background(), 20*time.Second)
 	killCmdObj := exec.CommandContext(killCtx, megaCmdBinPath, "ipc", "killserver")
 	killCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
 	killOutBytes, killErr := killCmdObj.CombinedOutput()
-	killCancel() // Release context resources
-
+	killCancel()
 	if killErr != nil {
-		// This might not be fatal if server wasn't running, but log it.
 		log.Printf("Warning downloadMetricsFromMega: '%s ipc killserver' failed or server not running: %v. Output: %s", megaCmdBinPath, killErr, string(killOutBytes))
 	} else {
 		log.Printf("Debug downloadMetricsFromMega: '%s ipc killserver' successful or server was not running. Output: %s", megaCmdBinPath, string(killOutBytes))
-		// Optionally, add a small delay to ensure the old server process has fully exited if it was running.
-		// time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second) // Brief pause for server to stop
 	}
 	// --- End of killserver attempt ---
 
-	// The subsequent megals command (with credentials) should start a new server and log in.
+	// --- 2. Attempt explicit mega-login ---
+	log.Printf("Debug downloadMetricsFromMega: Attempting explicit '%s login'...", megaCmdBinPath)
+	loginCtx, loginCancel := context.WithTimeout(context.Background(), 45*time.Second) // Increased timeout for login
+	loginCmdObj := exec.CommandContext(loginCtx, megaCmdBinPath, "login",
+		megaEmail,
+		megaPassword,
+		"--no-ask-password")
+	loginCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
+	loginOutBytes, loginErr := loginCmdObj.CombinedOutput()
+	loginCancel()
 
+	loginOutput := string(loginOutBytes)
+	// Log the full login output for diagnostics
+	log.Printf("Debug downloadMetricsFromMega: Explicit login full output (Length %d):\n%s", len(loginOutput), loginOutput)
+
+	if loginErr != nil {
+		// An exit error from login is usually a failure.
+		log.Printf("ERROR downloadMetricsFromMega: Explicit '%s login' command failed: %v.", megaCmdBinPath, loginErr)
+		return fmt.Errorf("explicit mega-login command failed: %w. Full Output already logged.", loginErr)
+	}
+	// Check login output for common failure/problem indicators
+	if strings.Contains(loginOutput, "Still trying to log in") ||
+		strings.Contains(loginOutput, "Failed to log in") || // Add other known failure strings
+		strings.Contains(loginOutput, "Incorrect email and/or password") ||
+		strings.Contains(loginOutput, "problems contacting MEGA servers") {
+		log.Printf("ERROR downloadMetricsFromMega: Explicit login command output indicates login was not fully successful or encountered issues.")
+		return fmt.Errorf("explicit mega-login did not succeed cleanly. Full Output already logged.")
+	}
+	log.Printf("Debug downloadMetricsFromMega: Explicit '%s login' command executed (check output above for success details).", megaCmdBinPath)
+	// Assuming login success if no error and no explicit failure messages in output.
+	// A short pause might help ensure the session is fully active on the server.
+	log.Println("Debug downloadMetricsFromMega: Pausing for 3 seconds after login attempt...")
+	time.Sleep(3 * time.Second)
+	// --- End of explicit login ---
+
+	// --- 3. Proceed with megals ---
 	var foundMegaLsPath string
 	log.Printf("Debug: Attempting to find '%s' in PATH for Go process (using exec.LookPath)...", megaLsCmd)
 	pathViaLookPathLs, lookErrLs := exec.LookPath(megaLsCmd)
@@ -163,6 +193,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("Debug: Command '%s' found by LookPath at: '%s'. This path will be used.", megaLsCmd, pathViaLookPathLs)
 		foundMegaLsPath = pathViaLookPathLs
 	} else {
+		// ... (fallback logic for megals path, same as before) ...
 		log.Printf("Debug: Command '%s' not found in PATH using exec.LookPath: %v", megaLsCmd, lookErrLs)
 		currentPath := os.Getenv("PATH")
 		log.Printf("Debug: Current PATH for Go process: %s", currentPath)
@@ -182,6 +213,9 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	ctxLs, cancelLs := context.WithTimeout(context.Background(), megaCmdTimeout)
 	defer cancelLs()
 
+	// For megals *after* an explicit login, we might not need to pass credentials again if the session is active.
+	// However, MEGAcmd is designed so scriptable commands often re-assert credentials.
+	// Let's keep them for now for robustness, as the server might have restarted.
 	lsCmdObj := exec.CommandContext(ctxLs, foundMegaLsPath, "--username", megaEmail, "--password", megaPassword, "--no-ask-password", megaRemoteFolderPath)
 	lsCmdObj.Env = append(os.Environ(), "HOME="+homeEnv)
 	lsOutBytes, lsErr := lsCmdObj.CombinedOutput()
@@ -201,14 +235,16 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("'%s' command failed: %v. Full Output already logged.", foundMegaLsPath, lsErr)
 	}
 	if strings.Contains(lsOut, "Unable to connect to service") || strings.Contains(lsOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue. Ensure mega-cmd-server is running and accessible by user '%s' with HOME='%s'. Full Output already logged.", foundMegaLsPath, os.Getenv("USER"), homeEnv)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue. Full Output already logged.", foundMegaLsPath)
 	}
+	// If explicit login was successful, we expect `ls` to just list files or give a logged-in prompt.
+	// The "Resuming session / Still trying to log in" should ideally not appear now.
 
 	var latestFilename string
 	var latestTimestamp time.Time
 	foundFile := false
 
-	// --- SIMPLER PARSING LOGIC (as used in previous successful log analysis) ---
+	// --- SIMPLER PARSING LOGIC (adjusted for post-login scenario) ---
 	scanner := bufio.NewScanner(strings.NewReader(lsOut))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -217,19 +253,20 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		}
 		isBannerOrKnownNoise := strings.Contains(strings.ToUpper(line), "WRN:") ||
 			strings.Contains(strings.ToUpper(line), "ERR:") ||
-			strings.Contains(line, "[Initiating MEGAcmd server") ||
+			strings.Contains(line, "[Initiating MEGAcmd server") || // Should not happen if server already started by login
 			strings.Contains(line, "MEGAcmd!") ||
 			strings.HasPrefix(line, ".") ||
 			strings.HasPrefix(line, "|") ||
 			strings.HasPrefix(line, "`") ||
 			strings.Contains(line, "(CTRL+D) Exiting ...") ||
-			(strings.Contains(line, ":/$") && !strings.Contains(line, "metrics_")) || // Skip prompt unless it contains "metrics_"
-			// Additional specific messages to skip from recent logs:
-			strings.Contains(line, "Resuming session ...") ||
-			strings.Contains(line, "MEGAcmd Server is still trying to log in.") ||
-			strings.Contains(line, "Still, some commands are available.") ||
-			strings.Contains(line, "Type \"help\", to list them.") ||
-			(strings.HasPrefix(line, "-") && strings.HasSuffix(line, "-")) // Lines like "----...----"
+			// After explicit login, prompt should be like "email:/path$" or just "email:/$"
+			(strings.HasSuffix(line, ":/$") && !strings.Contains(line, "metrics_")) || // More specific prompt skip
+			// Remove these as login should be complete:
+			// strings.Contains(line, "Resuming session ...") ||
+			// strings.Contains(line, "MEGAcmd Server is still trying to log in.") ||
+			// strings.Contains(line, "Still, some commands are available.") ||
+			// strings.Contains(line, "Type \"help\", to list them.") ||
+			(strings.HasPrefix(line, "-") && strings.HasSuffix(line, "-"))
 
 		if isBannerOrKnownNoise {
 			log.Printf("MEGA LS Info/Warning/Banner/Prompt (Skipping): %s", line)
@@ -240,6 +277,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("Debug downloadMetricsFromMega parser: Processing line: '%s' -> base for regex: '%s'", line, filenameToParse)
 
 		match := metricsFileRegex.FindStringSubmatch(filenameToParse)
+		// ... (rest of parsing logic is the same as before) ...
 		if len(match) == 2 {
 			timestampStr := match[1]
 			t, parseErr := time.Parse(timestampFormat, timestampStr)
@@ -325,7 +363,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("failed to download '%s' with '%s': %v. Full Output already logged.", remoteFilePathFull, foundMegaGetPath, getErr)
 	}
 	if strings.Contains(getOut, "Unable to connect to service") || strings.Contains(getOut, "Please ensure mega-cmd-server is running") {
-		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get. Ensure mega-cmd-server is running and accessible by user '%s' with HOME='%s'. Full Output already logged.", foundMegaGetPath, os.Getenv("USER"), homeEnv)
+		return fmt.Errorf("'%s' output indicates MEGAcmd server issue during get. Full Output already logged.", foundMegaGetPath)
 	}
 
 	if _, statErr := os.Stat(tempDownloadPath); os.IsNotExist(statErr) {
