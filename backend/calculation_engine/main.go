@@ -110,35 +110,44 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		homeEnv = "/home/appuser"
 		log.Printf("DEBUG: HOME not set; defaulting to %s", homeEnv)
 	}
-	// Some older/alternate commands might not use “mega-cmd” prefix. We also allow raw “mega-logout”, etc.
-	runRawMega := func(cmdName string, args ...string) (string, error) {
-		fullArgs := append([]string{"--non-interactive"}, args...)
-		cmd := exec.Command(cmdName, fullArgs...)
+
+	// runMega executes a "mega" command (logout, login, mkdir, ls, get, etc.)
+	runMega := func(args ...string) (string, error) {
+		cmd := exec.Command("mega", args...)
 		cmd.Env = append(os.Environ(), "HOME="+homeEnv)
 		outBytes, err := cmd.CombinedOutput()
-		out := string(outBytes)
-		return out, err
+		return string(outBytes), err
+	}
+
+	// runMegaCmd executes a "mega-cmd" command with --non-interactive
+	runMegaCmd := func(args ...string) (string, error) {
+		fullArgs := append([]string{"--non-interactive"}, args...)
+		cmd := exec.Command("mega-cmd", fullArgs...)
+		cmd.Env = append(os.Environ(), "HOME="+homeEnv)
+		outBytes, err := cmd.CombinedOutput()
+		return string(outBytes), err
 	}
 
 	// ── 2) mega-logout (ignore errors) ──────────────────────────────────────────
-	if out, err := runRawMega("mega-logout"); err != nil {
+	if out, err := runMega("logout"); err != nil {
 		log.Printf("WARNING: mega-logout error (continuing anyway): %v\n%s", err, out)
 	} else {
 		log.Printf("DEBUG: mega-logout output:\n%s", out)
 	}
 
 	// ── 3) mega-cmd ipc killserver (ignore errors) ──────────────────────────────
-	if out, err := runRawMega("mega-cmd", "ipc", "killserver"); err != nil {
+	if out, err := runMegaCmd("ipc", "killserver"); err != nil {
 		log.Printf("DEBUG: mega-cmd ipc killserver error (probably no server): %v\n%s", err, out)
 	} else {
 		log.Printf("DEBUG: mega-cmd ipc killserver output:\n%s", out)
 	}
-	time.Sleep(1 * time.Second) // give a moment for any server to actually shut down
+	time.Sleep(1 * time.Second)
 
 	// ── 4) mega-login (treat exit code 54 + “already logged in” as OK) ─────────
-	loginOut, loginErr := runRawMega("mega-login", megaEmail, megaPassword)
+	loginOut, loginErr := runMega("login", megaEmail, megaPassword)
 	if loginErr != nil {
-		if exitErr, ok := loginErr.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
+		if exitErr, ok := loginErr.(*exec.ExitError); ok &&
+			exitErr.ExitCode() == 54 &&
 			strings.Contains(strings.ToLower(loginOut), "already logged in") {
 			log.Printf("DEBUG: mega-login says “Already logged in.” Proceeding.")
 		} else {
@@ -147,12 +156,13 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	} else {
 		log.Printf("DEBUG: mega-login succeeded (output:\n%s)", loginOut)
 	}
-	time.Sleep(2 * time.Second) // let the session fully initialize
+	time.Sleep(2 * time.Second)
 
 	// ── 5) Ensure the remote folder exists via mega-mkdir -p "/remote_metrics" ───
-	mkdirOut, mkdirErr := runRawMega("mega-mkdir", "-p", "/remote_metrics")
+	mkdirOut, mkdirErr := runMega("mkdir", "-p", "/remote_metrics")
 	if mkdirErr != nil {
-		if exitErr, ok := mkdirErr.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
+		if exitErr, ok := mkdirErr.(*exec.ExitError); ok &&
+			exitErr.ExitCode() == 54 &&
 			strings.Contains(strings.ToLower(mkdirOut), "already exists") {
 			log.Printf("DEBUG: remote folder already exists: /remote_metrics")
 		} else {
@@ -172,7 +182,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 
 	var lsOutput, folderInUse string
 	for _, folder := range candidates {
-		out, err := runRawMega("mega-ls", folder)
+		out, err := runMega("ls", folder)
 		if err == nil && strings.Contains(out, "metrics_") {
 			lsOutput = out
 			folderInUse = folder
@@ -186,7 +196,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 			candidates, lsOutput,
 		)
 	}
-	log.Printf("DEBUG: using MEGA folder path %q; `mega-ls` returned:\n%s", folderInUse, lsOutput)
+	log.Printf("DEBUG: using MEGA folder path %q; `mega ls` returned:\n%s", folderInUse, lsOutput)
 
 	// ── 7) Parse the listing for the newest “metrics_<YYYYMMDDhhmmss>.json” ─────
 	var latestFilename string
@@ -196,7 +206,6 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	scanner := bufio.NewScanner(strings.NewReader(lsOutput))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		// Only consider lines that look exactly like “metrics_<timestamp>.json”
 		if strings.HasPrefix(line, "metrics_") && strings.HasSuffix(line, ".json") {
 			tsPart := strings.TrimSuffix(strings.TrimPrefix(line, "metrics_"), ".json")
 			if t, err := time.Parse(timeLayout, tsPart); err == nil {
@@ -223,7 +232,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	tempPath := filepath.Join(targetDir, latestFilename)
 
 	log.Printf("DEBUG: downloading %q → %q", remoteFile, tempPath)
-	getOut, getErr := runRawMega("mega-get", remoteFile, "--path", targetDir)
+	getOut, getErr := runMega("get", remoteFile, "--path", targetDir)
 	if getErr != nil {
 		return fmt.Errorf("mega-get %q failed: %v\nOutput:\n%s", remoteFile, getErr, getOut)
 	}
