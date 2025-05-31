@@ -114,7 +114,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	logoutCmd := exec.Command("mega-logout")
 	logoutCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	if outLO, errLO := logoutCmd.CombinedOutput(); errLO != nil {
-		// It’s okay if “mega-logout” fails because there was no session; just log and continue.
+		// It’s okay if “mega-logout” fails because no session existed; just log and continue.
 		log.Printf("WARNING: mega-logout returned error (continuing anyway): %v\n%s",
 			errLO, string(outLO))
 	} else {
@@ -140,44 +140,60 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 			if strings.Contains(lower, "already logged in") {
 				log.Printf("DEBUG: mega-login says “Already logged in.” Proceeding.")
 			} else {
-				// Some other 54-related message we didn’t expect
-				return fmt.Errorf("mega-login failed with exit 54 but output didn’t confirm “already logged in”:\n%s", loginOutput)
+				return fmt.Errorf("mega-login returned exit 54 but output didn’t confirm “already logged in”:\n%s", loginOutput)
 			}
 		} else {
-			// Any other exit code or error → fatal
 			return fmt.Errorf("mega-login failed: %v\nOutput:\n%s", errLogin, loginOutput)
 		}
 	} else {
 		log.Printf("DEBUG: mega-login succeeded (output:\n%s)", loginOutput)
 	}
-	// Give MEGAcmd a few seconds to write the session file
-	time.Sleep(5 * time.Second)
+	time.Sleep(5 * time.Second) // let MEGAcmd write session file
 
-	// ── 6) (Optional) Double-check whoami ────────────────────────────────────────
-	whoamiCmd := exec.Command("mega-whoami")
+	// ── 6) Parse mega-whoami output, ignoring banner lines ──────────────────────
+	whoamiCmd := exec.Command("mega-whoami", "--non-interactive")
 	whoamiCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	outWhoami, errWhoami := whoamiCmd.CombinedOutput()
+	outWhoamiBytes, errWhoami := whoamiCmd.CombinedOutput()
 	if errWhoami != nil {
-		return fmt.Errorf("mega-whoami failed: %v\nOutput:\n%s", errWhoami, string(outWhoami))
+		return fmt.Errorf("mega-whoami failed: %v\nOutput:\n%s", errWhoami, string(outWhoamiBytes))
 	}
-	currentUser := strings.TrimSpace(string(outWhoami))
-	if !strings.EqualFold(currentUser, megaEmail) {
-		return fmt.Errorf("mega-whoami returned %q, expected %q", currentUser, megaEmail)
+	whoamiOutput := string(outWhoamiBytes)
+
+	var foundEmail string
+	scanner := bufio.NewScanner(strings.NewReader(whoamiOutput))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip blank lines or lines that look like the banner:
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, ".") || strings.HasPrefix(line, "|") ||
+			strings.Contains(line, "Welcome to MEGAcmd") {
+			continue
+		}
+		// Any remaining non-empty, non-banner line is assumed to be the email
+		foundEmail = line
+		break
+	}
+	if scanErr := scanner.Err(); scanErr != nil {
+		log.Printf("WARNING: error scanning mega-whoami output: %v", scanErr)
+	}
+	if !strings.EqualFold(foundEmail, megaEmail) {
+		return fmt.Errorf("mega-whoami returned %q, expected %q", foundEmail, megaEmail)
 	}
 
-	// ── 7) Ensure the remote folder exists: mega-mkdir -p <remoteFolder> ─────────
+	// ── 7) Ensure the remote folder exists: mega-mkdir -p <remoteFolder> ───────
 	mkdirCmd := exec.Command("mega-mkdir", "-p", megaRemoteFolderPath)
 	mkdirCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outMkdir, errMkdir := mkdirCmd.CombinedOutput()
 	mkdirOutput := string(outMkdir)
 	if errMkdir != nil {
 		if exitErr, ok := errMkdir.(*exec.ExitError); ok && exitErr.ExitCode() == 54 {
-			// 54 often means “already exists.” Verify the message.
 			lower := strings.ToLower(mkdirOutput)
 			if strings.Contains(lower, "already exists") {
 				log.Printf("DEBUG: remote folder %q already exists.", megaRemoteFolderPath)
 			} else {
-				return fmt.Errorf("mega-mkdir returned exit 54 but output did not say \"already exists\":\n%s", mkdirOutput)
+				return fmt.Errorf("mega-mkdir returned exit 54 but output didn’t confirm “already exists”:\n%s", mkdirOutput)
 			}
 		} else {
 			return fmt.Errorf("mega-mkdir -p %s failed: %v\nOutput:\n%s",
@@ -191,8 +207,8 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	lsCmd := exec.Command("megals",
 		"--username", megaEmail,
 		"--password", megaPassword,
-		"--non-interactive",  // critical: do not drop into a prompt
-		megaRemoteFolderPath, // e.g. "/remote_metrics"
+		"--non-interactive",
+		megaRemoteFolderPath,
 	)
 	lsCmd.Env = append(os.Environ(), "HOME="+homeEnv)
 	outLs, errLs := lsCmd.CombinedOutput()
@@ -202,11 +218,11 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	}
 
 	// ── 9) Parse “metrics_<YYYYMMDDhhmmss>.json” lines ──────────────────────────
-	scanner := bufio.NewScanner(strings.NewReader(lsOutput))
 	var latestFilename string
 	var latestTimestamp time.Time
 	const timeLayout = "20060102150405" // “YYYYMMDDhhmmss”
 
+	scanner = bufio.NewScanner(strings.NewReader(lsOutput))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
