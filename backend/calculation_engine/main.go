@@ -94,6 +94,8 @@ var (
 	metricsFileRegex           = regexp.MustCompile(`^metrics_(\d{14})\.json$`)
 )
 
+// downloadMetricsFromMega connects to MEGA, finds the newest metrics_<timestamp>.json
+// under any recognized “remote_metrics” path, downloads it, and writes it to localTargetFilename.
 func downloadMetricsFromMega(localTargetFilename string) error {
 	// ── 1) Read environment variables ────────────────────────────────────────────
 	megaEmail := os.Getenv("MEGA_EMAIL")
