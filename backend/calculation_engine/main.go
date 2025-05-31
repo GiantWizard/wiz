@@ -104,78 +104,77 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		return fmt.Errorf("MEGA_EMAIL or MEGA_PWD not set")
 	}
 
-	// Ensure we have HOME for MEGAcmd
+	// Ensure we have a HOME for MEGAcmd
 	homeEnv := os.Getenv("HOME")
 	if homeEnv == "" {
 		homeEnv = "/home/appuser"
 		log.Printf("DEBUG: HOME not set; defaulting to %s", homeEnv)
 	}
-
-	// ── 2) Mega logout (ignore errors) ──────────────────────────────────────────
-	logoutCmd := exec.Command("mega-logout")
-	logoutCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	if out, err := logoutCmd.CombinedOutput(); err != nil {
-		log.Printf("WARNING: mega-logout error (continuing anyway): %v\n%s", err, string(out))
-	} else {
-		log.Printf("DEBUG: mega-logout output:\n%s", string(out))
+	// Some older/alternate commands might not use “mega-cmd” prefix. We also allow raw “mega-logout”, etc.
+	runRawMega := func(cmdName string, args ...string) (string, error) {
+		fullArgs := append([]string{"--non-interactive"}, args...)
+		cmd := exec.Command(cmdName, fullArgs...)
+		cmd.Env = append(os.Environ(), "HOME="+homeEnv)
+		outBytes, err := cmd.CombinedOutput()
+		out := string(outBytes)
+		return out, err
 	}
 
-	// ── 3) Kill any running mega-cmd-server ─────────────────────────────────────
-	killCmd := exec.Command("mega-cmd", "ipc", "killserver")
-	killCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	killCmd.Run() // safe to ignore errors if no server was running
-	time.Sleep(1 * time.Second)
+	// ── 2) mega-logout (ignore errors) ──────────────────────────────────────────
+	if out, err := runRawMega("mega-logout"); err != nil {
+		log.Printf("WARNING: mega-logout error (continuing anyway): %v\n%s", err, out)
+	} else {
+		log.Printf("DEBUG: mega-logout output:\n%s", out)
+	}
 
-	// ── 4) Mega login (treat exit code 54 + “already logged in” as OK) ─────────
-	loginCmd := exec.Command("mega-login", megaEmail, megaPassword)
-	loginCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	outLogin, errLogin := loginCmd.CombinedOutput()
-	loginOutput := string(outLogin)
-	if errLogin != nil {
-		if exitErr, ok := errLogin.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
-			strings.Contains(strings.ToLower(loginOutput), "already logged in") {
+	// ── 3) mega-cmd ipc killserver (ignore errors) ──────────────────────────────
+	if out, err := runRawMega("mega-cmd", "ipc", "killserver"); err != nil {
+		log.Printf("DEBUG: mega-cmd ipc killserver error (probably no server): %v\n%s", err, out)
+	} else {
+		log.Printf("DEBUG: mega-cmd ipc killserver output:\n%s", out)
+	}
+	time.Sleep(1 * time.Second) // give a moment for any server to actually shut down
+
+	// ── 4) mega-login (treat exit code 54 + “already logged in” as OK) ─────────
+	loginOut, loginErr := runRawMega("mega-login", megaEmail, megaPassword)
+	if loginErr != nil {
+		if exitErr, ok := loginErr.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
+			strings.Contains(strings.ToLower(loginOut), "already logged in") {
 			log.Printf("DEBUG: mega-login says “Already logged in.” Proceeding.")
 		} else {
-			return fmt.Errorf("mega-login failed: %v\nOutput:\n%s", errLogin, loginOutput)
+			return fmt.Errorf("mega-login failed: %v\nOutput:\n%s", loginErr, loginOut)
 		}
 	} else {
-		log.Printf("DEBUG: mega-login succeeded (output:\n%s)", loginOutput)
+		log.Printf("DEBUG: mega-login succeeded (output:\n%s)", loginOut)
 	}
-	time.Sleep(3 * time.Second) // allow session to stabilize
+	time.Sleep(2 * time.Second) // let the session fully initialize
 
-	// ── 5) Ensure the remote folder exists: mega-mkdir -p "/remote_metrics" ─────
-	mkdirCmd := exec.Command("mega-mkdir", "-p", "/remote_metrics")
-	mkdirCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	outMkdir, errMkdir := mkdirCmd.CombinedOutput()
-	mkdirOutput := string(outMkdir)
-	if errMkdir != nil {
-		if exitErr, ok := errMkdir.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
-			strings.Contains(strings.ToLower(mkdirOutput), "already exists") {
+	// ── 5) Ensure the remote folder exists via mega-mkdir -p "/remote_metrics" ───
+	mkdirOut, mkdirErr := runRawMega("mega-mkdir", "-p", "/remote_metrics")
+	if mkdirErr != nil {
+		if exitErr, ok := mkdirErr.(*exec.ExitError); ok && exitErr.ExitCode() == 54 &&
+			strings.Contains(strings.ToLower(mkdirOut), "already exists") {
 			log.Printf("DEBUG: remote folder already exists: /remote_metrics")
 		} else {
-			return fmt.Errorf("mega-mkdir -p /remote_metrics failed: %v\nOutput:\n%s", errMkdir, mkdirOutput)
+			return fmt.Errorf("mega-mkdir -p /remote_metrics failed: %v\nOutput:\n%s", mkdirErr, mkdirOut)
 		}
 	} else {
-		log.Printf("DEBUG: mega-mkdir succeeded (output:\n%s)", mkdirOutput)
+		log.Printf("DEBUG: mega-mkdir succeeded (output:\n%s)", mkdirOut)
 	}
 
-	// ── 6) List candidate paths until we see “metrics_*.json” ────────────────────
+	// ── 6) Try all candidate paths until we find any “metrics_*.json” ─────────────
 	candidates := []string{
 		"/remote_metrics",
 		"/Root/remote_metrics",
 		"remote_metrics",
 		"Root/remote_metrics",
 	}
-	var lsOutput string
-	var folderInUse string
 
+	var lsOutput, folderInUse string
 	for _, folder := range candidates {
-		lsCmd := exec.Command("megals", folder)
-		lsCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-		out, err := lsCmd.CombinedOutput()
-		s := string(out)
-		if err == nil && strings.Contains(s, "metrics_") {
-			lsOutput = s
+		out, err := runRawMega("megals", folder)
+		if err == nil && strings.Contains(out, "metrics_") {
+			lsOutput = out
 			folderInUse = folder
 			break
 		}
@@ -197,14 +196,14 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	scanner := bufio.NewScanner(strings.NewReader(lsOutput))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "metrics_") || !strings.HasSuffix(line, ".json") {
-			continue
-		}
-		tsPart := strings.TrimSuffix(strings.TrimPrefix(line, "metrics_"), ".json")
-		if t, err := time.Parse(timeLayout, tsPart); err == nil {
-			if latestFilename == "" || t.After(latestTime) {
-				latestTime = t
-				latestFilename = line
+		// Only consider lines that look exactly like “metrics_<timestamp>.json”
+		if strings.HasPrefix(line, "metrics_") && strings.HasSuffix(line, ".json") {
+			tsPart := strings.TrimSuffix(strings.TrimPrefix(line, "metrics_"), ".json")
+			if t, err := time.Parse(timeLayout, tsPart); err == nil {
+				if latestFilename == "" || t.After(latestTime) {
+					latestTime = t
+					latestFilename = line
+				}
 			}
 		}
 	}
@@ -212,112 +211,84 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 		log.Printf("WARNING: error scanning megals output: %v", err)
 	}
 	if latestFilename == "" {
-		return fmt.Errorf("found no file matching metrics_<timestamp>.json under %q; listing:\n%s",
-			folderInUse, lsOutput)
+		return fmt.Errorf(
+			"found no file matching metrics_<timestamp>.json under %q; listing:\n%s",
+			folderInUse, lsOutput,
+		)
 	}
 
-	// ── 8) Download that file via megaget ──────────────────────────────────────
+	// ── 8) Download via “megaget” ───────────────────────────────────────────────
 	remoteFile := filepath.Join(folderInUse, latestFilename)
 	targetDir := filepath.Dir(localTargetFilename)
 	tempPath := filepath.Join(targetDir, latestFilename)
 
-	getCmd := exec.Command("megaget", remoteFile, "--path", targetDir)
-	getCmd.Env = append(os.Environ(), "HOME="+homeEnv)
-	outGet, errGet := getCmd.CombinedOutput()
-	if errGet != nil {
-		return fmt.Errorf("megaget %s failed: %v\nOutput:\n%s", remoteFile, errGet, string(outGet))
+	log.Printf("DEBUG: downloading %q → %q", remoteFile, tempPath)
+	getOut, getErr := runRawMega("megaget", remoteFile, "--path", targetDir)
+	if getErr != nil {
+		return fmt.Errorf("megaget %q failed: %v\nOutput:\n%s", remoteFile, getErr, getOut)
 	}
 
-	// ── 9) Rename the downloaded file into place ───────────────────────────────
+	// ── 9) Rename the downloaded file into place ────────────────────────────────
 	if tempPath != localTargetFilename {
 		if err := os.Rename(tempPath, localTargetFilename); err != nil {
-			return fmt.Errorf("failed to rename %s → %s: %v", tempPath, localTargetFilename, err)
+			return fmt.Errorf("failed to rename %q → %q: %v", tempPath, localTargetFilename, err)
 		}
 	}
-
-	log.Printf("Successfully downloaded %s → %s", remoteFile, localTargetFilename)
+	log.Printf("Successfully downloaded %q → %q", remoteFile, localTargetFilename)
 	return nil
 }
 
+// Here is a typical wrapper showing how you might call it from your ticker/goroutine.
 func downloadAndStoreMetrics() {
 	log.Println("downloadAndStoreMetrics: Initiating metrics download...")
-	// Ensure os.TempDir() is writable; usually is.
-	tempMetricsFilename := filepath.Join(os.TempDir(), fmt.Sprintf("metrics_%d.downloading.tmp", time.Now().UnixNano()))
-	defer os.Remove(tempMetricsFilename) // Clean up temp file
+	tempMetricsFilename := filepath.Join(os.TempDir(), fmt.Sprintf("metrics_%d.tmp.json", time.Now().UnixNano()))
+	defer os.Remove(tempMetricsFilename)
 
-	metricsDownloadStatusMutex.Lock()
-	lastMetricsDownloadTime = time.Now()
-	downloadErr := downloadMetricsFromMega(tempMetricsFilename)
-	metricsDownloadStatusMutex.Unlock()
-
-	if downloadErr != nil {
-		newStatus := fmt.Sprintf("Error during MEGA download at %s: %v", lastMetricsDownloadTime.Format(time.RFC3339), downloadErr)
-		metricsDownloadStatusMutex.Lock()
-		lastMetricsDownloadStatus = newStatus
-		metricsDownloadStatusMutex.Unlock()
-		log.Println(newStatus) // Already logged within downloadMetricsFromMega if it's detailed
+	err := downloadMetricsFromMega(tempMetricsFilename)
+	if err != nil {
+		status := fmt.Sprintf("Error during MEGA download at %s: %v",
+			time.Now().Format(time.RFC3339), err)
+		log.Println(status)
+		// update your in-memory or global status variable here if needed
 		return
 	}
 
 	data, readErr := os.ReadFile(tempMetricsFilename)
 	if readErr != nil {
-		newStatus := fmt.Sprintf("Error reading downloaded metrics file %s at %s: %v", tempMetricsFilename, lastMetricsDownloadTime.Format(time.RFC3339), readErr)
-		metricsDownloadStatusMutex.Lock()
-		lastMetricsDownloadStatus = newStatus
-		metricsDownloadStatusMutex.Unlock()
-		log.Println(newStatus)
+		status := fmt.Sprintf("Error reading downloaded file %q: %v", tempMetricsFilename, readErr)
+		log.Println(status)
 		return
 	}
 
-	if len(data) == 0 {
-		newStatus := fmt.Sprintf("Error: downloaded metrics data from %s was empty at %s.", tempMetricsFilename, lastMetricsDownloadTime.Format(time.RFC3339))
-		metricsDownloadStatusMutex.Lock()
-		lastMetricsDownloadStatus = newStatus
-		metricsDownloadStatusMutex.Unlock()
-		log.Println(newStatus)
-		return
-	}
-	if string(data) == "{}" { // Check for empty JSON object specifically if that's an invalid state
-		newStatus := fmt.Sprintf("Error: downloaded metrics data was '{}' (empty JSON object) at %s.", lastMetricsDownloadTime.Format(time.RFC3339))
-		metricsDownloadStatusMutex.Lock()
-		lastMetricsDownloadStatus = newStatus
-		metricsDownloadStatusMutex.Unlock()
-		log.Println(newStatus)
+	// Check for empty or invalid JSON
+	if len(data) == 0 || string(data) == "{}" {
+		status := fmt.Sprintf("Downloaded metrics were empty or `{}` at %s", time.Now().Format(time.RFC3339))
+		log.Println(status)
 		return
 	}
 
-	var tempMetricsSlice []ProductMetrics // This type comes from metrics.go
-	if jsonErr := json.Unmarshal(data, &tempMetricsSlice); jsonErr != nil {
-		// Log only a snippet of the data if it's large
-		dataSample := string(data)
-		if len(dataSample) > 200 {
-			dataSample = dataSample[:200] + "..."
+	// (Optional) Attempt to unmarshal into your metrics struct to validate
+	var tmp []interface{} // replace with your actual slice type, e.g. []ProductMetrics
+	if jsonErr := json.Unmarshal(data, &tmp); jsonErr != nil {
+		sample := string(data)
+		if len(sample) > 200 {
+			sample = sample[:200] + "…"
 		}
-		newStatus := fmt.Sprintf("Error: downloaded metrics data was NOT A VALID JSON ARRAY of ProductMetrics at %s: %v. Body(sample): %s", lastMetricsDownloadTime.Format(time.RFC3339), jsonErr, dataSample)
-		metricsDownloadStatusMutex.Lock()
-		lastMetricsDownloadStatus = newStatus
-		metricsDownloadStatusMutex.Unlock()
-		log.Println(newStatus)
+		status := fmt.Sprintf(
+			"Downloaded file is not valid JSON array at %s: %v; sample: %q",
+			time.Now().Format(time.RFC3339), jsonErr, sample,
+		)
+		log.Println(status)
 		return
 	}
 
-	metricsDataMutex.Lock()
-	latestMetricsData = data
-	metricsDataMutex.Unlock()
-
-	// Persist to local cache file (metricsFilename)
-	if writeErr := os.WriteFile(metricsFilename, data, 0644); writeErr != nil {
-		log.Printf("Warning: failed to write metrics to permanent cache file %s: %v. In-memory cache IS updated.", metricsFilename, writeErr)
-		// Not a fatal error for the current run if in-memory is updated.
+	// Overwrite your permanent cache (e.g. metrics.json)
+	permanentPath := "latest_metrics.json" // wherever you want to store it
+	if writeErr := os.WriteFile(permanentPath, data, 0644); writeErr != nil {
+		log.Printf("Warning: could not write to %q: %v (in-memory data is OK)", permanentPath, writeErr)
 	} else {
-		log.Printf("Successfully wrote new metrics data (len %d) to %s", len(data), metricsFilename)
+		log.Printf("Successfully updated %q (%d bytes)", permanentPath, len(data))
 	}
-
-	newStatus := fmt.Sprintf("Successfully downloaded and updated metrics at %s. Size: %d bytes", lastMetricsDownloadTime.Format(time.RFC3339), len(data))
-	metricsDownloadStatusMutex.Lock()
-	lastMetricsDownloadStatus = newStatus
-	metricsDownloadStatusMutex.Unlock()
-	log.Println(newStatus)
 }
 
 func downloadMetricsPeriodically() {
