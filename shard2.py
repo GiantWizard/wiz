@@ -1,17 +1,26 @@
 import requests
 import concurrent.futures
 from typing import List, Dict, Any, Optional
+import math
 
 # --- Configuration ---
 BAZAAR_API_URL = "https://api.hypixel.net/v2/skyblock/bazaar"
-TOP_N_RESULTS = 50
-# Set the minimum profit margin required to show an item
-PROFIT_MARGIN_THRESHOLD = 0.15 # (15%)
-# Set a maximum number of active orders to filter out highly competitive items.
-# An item with thousands of orders is very volatile. Set to None to disable this filter.
-MAX_ACTIVE_ORDERS = 500  # <-- NEW: Filter out items with more than 500 total active orders
+TOP_N_RESULTS = 25  # Show the top 25 scored results
+PROFIT_MARGIN_THRESHOLD = 0.15  # (15%)
+MAX_ACTIVE_ORDERS = 750  # Filter out items with more than this many total active orders
 
-# --- Time Period Assumptions ---
+# --- NEW: Scoring Weights (Must add up to 1.0) ---
+# Define what makes an item "the best" for you.
+# - profit_per_hour: How much money you make over time.
+# - profit_margin: How safe the flip is (higher margin is safer).
+# - low_competition: How easy it is to flip without being undercut.
+SCORE_WEIGHTS = {
+    "profit_per_hour": 0.5, # 50% of the score
+    "profit_margin": 0.3,   # 30% of the score
+    "low_competition": 0.2  # 20% of the score
+}
+
+# --- Time Period Assumptions (No changes needed here) ---
 SPECIAL_HOURS_IN_PERIOD = 96
 SPECIAL_48_HOUR_ITEMS = {
     "SEA_LUMIES", "SHARD_YOG", "SHARD_CROW", "SHARD_CHILL", "SHARD_CARROT_KING", "SHARD_CORALOT",
@@ -51,9 +60,7 @@ def get_all_bazaar_data() -> Optional[Dict[str, Any]]:
         response.raise_for_status()
         bazaar_data = response.json()
         if bazaar_data.get("success"):
-            print(f"✅ Data received. Analyzing items with >{PROFIT_MARGIN_THRESHOLD:.0%} profit margin...")
-            if MAX_ACTIVE_ORDERS is not None: # <-- NEW
-                print(f"   and fewer than {MAX_ACTIVE_ORDERS} active orders.") # <-- NEW
+            print(f"✅ Data received. Analyzing items that meet requirements...")
             return bazaar_data.get("products", {})
         else:
             print("❌ API request was not successful.")
@@ -64,34 +71,33 @@ def get_all_bazaar_data() -> Optional[Dict[str, Any]]:
 
 def analyze_bazaar_item(product_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    Calculates profit metrics, filters by profit margin, and checks order competition.
+    Calculates profit metrics and filters out items that do not meet the baseline requirements.
     """
     buy_summary = data.get("buy_summary", [])
     sell_summary = data.get("sell_summary", [])
-    status = data.get("quick_status", {}) # <-- MODIFIED: Moved up for early access
+    status = data.get("quick_status", {})
 
     if not buy_summary or not sell_summary or not status:
         return None
 
-    # --- NEW: Filter by active order count (competition level) ---
-    active_buy_orders = status.get('buyOrders', 0)   # <-- NEW
-    active_sell_orders = status.get('sellOrders', 0) # <-- NEW
-    total_active_orders = active_buy_orders + active_sell_orders # <-- NEW
+    # --- Filter by active order count (competition level) ---
+    active_buy_orders = status.get('buyOrders', 0)
+    active_sell_orders = status.get('sellOrders', 0)
+    total_active_orders = active_buy_orders + active_sell_orders
 
-    if MAX_ACTIVE_ORDERS is not None and total_active_orders > MAX_ACTIVE_ORDERS: # <-- NEW
-        return None # <-- NEW: Skip item if it's too competitive
+    if MAX_ACTIVE_ORDERS is not None and total_active_orders > MAX_ACTIVE_ORDERS:
+        return None # Skip item if it's too competitive
 
     top_buy_order_price = buy_summary[0]['pricePerUnit']
     bottom_sell_order_price = sell_summary[0]['pricePerUnit']
 
-    if bottom_sell_order_price <= 0:
-        return None
+    if bottom_sell_order_price <= 0: return None
 
     profit_per_item = top_buy_order_price - bottom_sell_order_price
     profit_margin = profit_per_item / bottom_sell_order_price
 
     if profit_margin < PROFIT_MARGIN_THRESHOLD:
-        return None
+        return None # Skip item if margin is too low
 
     hours_in_period = SPECIAL_HOURS_IN_PERIOD if product_id in SPECIAL_48_HOUR_ITEMS else DEFAULT_HOURS_IN_PERIOD
     
@@ -110,45 +116,68 @@ def analyze_bazaar_item(product_id: str, data: Dict[str, Any]) -> Optional[Dict[
         'sell_price': bottom_sell_order_price,
         'bottleneck_volume': transaction_bottleneck,
         'period_hours': hours_in_period,
-        'active_orders': total_active_orders # <-- NEW: Pass competition metric to be printed
+        'active_orders': total_active_orders
     }
+
+def add_flip_scores(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    NEW: Calculates a weighted score for each item to find the "best" flips.
+    """
+    if not items:
+        return []
+
+    print(f"\n✅ Found {len(items)} potential flips. Calculating scores to find the best...")
+
+    # Find the maximum values for normalization (so big numbers don't dominate the score)
+    max_profit_hr = max(item['profit_per_hour'] for item in items)
+    max_margin = max(item['profit_margin'] for item in items)
+    # For competition, we find the minimum non-zero value to properly score "low is good"
+    min_orders = min((item['active_orders'] for item in items if item['active_orders'] > 0), default=1)
+
+    scored_items = []
+    for item in items:
+        # Normalize each metric from 0 to 1
+        norm_profit_hr = item['profit_per_hour'] / max_profit_hr if max_profit_hr > 0 else 0
+        norm_margin = item['profit_margin'] / max_margin if max_margin > 0 else 0
+        # For low competition, a lower order count is better, so we invert the score
+        norm_competition = min_orders / item['active_orders'] if item['active_orders'] > 0 else 1
+
+        # Calculate the weighted score
+        score = (norm_profit_hr * SCORE_WEIGHTS['profit_per_hour'] +
+                 norm_margin * SCORE_WEIGHTS['profit_margin'] +
+                 norm_competition * SCORE_WEIGHTS['low_competition'])
+        
+        item['score'] = score * 100  # Multiply by 100 for a more readable score
+        scored_items.append(item)
+    
+    return scored_items
 
 def clean_item_name(product_id: str) -> str:
     """Makes API product IDs more readable."""
-    parts = product_id.split(':')
-    name = parts[0].replace("_", " ").title()
-    if len(parts) > 1:
-        return f"{name}:{parts[1]}"
-    return name
+    return product_id.replace("_", " ").title()
 
 def print_results_table(results: List[Dict[str, Any]]):
-    """Formats and prints the filtered, high-margin analysis."""
+    """Formats and prints the filtered and scored analysis."""
     if not results:
-        message = f"\nAnalysis complete. No items found with a profit margin > {PROFIT_MARGIN_THRESHOLD:.0%}"
-        if MAX_ACTIVE_ORDERS is not None:
-             message += f" and < {MAX_ACTIVE_ORDERS} active orders."
-        print(message)
+        print(f"\nAnalysis complete. No items found that meet your criteria.")
         return
 
-    print(f"\n--- Top Bazaar Flips with >{PROFIT_MARGIN_THRESHOLD:.0%} Margin (Sorted by Profit/Hour) ---")
-    print("Analysis covers all items. Best opportunities are at the top.\n")
+    print(f"\n--- Top {TOP_N_RESULTS} Bazaar Flips (Sorted by Weighted Score) ---")
+    print("Score balances profit/hr, margin, and low competition. Best opportunities are at the top.\n")
 
-    # <-- MODIFIED: Added "Active Orders" column
-    headers = ["Item Name", "Profit/Hour", "Margin %", "Active Orders", "Profit Spread", "Top Buy Order", "Bottom Sell Order", "Bottleneck Vol", "Period (h)"]
+    # MODIFIED: Added "Score" column and re-ordered for importance
+    headers = ["Item Name", "Score", "Profit/Hour", "Margin %", "Active Orders", "Profit Spread"]
     
     printable_data = []
     for item in results[:TOP_N_RESULTS]:
-        name_str = clean_item_name(item['id'])
-        profit_hr_str = f"{item['profit_per_hour']:,.0f}"
-        margin_str = f"{item['profit_margin']:.1%}"
-        active_orders_str = f"{item['active_orders']:,}" # <-- NEW
-        profit_item_str = f"{item['profit_per_item']:,.2f}"
-        buy_price_str = f"{item['buy_price']:,.1f}"
-        sell_price_str = f"{item['sell_price']:,.1f}"
-        vol_str = f"{item['bottleneck_volume']:,}"
-        period_str = str(item['period_hours'])
-        # <-- MODIFIED: Added the new metric to the row data
-        printable_data.append([name_str, profit_hr_str, margin_str, active_orders_str, profit_item_str, buy_price_str, sell_price_str, vol_str, period_str])
+        printable_data.append([
+            clean_item_name(item['id']),
+            f"{item['score']:.1f}",
+            f"{item['profit_per_hour']:,.0f}",
+            f"{item['profit_margin']:.1%}",
+            f"{item['active_orders']:,}",
+            f"{item['profit_per_item']:,.2f}",
+        ])
 
     col_widths = [len(h) for h in headers]
     for row in printable_data:
@@ -160,8 +189,10 @@ def print_results_table(results: List[Dict[str, Any]]):
     print("-+-".join("-" * width for width in col_widths))
     
     for row in printable_data:
-        data_line = " | ".join(row[i].rjust(col_widths[i]) for i in range(len(row)))
-        data_line = f"{row[0].ljust(col_widths[0])}" + data_line[col_widths[0]:]
+        # Justify the first column to the left, and the rest to the right
+        data_line = row[0].ljust(col_widths[0])
+        for i in range(1, len(row)):
+            data_line += " | " + row[i].rjust(col_widths[i])
         print(data_line)
 
 # --- Main Execution Logic ---
@@ -169,18 +200,23 @@ if __name__ == "__main__":
     all_products = get_all_bazaar_data()
     
     if all_products:
+        # Step 1: Filter items based on your baseline requirements (margin, orders)
         analyzed_items = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             future_to_item = {
                 executor.submit(analyze_bazaar_item, pid, data): pid
                 for pid, data in all_products.items()
             }
-            
             for future in concurrent.futures.as_completed(future_to_item):
                 result = future.result()
                 if result:
                     analyzed_items.append(result)
         
-        analyzed_items.sort(key=lambda x: x['profit_per_hour'], reverse=True)
+        # Step 2: NEW - Score the filtered items to find the best overall opportunities
+        scored_items = add_flip_scores(analyzed_items)
         
-        print_results_table(analyzed_items)
+        # Step 3: Sort the results by the new score
+        scored_items.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Step 4: Print the final, ranked list
+        print_results_table(scored_items)
