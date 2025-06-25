@@ -1,4 +1,1 @@
-          
-worker: python fetchur.py
-
-    
+worker: python bazaar_scanner.py
