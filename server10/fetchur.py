@@ -8,7 +8,7 @@ from flask import Flask, Response
 
 # --- Main Configuration ---
 HYPIXEL_API_URL = "https://api.hypixel.net/v2/skyblock/bazaar"
-STABILITY_THRESHOLD = 1.0  # Avg changes per minute < 1.0
+STABILITY_THRESHOLD = 3  # Avg changes per minute < 1.0
 PROFIT_MARGIN_THRESHOLD = 0.15 # 15% minimum profit
 MAX_ACTIVE_ORDERS = 750
 
