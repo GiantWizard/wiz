@@ -1,8 +1,15 @@
-name = "keep-koyeb-awake"
-compatibility_date = "2025-05-25"
+name = 'spam-pinger'
+compatibility_date = "2025-06-27"
 main = "index.js"
 workers_dev = true
 account_id = "f6e75b759e3fd7d1c623a2b505a47bc6"
 
 [triggers]
 crons = ["* * * * *"]  # every minute
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true
+
+
+
