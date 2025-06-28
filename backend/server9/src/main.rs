@@ -220,7 +220,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut last_mod: Option<String> = None;
 
     // Pretend 5 minutes have passed so we export immediately
-    let mut export_timer = Instant::now() - Duration::from_secs(300);
+    let mut export_timer = Instant::now() - Duration::from_secs(3600);
 
     loop {
         // heartbeat
@@ -242,7 +242,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         // every 5 minutes?
-        if export_timer.elapsed() >= Duration::from_secs(300) {
+        if export_timer.elapsed() >= Duration::from_secs(3600) {
             println!(">>> Exporting metrics after {} seconds…", export_timer.elapsed().as_secs());
             if !states.is_empty() {
                 let results: Vec<_> = states
