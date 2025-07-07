@@ -1,0 +1,22 @@
+{
+  "Grove": {
+    "cost_to_buy": 341367.3,
+    "value_to_sell": 469993.3
+  },
+  "Mist": {
+    "cost_to_buy": 114299.9,
+    "value_to_sell": 175039.9
+  },
+  "Stridersurfer": {
+    "cost_to_buy": 13955.3,
+    "value_to_sell": 22094.3
+  },
+  "Abyssal Lanternfish": {
+    "cost_to_buy": 631000.0,
+    "value_to_sell": 848064.3
+  },
+  "Cinderbat": {
+    "cost_to_buy": 132774.4,
+    "value_to_sell": 149998.4
+  }
+}
