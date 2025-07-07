@@ -9,7 +9,12 @@ COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /go_app_binary .
 
 # STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
-FROM rust:1.80-slim-bookworm AS rust-cpp-builder
+#
+# ---- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED ----
+# FROM rust:1.80-slim-bookworm AS rust-cpp-builder
+FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
+# ---------------------------------------------------
+#
 LABEL stage=rust-cpp-builder
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
