@@ -806,7 +806,8 @@ func formatTimeIfNotZero(t time.Time) string {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	fmt.Fprintln(w, "<html><head><title>Optimizer Microservice</title></head><body><h1>Optimizer Microservice</h1><p>Available endpoints:</p><ul><li><a href='/status'>/status</a></li><li><a href='/optimizer_results.json'>/optimizer_results.json</a></li><li><a href='/failed_items_report.json'>/failed_items_report.json</a></li><li><a href='/healthz'>/healthz</a></li><li><a href='/debug/pprof/'>/debug/pprof/</a> (if pprof is imported)</li><li><a href='/debug/memstats'>/debug/memstats</a></li><li><a href='/debug/forcegc'>/debug/forcegc</a></li></ul></body></html>")
+	// --- ADDED ---: Link to the new endpoint on the root page
+	fmt.Fprintln(w, "<html><head><title>Optimizer Microservice</title></head><body><h1>Optimizer Microservice</h1><p>Available endpoints:</p><ul><li><a href='/status'>/status</a></li><li><a href='/optimizer_results.json'>/optimizer_results.json</a></li><li><a href='/failed_items_report.json'>/failed_items_report.json</a></li><li><a href='/latest-metric'>/latest-metric</a></li><li><a href='/healthz'>/healthz</a></li><li><a href='/debug/pprof/'>/debug/pprof/</a> (if pprof is imported)</li><li><a href='/debug/memstats'>/debug/memstats</a></li><li><a href='/debug/forcegc'>/debug/forcegc</a></li></ul></body></html>")
 }
 
 func min(a, b int) int {
@@ -814,6 +815,58 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// --- ADDED ---: New handler to serve the latest raw metrics file
+// This handler finds the most recently generated metrics file from the Rust service
+// and returns its JSON content directly.
+func latestMetricFileHandler(w http.ResponseWriter, r *http.Request) {
+	// The Rust app saves metrics to "metrics/", and our working directory is "/app".
+	const metricsDir = "metrics"
+
+	entries, err := os.ReadDir(metricsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("INFO: Metrics directory '%s' not found.", metricsDir)
+			http.Error(w, `{"error": "Metrics directory not found. No metrics have been generated yet."}`, http.StatusNotFound)
+			return
+		}
+		log.Printf("ERROR: Could not read metrics directory %s: %v", metricsDir, err)
+		http.Error(w, `{"error": "Internal Server Error: could not read metrics directory."}`, http.StatusInternalServerError)
+		return
+	}
+
+	var latestFile string
+	// The filename format `metrics_YYYYMMDDHHMMSS.json` is lexicographically sortable.
+	// This means we can find the "latest" file with a simple string comparison, which is very efficient.
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "metrics_") && strings.HasSuffix(entry.Name(), ".json") {
+			if entry.Name() > latestFile {
+				latestFile = entry.Name()
+			}
+		}
+	}
+
+	if latestFile == "" {
+		log.Printf("INFO: No metrics files found in %s", metricsDir)
+		http.Error(w, `{"error": "Not Found: No metrics have been generated yet."}`, http.StatusNotFound)
+		return
+	}
+
+	fullPath := filepath.Join(metricsDir, latestFile)
+	log.Printf("INFO: Serving latest metrics from: %s", fullPath)
+
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		log.Printf("ERROR: Could not read latest metric file %s: %v", fullPath, err)
+		http.Error(w, `{"error": "Internal Server Error: could not read metric file."}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }
 
 func main() {
@@ -869,6 +922,10 @@ func main() {
 	http.HandleFunc("/failed_items_report.json", failedItemsReportHandler)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", rootHandler) // Root handler for basic info
+
+	// --- ADDED ---: Register the new endpoint handler
+	http.HandleFunc("/latest-metric", latestMetricFileHandler)
+
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK\n"))
