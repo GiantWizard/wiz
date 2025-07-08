@@ -9,9 +9,9 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
-/// Represents an individual sell order.
+/// Represents an individual order (can be a buy or sell order).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-struct SellOrder {
+struct Order {
     amount: i64,
     price_per_unit: f64,
     orders: i64,
@@ -23,9 +23,12 @@ struct BazaarInfo {
     product_id: String,
     sell_price: f64,
     buy_price: f64,
-    buy_moving_week: i64,
+    buy_moving_week: i64,  // Used to calculate sell frequency/size
+    sell_moving_week: i64, // Used to calculate buy frequency/size
     sell_volume: i64,
-    sell_orders: Vec<SellOrder>,
+    buy_volume: i64,
+    sell_orders: Vec<Order>,
+    buy_orders: Vec<Order>,
 }
 
 /// Holds the final analysis metrics for one product.
@@ -34,10 +37,16 @@ struct AnalysisResult {
     product_id: String,
     buy_price_average: f64,
     sell_price_average: f64,
-    order_frequency_average: f64,
-    order_size_average: f64,
+    // Sell-side metrics
+    sell_order_frequency_average: f64,
+    sell_order_size_average: f64,
     sell_frequency: f64,
     sell_size: f64,
+    // Buy-side metrics
+    buy_order_frequency_average: f64,
+    buy_order_size_average: f64,
+    buy_frequency: f64,
+    buy_size: f64,
 }
 
 /// Incremental state for each product; updated on each new snapshot.
@@ -46,13 +55,22 @@ struct ProductMetricsState {
     sum_buy: f64,
     sum_sell: f64,
     count: usize,
-    order_frequency_sum: f64,
-    order_frequency_count: usize,
-    total_new_orders: f64,
-    total_new_order_amount: f64,
+    windows: usize,
+    // Sell-side state
+    sell_order_frequency_sum: f64,
+    sell_order_frequency_count: usize,
+    total_new_sell_orders: f64,
+    total_new_sell_order_amount: f64,
     sell_changes_count: usize,
     sell_size_total: f64,
-    windows: usize,
+    // Buy-side state
+    buy_order_frequency_sum: f64,
+    buy_order_frequency_count: usize,
+    total_new_buy_orders: f64,
+    total_new_buy_order_amount: f64,
+    buy_changes_count: usize,
+    buy_size_total: f64,
+    // Previous state for comparison
     prev_snapshot: Option<BazaarInfo>,
 }
 
@@ -62,13 +80,19 @@ impl ProductMetricsState {
             sum_buy: first.buy_price,
             sum_sell: first.sell_price,
             count: 1,
-            order_frequency_sum: 0.0,
-            order_frequency_count: 0,
-            total_new_orders: 0.0,
-            total_new_order_amount: 0.0,
+            windows: 0,
+            sell_order_frequency_sum: 0.0,
+            sell_order_frequency_count: 0,
+            total_new_sell_orders: 0.0,
+            total_new_sell_order_amount: 0.0,
             sell_changes_count: 0,
             sell_size_total: 0.0,
-            windows: 0,
+            buy_order_frequency_sum: 0.0,
+            buy_order_frequency_count: 0,
+            total_new_buy_orders: 0.0,
+            total_new_buy_order_amount: 0.0,
+            buy_changes_count: 0,
+            buy_size_total: 0.0,
             prev_snapshot: Some(first.clone()),
         }
     }
@@ -79,35 +103,50 @@ impl ProductMetricsState {
         self.sum_sell += current.sell_price;
 
         if let Some(prev) = &self.prev_snapshot {
-            // Order frequency & size
+            self.windows += 1;
+
+            // --- Sell-Side Analysis ---
+            // Sell Order frequency & size (how many new sell orders appear)
             if prev.sell_orders.len() > 1 && !current.sell_orders.is_empty() {
-                let anchor = &prev.sell_orders[1];
-                if let Some(idx) = current
-                    .sell_orders
-                    .iter()
-                    .position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6)
-                {
-                    let new_orders = if idx > 1 { idx - 1 } else { 0 };
-                    self.order_frequency_sum += new_orders as f64;
-                    self.order_frequency_count += 1;
+                let anchor = &prev.sell_orders[1]; // Use 2nd best offer as stable point
+                if let Some(idx) = current.sell_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
+                    let new_orders = if idx > 0 { idx } else { 0 }; // All orders before anchor
+                    self.sell_order_frequency_sum += new_orders as f64;
+                    self.sell_order_frequency_count += 1;
                     if new_orders > 0 {
-                        let amount: i64 = current
-                            .sell_orders
-                            .iter()
-                            .take(new_orders)
-                            .map(|o| o.amount)
-                            .sum();
-                        self.total_new_order_amount += amount as f64;
-                        self.total_new_orders += new_orders as f64;
+                        let amount: i64 = current.sell_orders.iter().take(new_orders).map(|o| o.amount).sum();
+                        self.total_new_sell_order_amount += amount as f64;
+                        self.total_new_sell_orders += new_orders as f64;
                     }
                 }
             }
-            // Sell frequency & size
-            let diff = current.buy_moving_week - prev.buy_moving_week;
-            self.windows += 1;
-            if diff != 0 {
+            // Sell frequency & size (how often and how much is sold)
+            let sell_diff = current.buy_moving_week - prev.buy_moving_week;
+            if sell_diff != 0 {
                 self.sell_changes_count += 1;
-                self.sell_size_total += diff.abs() as f64;
+                self.sell_size_total += sell_diff.abs() as f64;
+            }
+
+            // --- Buy-Side Analysis ---
+            // Buy Order frequency & size (how many new buy orders appear)
+            if prev.buy_orders.len() > 1 && !current.buy_orders.is_empty() {
+                let anchor = &prev.buy_orders[1]; // Use 2nd best offer as stable point
+                if let Some(idx) = current.buy_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
+                    let new_orders = if idx > 0 { idx } else { 0 };
+                    self.buy_order_frequency_sum += new_orders as f64;
+                    self.buy_order_frequency_count += 1;
+                    if new_orders > 0 {
+                        let amount: i64 = current.buy_orders.iter().take(new_orders).map(|o| o.amount).sum();
+                        self.total_new_buy_order_amount += amount as f64;
+                        self.total_new_buy_orders += new_orders as f64;
+                    }
+                }
+            }
+            // Buy frequency & size (how often and how much is bought)
+            let buy_diff = current.sell_moving_week - prev.sell_moving_week;
+            if buy_diff != 0 {
+                self.buy_changes_count += 1;
+                self.buy_size_total += buy_diff.abs() as f64;
             }
         }
 
@@ -117,35 +156,31 @@ impl ProductMetricsState {
     fn finalize(&self, product_id: String) -> AnalysisResult {
         let buy_price_average = self.sum_buy / self.count as f64;
         let sell_price_average = self.sum_sell / self.count as f64;
-        let order_frequency_average = if self.order_frequency_count > 0 {
-            self.order_frequency_sum / self.order_frequency_count as f64
-        } else {
-            0.0
-        };
-        let order_size_average = if self.total_new_orders > 0.0 {
-            self.total_new_order_amount / self.total_new_orders
-        } else {
-            0.0
-        };
-        let sell_frequency = if self.windows > 0 {
-            self.sell_changes_count as f64 / self.windows as f64
-        } else {
-            0.0
-        };
-        let sell_size = if self.sell_changes_count > 0 {
-            self.sell_size_total / self.sell_changes_count as f64
-        } else {
-            0.0
-        };
+
+        // Finalize sell-side metrics
+        let sell_order_frequency_average = if self.sell_order_frequency_count > 0 { self.sell_order_frequency_sum / self.sell_order_frequency_count as f64 } else { 0.0 };
+        let sell_order_size_average = if self.total_new_sell_orders > 0.0 { self.total_new_sell_order_amount / self.total_new_sell_orders } else { 0.0 };
+        let sell_frequency = if self.windows > 0 { self.sell_changes_count as f64 / self.windows as f64 } else { 0.0 };
+        let sell_size = if self.sell_changes_count > 0 { self.sell_size_total / self.sell_changes_count as f64 } else { 0.0 };
+
+        // Finalize buy-side metrics
+        let buy_order_frequency_average = if self.buy_order_frequency_count > 0 { self.buy_order_frequency_sum / self.buy_order_frequency_count as f64 } else { 0.0 };
+        let buy_order_size_average = if self.total_new_buy_orders > 0.0 { self.total_new_buy_order_amount / self.total_new_buy_orders } else { 0.0 };
+        let buy_frequency = if self.windows > 0 { self.buy_changes_count as f64 / self.windows as f64 } else { 0.0 };
+        let buy_size = if self.buy_changes_count > 0 { self.buy_size_total / self.buy_changes_count as f64 } else { 0.0 };
 
         AnalysisResult {
             product_id,
             buy_price_average,
             sell_price_average,
-            order_frequency_average,
-            order_size_average,
+            sell_order_frequency_average,
+            sell_order_size_average,
             sell_frequency,
             sell_size,
+            buy_order_frequency_average,
+            buy_order_size_average,
+            buy_frequency,
+            buy_size,
         }
     }
 }
@@ -154,12 +189,7 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
     let url = "https://api.hypixel.net/v2/skyblock/bazaar";
     let resp = reqwest::get(url).await?.error_for_status()?;
 
-    let new_mod = resp
-        .headers()
-        .get("last-modified")
-        .and_then(|h| h.to_str().ok())
-        .map(String::from);
-
+    let new_mod = resp.headers().get("last-modified").and_then(|h| h.to_str().ok()).map(String::from);
     if let (Some(prev), Some(curr)) = (last_modified.as_ref(), new_mod.as_ref()) {
         if prev == curr {
             println!("Last-Modified unchanged ({}). Disposing snapshot.", curr);
@@ -178,12 +208,28 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
         tasks.push(tokio::spawn(async move {
             let sell_price = prod["sell_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
             let buy_price = prod["buy_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
-            let buy_moving_week = prod["quick_status"]["buyMovingWeek"].as_i64().unwrap_or_default();
+            
+            let quick_status = &prod["quick_status"];
+            let buy_moving_week = quick_status["buyMovingWeek"].as_i64().unwrap_or_default();
+            let sell_moving_week = quick_status["sellMovingWeek"].as_i64().unwrap_or_default();
+            let sell_volume = quick_status["sellVolume"].as_i64().unwrap_or_default();
+            let buy_volume = quick_status["buyVolume"].as_i64().unwrap_or_default();
 
             let mut sell_orders = Vec::new();
             if let Some(arr) = prod["sell_summary"].as_array() {
                 for o in arr {
-                    sell_orders.push(SellOrder {
+                    sell_orders.push(Order {
+                        amount: o["amount"].as_i64().unwrap_or_default(),
+                        price_per_unit: o["pricePerUnit"].as_f64().unwrap_or_default(),
+                        orders: o["orders"].as_i64().unwrap_or_default(),
+                    });
+                }
+            }
+
+            let mut buy_orders = Vec::new();
+            if let Some(arr) = prod["buy_summary"].as_array() {
+                for o in arr {
+                    buy_orders.push(Order {
                         amount: o["amount"].as_i64().unwrap_or_default(),
                         price_per_unit: o["pricePerUnit"].as_f64().unwrap_or_default(),
                         orders: o["orders"].as_i64().unwrap_or_default(),
@@ -196,8 +242,11 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
                 sell_price,
                 buy_price,
                 buy_moving_week,
-                sell_volume: prod["quick_status"]["sellVolume"].as_i64().unwrap_or_default(),
+                sell_moving_week,
+                sell_volume,
+                buy_volume,
                 sell_orders,
+                buy_orders,
             }
         }));
     }
@@ -215,18 +264,23 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("metrics")?;
-    let remote_dir = "/remote_metrics";
+    let remote_dir = std::env::var("MEGA_METRICS_FOLDER_PATH").unwrap_or_else(|_| "/remote_metrics".to_string());
+    
     let mut states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_mod: Option<String> = None;
 
-    // Pretend 5 minutes have passed so we export immediately
-    let mut export_timer = Instant::now() - Duration::from_secs(3600);
+    let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600); // Default 1 hour
+    let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(60); // Default 1 minute
+
+    println!("Configuration: Exporting every {} seconds, polling API every {} seconds.", export_interval_secs, api_poll_interval_secs);
+
+    let mut export_timer = Instant::now();
 
     loop {
-        // heartbeat
         println!("💓 heartbeat at Local: {}  UTC: {}", Local::now(), Utc::now());
 
-        // fetch & update
         match fetch_snapshot(&mut last_mod).await {
             Ok(Some(snap)) => {
                 for info in snap {
@@ -235,14 +289,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .and_modify(|st| st.update(&info))
                         .or_insert_with(|| ProductMetricsState::new(&info));
                 }
-                println!("Updated product states with new snapshot.");
+                println!("Updated {} product states with new snapshot.", states.len());
             }
-            Ok(None) => println!("No new snapshot processed this round."),
+            Ok(None) => println!("No new snapshot data from API (Last-Modified unchanged)."),
             Err(e) => eprintln!("Error fetching snapshot: {}", e),
         }
 
-        // every 5 minutes?
-        if export_timer.elapsed() >= Duration::from_secs(3600) {
+        if export_timer.elapsed() >= Duration::from_secs(export_interval_secs) {
             println!(">>> Exporting metrics after {} seconds…", export_timer.elapsed().as_secs());
             if !states.is_empty() {
                 let results: Vec<_> = states
@@ -251,28 +304,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .collect();
                 let ts = Utc::now().format("%Y%m%d%H%M%S").to_string();
                 let path = format!("metrics/metrics_{}.json", ts);
-                fs::write(&path, serde_json::to_string_pretty(&results)?)?;
-                println!("Exported metrics to {}", path);
+                
+                match fs::write(&path, serde_json::to_string_pretty(&results)?) {
+                    Ok(_) => {
+                        println!("Exported metrics for {} products to {}", results.len(), path);
 
-                if let Ok(output) = Command::new("export_engine")
-                    .arg(&path)
-                    .arg(remote_dir)
-                    .output()
-                {
-                    println!("Export engine output:\n{}", String::from_utf8_lossy(&output.stdout));
-                    if !output.stderr.is_empty() {
-                        eprintln!("Export errors:\n{}", String::from_utf8_lossy(&output.stderr));
+                        let export_engine_path = std::env::var("EXPORT_ENGINE_PATH").unwrap_or_else(|_| "export_engine".to_string());
+                        match Command::new(&export_engine_path).arg(&path).arg(&remote_dir).output() {
+                            Ok(output) => {
+                                println!("Export engine stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+                                if !output.stderr.is_empty() {
+                                    eprintln!("Export engine stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+                                }
+                            }
+                            Err(e) => eprintln!("Failed to execute export_engine: {}", e),
+                        }
                     }
-                } else {
-                    eprintln!("Failed to execute export_engine");
+                    Err(e) => eprintln!("Failed to write metrics file {}: {}", path, e),
                 }
             } else {
-                println!("No snapshots to export this round.");
+                println!("No state to export this round.");
             }
+            // Reset state for the next aggregation window
             states.clear();
             export_timer = Instant::now();
         }
 
-        sleep(Duration::from_secs(5)).await;
+        sleep(Duration::from_secs(api_poll_interval_secs)).await;
     }
 }
