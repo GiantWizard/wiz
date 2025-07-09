@@ -21,55 +21,85 @@ struct Order {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct BazaarInfo {
     product_id: String,
+    // Note: Per your clarification:
+    // sell_price here is from prod["sell_summary"][0]["pricePerUnit"], which is the Instasell Price (player receives).
+    // buy_price here is from prod["buy_summary"][0]["pricePerUnit"], which is the Instabuy Price (player pays).
     sell_price: f64,
     buy_price: f64,
-    buy_moving_week: i64,  // Used to calculate sell frequency/size
-    sell_moving_week: i64, // Used to calculate buy frequency/size
-    sell_volume: i64,
-    buy_volume: i64,
-    sell_orders: Vec<Order>,
-    buy_orders: Vec<Order>,
+    buy_moving_week: i64,  // Tracks items BOUGHT FROM Bazaar (Player Instabuys)
+    sell_moving_week: i64, // Tracks items SOLD TO Bazaar (Player Instasells)
+    sell_volume: i64, // From quick_status, total volume of items for sale
+    buy_volume: i64, // From quick_status, total volume of items being bought
+    sell_orders: Vec<Order>, // From prod["sell_summary"], these are BUY ORDERS (player demand)
+    buy_orders: Vec<Order>,  // From prod["buy_summary"], these are SELL ORDERS (player supply)
 }
 
 /// Holds the final analysis metrics for one product.
 #[derive(Debug, Serialize)]
 struct AnalysisResult {
     product_id: String,
-    buy_price_average: f64,
-    sell_price_average: f64,
-    // Sell-side metrics
-    sell_order_frequency_average: f64,
-    sell_order_size_average: f64,
-    sell_frequency: f64,
-    sell_size: f64,
-    // Buy-side metrics
-    buy_order_frequency_average: f64,
-    buy_order_size_average: f64,
-    buy_frequency: f64,
-    buy_size: f64,
+
+    // Prices:
+    // Average price a player PAYS to Instabuy (sourced from buy_summary[0] in API)
+    instabuy_price_average: f64,
+    // Average price a player RECEIVES when Instaselling (sourced from sell_summary[0] in API)
+    instasell_price_average: f64,
+
+    // Order Book Dynamics: Demand Side (New Buy Offers appearing)
+    // How often new, competitive Buy Offers (demand) appear (monitors sell_summary list in API)
+    new_demand_offer_frequency_average: f64,
+    // Average quantity of new, competitive Buy Offers (demand) (monitors sell_summary list in API)
+    new_demand_offer_size_average: f64,
+
+    // Actual Player Transactions: Instabuys (items BOUGHT FROM Bazaar, tracked by buy_moving_week)
+    // How often players perform Instabuys
+    player_instabuy_transaction_frequency: f64,
+    // Average quantity per player Instabuy transaction
+    player_instabuy_transaction_size_average: f64,
+
+    // Order Book Dynamics: Supply Side (New Sell Offers appearing)
+    // How often new, competitive Sell Offers (supply) appear (monitors buy_summary list in API)
+    new_supply_offer_frequency_average: f64,
+    // Average quantity of new, competitive Sell Offers (supply) (monitors buy_summary list in API)
+    new_supply_offer_size_average: f64,
+
+    // Actual Player Transactions: Instasells (items SOLD TO Bazaar, tracked by sell_moving_week)
+    // How often players perform Instasells
+    player_instasell_transaction_frequency: f64,
+    // Average quantity per player Instasell transaction
+    player_instasell_transaction_size_average: f64,
 }
 
 /// Incremental state for each product; updated on each new snapshot.
 #[derive(Debug)]
 struct ProductMetricsState {
-    sum_buy: f64,
-    sum_sell: f64,
-    count: usize,
-    windows: usize,
-    // Sell-side state
-    sell_order_frequency_sum: f64,
-    sell_order_frequency_count: usize,
-    total_new_sell_orders: f64,
-    total_new_sell_order_amount: f64,
-    sell_changes_count: usize,
-    sell_size_total: f64,
-    // Buy-side state
-    buy_order_frequency_sum: f64,
-    buy_order_frequency_count: usize,
-    total_new_buy_orders: f64,
-    total_new_buy_order_amount: f64,
-    buy_changes_count: usize,
-    buy_size_total: f64,
+    // These sum the values from BazaarInfo
+    sum_instabuy_price: f64,
+    sum_instasell_price: f64,
+    count: usize, // Number of snapshots processed
+
+    windows: usize, // Number of snapshot pairs processed (for calculating frequencies/sizes of changes)
+
+    // New Demand Offer (Buy Offer) Metrics (from sell_orders in BazaarInfo)
+    new_demand_offer_frequency_sum: f64,
+    new_demand_offer_frequency_count: usize,
+    total_new_demand_offers: f64,
+    total_new_demand_offer_amount: f64,
+
+    // Player Instabuy Transaction Metrics (from buy_moving_week in BazaarInfo)
+    player_instabuy_transaction_changes_count: usize,
+    player_instabuy_transaction_size_total: f64,
+
+    // New Supply Offer (Sell Offer) Metrics (from buy_orders in BazaarInfo)
+    new_supply_offer_frequency_sum: f64,
+    new_supply_offer_frequency_count: usize,
+    total_new_supply_offers: f64,
+    total_new_supply_offer_amount: f64,
+
+    // Player Instasell Transaction Metrics (from sell_moving_week in BazaarInfo)
+    player_instasell_transaction_changes_count: usize,
+    player_instasell_transaction_size_total: f64,
+    
     // Previous state for comparison
     prev_snapshot: Option<BazaarInfo>,
 }
@@ -77,76 +107,83 @@ struct ProductMetricsState {
 impl ProductMetricsState {
     fn new(first: &BazaarInfo) -> Self {
         Self {
-            sum_buy: first.buy_price,
-            sum_sell: first.sell_price,
+            sum_instabuy_price: first.buy_price, // BazaarInfo.buy_price is Instabuy Price
+            sum_instasell_price: first.sell_price, // BazaarInfo.sell_price is Instasell Price
             count: 1,
             windows: 0,
-            sell_order_frequency_sum: 0.0,
-            sell_order_frequency_count: 0,
-            total_new_sell_orders: 0.0,
-            total_new_sell_order_amount: 0.0,
-            sell_changes_count: 0,
-            sell_size_total: 0.0,
-            buy_order_frequency_sum: 0.0,
-            buy_order_frequency_count: 0,
-            total_new_buy_orders: 0.0,
-            total_new_buy_order_amount: 0.0,
-            buy_changes_count: 0,
-            buy_size_total: 0.0,
+
+            new_demand_offer_frequency_sum: 0.0,
+            new_demand_offer_frequency_count: 0,
+            total_new_demand_offers: 0.0,
+            total_new_demand_offer_amount: 0.0,
+            player_instabuy_transaction_changes_count: 0,
+            player_instabuy_transaction_size_total: 0.0,
+
+            new_supply_offer_frequency_sum: 0.0,
+            new_supply_offer_frequency_count: 0,
+            total_new_supply_offers: 0.0,
+            total_new_supply_offer_amount: 0.0,
+            player_instasell_transaction_changes_count: 0,
+            player_instasell_transaction_size_total: 0.0,
+            
             prev_snapshot: Some(first.clone()),
         }
     }
 
     fn update(&mut self, current: &BazaarInfo) {
         self.count += 1;
-        self.sum_buy += current.buy_price;
-        self.sum_sell += current.sell_price;
+        self.sum_instabuy_price += current.buy_price;   // Accumulate Instabuy Price
+        self.sum_instasell_price += current.sell_price; // Accumulate Instasell Price
 
         if let Some(prev) = &self.prev_snapshot {
             self.windows += 1;
 
-            // --- Sell-Side Analysis ---
-            // Sell Order frequency & size (how many new sell orders appear)
+            // --- Demand Side Order Book Dynamics (New Buy Offers / from current.sell_orders) ---
+            // Measures how many new competitive Buy Offers (demand) appear
             if prev.sell_orders.len() > 1 && !current.sell_orders.is_empty() {
-                let anchor = &prev.sell_orders[1]; // Use 2nd best offer as stable point
+                let anchor = &prev.sell_orders[1]; // Use 2nd best Buy Offer as stable point
                 if let Some(idx) = current.sell_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
-                    let new_orders = if idx > 0 { idx } else { 0 }; // All orders before anchor
-                    self.sell_order_frequency_sum += new_orders as f64;
-                    self.sell_order_frequency_count += 1;
-                    if new_orders > 0 {
-                        let amount: i64 = current.sell_orders.iter().take(new_orders).map(|o| o.amount).sum();
-                        self.total_new_sell_order_amount += amount as f64;
-                        self.total_new_sell_orders += new_orders as f64;
+                    let new_offers = if idx > 0 { idx } else { 0 }; // All orders before anchor (better price)
+                    self.new_demand_offer_frequency_sum += new_offers as f64;
+                    self.new_demand_offer_frequency_count += 1;
+                    if new_offers > 0 {
+                        let amount: i64 = current.sell_orders.iter().take(new_offers).map(|o| o.amount).sum();
+                        self.total_new_demand_offer_amount += amount as f64;
+                        self.total_new_demand_offers += new_offers as f64;
                     }
                 }
-            }
-            // Sell frequency & size (how often and how much is sold)
-            let sell_diff = current.buy_moving_week - prev.buy_moving_week;
-            if sell_diff != 0 {
-                self.sell_changes_count += 1;
-                self.sell_size_total += sell_diff.abs() as f64;
             }
 
-            // --- Buy-Side Analysis ---
-            // Buy Order frequency & size (how many new buy orders appear)
+            // --- Player Instabuy Transaction Metrics (from buy_moving_week) ---
+            // Measures how often and how much items are BOUGHT FROM the Bazaar (Player Instabuys)
+            let instabuy_diff = current.buy_moving_week - prev.buy_moving_week;
+            if instabuy_diff != 0 {
+                self.player_instabuy_transaction_changes_count += 1;
+                self.player_instabuy_transaction_size_total += instabuy_diff.abs() as f64;
+            }
+
+            // --- Supply Side Order Book Dynamics (New Sell Offers / from current.buy_orders) ---
+            // Measures how many new competitive Sell Offers (supply) appear
             if prev.buy_orders.len() > 1 && !current.buy_orders.is_empty() {
-                let anchor = &prev.buy_orders[1]; // Use 2nd best offer as stable point
+                let anchor = &prev.buy_orders[1]; // Use 2nd best Sell Offer as stable point
                 if let Some(idx) = current.buy_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
-                    let new_orders = if idx > 0 { idx } else { 0 };
-                    self.buy_order_frequency_sum += new_orders as f64;
-                    self.buy_order_frequency_count += 1;
-                    if new_orders > 0 {
-                        let amount: i64 = current.buy_orders.iter().take(new_orders).map(|o| o.amount).sum();
-                        self.total_new_buy_order_amount += amount as f64;
-                        self.total_new_buy_orders += new_orders as f64;
+                    let new_offers = if idx > 0 { idx } else { 0 };
+                    self.new_supply_offer_frequency_sum += new_offers as f64;
+                    self.new_supply_offer_frequency_count += 1;
+                    if new_offers > 0 {
+                        let amount: i64 = current.buy_orders.iter().take(new_offers).map(|o| o.amount).sum();
+                        self.total_new_supply_offer_amount += amount as f64;
+                        self.total_new_supply_offers += new_orders as f64;
                     }
                 }
             }
-            // Buy frequency & size (how often and how much is bought)
-            let buy_diff = current.sell_moving_week - prev.sell_moving_week;
-            if buy_diff != 0 {
-                self.buy_changes_count += 1;
-                self.buy_size_total += buy_diff.abs() as f64;
+
+            // --- Player Instasell Transaction Metrics (from sell_moving_week) ---
+            // Measures how often and how much items are SOLD TO the Bazaar (Player Instasells)
+            let instasell_diff = current.sell_moving_week - prev.sell_moving_week;
+            if instasell_diff != 0 {
+                self.player_instasell_transaction_changes_count += 1;
+                self.player_instasell_transaction_size_total += instasell_diff.abs() as f64;
             }
         }
 
@@ -154,33 +191,54 @@ impl ProductMetricsState {
     }
 
     fn finalize(&self, product_id: String) -> AnalysisResult {
-        let buy_price_average = self.sum_buy / self.count as f64;
-        let sell_price_average = self.sum_sell / self.count as f64;
+        // Calculate average prices
+        let instabuy_price_average = self.sum_instabuy_price / self.count as f64;
+        let instasell_price_average = self.sum_instasell_price / self.count as f64;
 
-        // Finalize sell-side metrics
-        let sell_order_frequency_average = if self.sell_order_frequency_count > 0 { self.sell_order_frequency_sum / self.sell_order_frequency_count as f64 } else { 0.0 };
-        let sell_order_size_average = if self.total_new_sell_orders > 0.0 { self.total_new_sell_order_amount / self.total_new_sell_orders } else { 0.0 };
-        let sell_frequency = if self.windows > 0 { self.sell_changes_count as f64 / self.windows as f64 } else { 0.0 };
-        let sell_size = if self.sell_changes_count > 0 { self.sell_size_total / self.sell_changes_count as f64 } else { 0.0 };
+        // Finalize New Demand Offer metrics
+        let new_demand_offer_frequency_average = if self.new_demand_offer_frequency_count > 0 { 
+            self.new_demand_offer_frequency_sum / self.new_demand_offer_frequency_count as f64 
+        } else { 0.0 };
+        let new_demand_offer_size_average = if self.total_new_demand_offers > 0.0 { 
+            self.total_new_demand_offer_amount / self.total_new_demand_offers 
+        } else { 0.0 };
 
-        // Finalize buy-side metrics
-        let buy_order_frequency_average = if self.buy_order_frequency_count > 0 { self.buy_order_frequency_sum / self.buy_order_frequency_count as f64 } else { 0.0 };
-        let buy_order_size_average = if self.total_new_buy_orders > 0.0 { self.total_new_buy_order_amount / self.total_new_buy_orders } else { 0.0 };
-        let buy_frequency = if self.windows > 0 { self.buy_changes_count as f64 / self.windows as f64 } else { 0.0 };
-        let buy_size = if self.buy_changes_count > 0 { self.buy_size_total / self.buy_changes_count as f64 } else { 0.0 };
+        // Finalize Player Instabuy Transaction metrics
+        let player_instabuy_transaction_frequency = if self.windows > 0 { 
+            self.player_instabuy_transaction_changes_count as f64 / self.windows as f64 
+        } else { 0.0 };
+        let player_instabuy_transaction_size_average = if self.player_instabuy_transaction_changes_count > 0 { 
+            self.player_instabuy_transaction_size_total / self.player_instabuy_transaction_changes_count as f64 
+        } else { 0.0 };
+
+        // Finalize New Supply Offer metrics
+        let new_supply_offer_frequency_average = if self.new_supply_offer_frequency_count > 0 { 
+            self.new_supply_offer_frequency_sum / self.new_supply_offer_frequency_count as f64 
+        } else { 0.0 };
+        let new_supply_offer_size_average = if self.total_new_supply_offers > 0.0 { 
+            self.total_new_supply_offer_amount / self.total_new_supply_offers 
+        } else { 0.0 };
+
+        // Finalize Player Instasell Transaction metrics
+        let player_instasell_transaction_frequency = if self.windows > 0 { 
+            self.player_instasell_transaction_changes_count as f64 / self.windows as f64 
+        } else { 0.0 };
+        let player_instasell_transaction_size_average = if self.player_instasell_transaction_changes_count > 0 { 
+            self.player_instasell_transaction_size_total / self.player_instasell_transaction_changes_count as f64 
+        } else { 0.0 };
 
         AnalysisResult {
             product_id,
-            buy_price_average,
-            sell_price_average,
-            sell_order_frequency_average,
-            sell_order_size_average,
-            sell_frequency,
-            sell_size,
-            buy_order_frequency_average,
-            buy_order_size_average,
-            buy_frequency,
-            buy_size,
+            instabuy_price_average,
+            instasell_price_average,
+            new_demand_offer_frequency_average,
+            new_demand_offer_size_average,
+            player_instabuy_transaction_frequency,
+            player_instabuy_transaction_size_average,
+            new_supply_offer_frequency_average,
+            new_supply_offer_size_average,
+            player_instasell_transaction_frequency,
+            player_instasell_transaction_size_average,
         }
     }
 }
@@ -206,19 +264,25 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
         let pid = pid.clone();
         let prod = prod.clone();
         tasks.push(tokio::spawn(async move {
-            let sell_price = prod["sell_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
-            let buy_price = prod["buy_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
+            // Per your clarification:
+            // prod["sell_summary"][0]["pricePerUnit"] is the price a player RECEIVES (Instasell Price)
+            // prod["buy_summary"][0]["pricePerUnit"] is the price a player PAYS (Instabuy Price)
+            let instasell_price = prod["sell_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
+            let instabuy_price = prod["buy_summary"][0]["pricePerUnit"].as_f64().unwrap_or_default();
             
             let quick_status = &prod["quick_status"];
+            // buyMovingWeek: items BOUGHT FROM Bazaar (Player Instabuys)
             let buy_moving_week = quick_status["buyMovingWeek"].as_i64().unwrap_or_default();
+            // sellMovingWeek: items SOLD TO Bazaar (Player Instasells)
             let sell_moving_week = quick_status["sellMovingWeek"].as_i64().unwrap_or_default();
             let sell_volume = quick_status["sellVolume"].as_i64().unwrap_or_default();
             let buy_volume = quick_status["buyVolume"].as_i64().unwrap_or_default();
 
-            let mut sell_orders = Vec::new();
+            // sell_summary: This list contains BUY ORDERS (player demand)
+            let mut sell_orders_vec = Vec::new();
             if let Some(arr) = prod["sell_summary"].as_array() {
                 for o in arr {
-                    sell_orders.push(Order {
+                    sell_orders_vec.push(Order {
                         amount: o["amount"].as_i64().unwrap_or_default(),
                         price_per_unit: o["pricePerUnit"].as_f64().unwrap_or_default(),
                         orders: o["orders"].as_i64().unwrap_or_default(),
@@ -226,10 +290,11 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
                 }
             }
 
-            let mut buy_orders = Vec::new();
+            // buy_summary: This list contains SELL ORDERS (player supply)
+            let mut buy_orders_vec = Vec::new();
             if let Some(arr) = prod["buy_summary"].as_array() {
                 for o in arr {
-                    buy_orders.push(Order {
+                    buy_orders_vec.push(Order {
                         amount: o["amount"].as_i64().unwrap_or_default(),
                         price_per_unit: o["pricePerUnit"].as_f64().unwrap_or_default(),
                         orders: o["orders"].as_i64().unwrap_or_default(),
@@ -239,14 +304,14 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
 
             BazaarInfo {
                 product_id: pid,
-                sell_price,
-                buy_price,
+                sell_price: instasell_price, // This is what the API calls 'sell_price', but is Instasell Price
+                buy_price: instabuy_price,   // This is what the API calls 'buy_price', but is Instabuy Price
                 buy_moving_week,
                 sell_moving_week,
                 sell_volume,
                 buy_volume,
-                sell_orders,
-                buy_orders,
+                sell_orders: sell_orders_vec, // These are BUY OFFERS (DEMAND)
+                buy_orders: buy_orders_vec,   // These are SELL OFFERS (SUPPLY)
             }
         }));
     }
@@ -272,7 +337,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600); // Default 1 hour
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
-        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20); // Default 1 minute
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20); // Default 20 seconds
 
     println!("Configuration: Exporting every {} seconds, polling API every {} seconds.", export_interval_secs, api_poll_interval_secs);
 
