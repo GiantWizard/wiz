@@ -20,10 +20,10 @@ struct Order {
 /// Represents the Bazaar snapshot for one product.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct BazaarInfo {
-    product_id: String,
     // Note: Per your clarification:
     // sell_price here is from prod["sell_summary"][0]["pricePerUnit"], which is the Instasell Price (player receives).
     // buy_price here is from prod["buy_summary"][0]["pricePerUnit"], which is the Instabuy Price (player pays).
+    product_id: String,
     sell_price: f64,
     buy_price: f64,
     buy_moving_week: i64,  // Tracks items BOUGHT FROM Bazaar (Player Instabuys)
@@ -107,7 +107,7 @@ struct ProductMetricsState {
 impl ProductMetricsState {
     fn new(first: &BazaarInfo) -> Self {
         Self {
-            sum_instabuy_price: first.buy_price, // BazaarInfo.buy_price is Instabuy Price
+            sum_instabuy_price: first.buy_price,   // BazaarInfo.buy_price is Instabuy Price
             sum_instasell_price: first.sell_price, // BazaarInfo.sell_price is Instasell Price
             count: 1,
             windows: 0,
@@ -141,6 +141,8 @@ impl ProductMetricsState {
             // --- Demand Side Order Book Dynamics (New Buy Offers / from current.sell_orders) ---
             // Measures how many new competitive Buy Offers (demand) appear
             if prev.sell_orders.len() > 1 && !current.sell_orders.is_empty() {
+                // prev.sell_orders contains BUY ORDERS (demand)
+                // current.sell_orders contains BUY ORDERS (demand)
                 let anchor = &prev.sell_orders[1]; // Use 2nd best Buy Offer as stable point
                 if let Some(idx) = current.sell_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
                     let new_offers = if idx > 0 { idx } else { 0 }; // All orders before anchor (better price)
@@ -149,7 +151,7 @@ impl ProductMetricsState {
                     if new_offers > 0 {
                         let amount: i64 = current.sell_orders.iter().take(new_offers).map(|o| o.amount).sum();
                         self.total_new_demand_offer_amount += amount as f64;
-                        self.total_new_demand_offers += new_offers as f64;
+                        self.total_new_demand_offers += new_offers as f64; // Corrected: was new_orders
                     }
                 }
             }
@@ -165,6 +167,8 @@ impl ProductMetricsState {
             // --- Supply Side Order Book Dynamics (New Sell Offers / from current.buy_orders) ---
             // Measures how many new competitive Sell Offers (supply) appear
             if prev.buy_orders.len() > 1 && !current.buy_orders.is_empty() {
+                // prev.buy_orders contains SELL ORDERS (supply)
+                // current.buy_orders contains SELL ORDERS (supply)
                 let anchor = &prev.buy_orders[1]; // Use 2nd best Sell Offer as stable point
                 if let Some(idx) = current.buy_orders.iter().position(|o| (o.price_per_unit - anchor.price_per_unit).abs() < 1e-6) {
                     let new_offers = if idx > 0 { idx } else { 0 };
@@ -173,7 +177,7 @@ impl ProductMetricsState {
                     if new_offers > 0 {
                         let amount: i64 = current.buy_orders.iter().take(new_offers).map(|o| o.amount).sum();
                         self.total_new_supply_offer_amount += amount as f64;
-                        self.total_new_supply_offers += new_orders as f64;
+                        self.total_new_supply_offers += new_offers as f64; // Corrected: was new_orders
                     }
                 }
             }
