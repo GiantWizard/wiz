@@ -101,25 +101,25 @@ def process_item(item: dict) -> dict:
 if __name__ == "__main__":
     # Define the items, their fractions, and any subtraction amounts
     ITEMS_TO_CALCULATE = [
-        {"id": "NECRON_HANDLE",             "label": "Necron's Handle",           "num": 275000/1.1, "den": 7000,   "subtract": 100_000_000},
-        {"id": "DIVAN_ALLOY",               "label": "Divan Alloy",               "num": 1000000/1.1, "den": 17000},
-        {"id": "WITHER_CHESTPLATE",         "label": "Wither Chestplate",         "num": 52000/1.1, "den": 7000,    "subtract": 10_000_000},
-        {"id": "RECOMBOBULATOR_3000",       "label": "Recombobulator 3000 (M3)",  "num": 6000/1.1, "den": 12000,   "subtract": 6_000_000},
-        {"id": "ENCHANTMENT_LOOTING_5",     "label": "Enchantment Looting 5",     "num": 500000/1.1, "den": 100000},
-        {"id": "VAMPIRE_DENTIST_RELIC",     "label": "Vampire Dentist Relic",     "num": 18450/1.1, "den": 8000},
-        {"id": "WARDEN_HEART",              "label": "Warden Heart",              "num": 3600000/1.1, "den": 500000},
-        {"id": "TOXIC_ARROW_POISON",        "label": "Toxic Arrow Poison",        "num": 3300/1.1, "den": 400000},
-        {"id": "OVERFLUX_CAPACITOR",        "label": "Overflux Capacitor",        "num": 1200000/1.1, "den": 300000},
-        {"id": "HAMSTER_WHEEL",             "label": "Hamster Wheel",             "num": 3000/1.1, "den": 300000},
-        {"id": "JUDGEMENT_CORE",            "label": "Judgement Core",            "num": 885000/1.1, "den": 70000},
-        {"id": "CRUDE_GABAGOOL_DISTILLATE", "label": "Crude Gabagool Distillate", "num": 10649/1.1, "den": 85000},
-        {"id": "HIGH_CLASS_ARCHFIEND_DICE", "label": "High Class Archfiend Dice", "num": 195000/1.1, "den": 85000},
-        {"id": "FIRST_MASTER_STAR",         "label": "First Master Star",         "num": 11850/1.1, "den": 12000,   "subtract": 5_000_000},
-        {"id": "SECOND_MASTER_STAR",        "label": "Second Master Star",        "num": 10950/1.1, "den": 12000,   "subtract": 6_000_000},
-        {"id": "THIRD_MASTER_STAR",         "label": "Third Master Star",         "num": 48750/1.1, "den": 20000,   "subtract": 7_000_000},
-        {"id": "FOURTH_MASTER_STAR",        "label": "Fourth Master Star",        "num": 81240/1.1, "den": 20000,   "subtract": 8_000_000},
-        {"id": "FIFTH_MASTER_STAR",         "label": "Fifth Master Star",         "num": 94200/1.1, "den": 7000,    "subtract": 9_000_000},
-        {"id": "GIANTS_SWORD",              "label": "Giant's Sword",             "num": 160020/1.1, "den": 20000,   "subtract": 25_000_000}
+        {"id": "NECRON_HANDLE",             "label": "Necron's Handle",           "num": 275000/1, "den": 7000,   "subtract": 100_000_000},
+        {"id": "DIVAN_ALLOY",               "label": "Divan Alloy",               "num": 1000000/1, "den": 17000},
+        {"id": "WITHER_CHESTPLATE",         "label": "Wither Chestplate",         "num": 52000/1, "den": 7000,    "subtract": 10_000_000},
+        {"id": "RECOMBOBULATOR_3000",       "label": "Recombobulator 3000 (M3)",  "num": 6000/1, "den": 12000,   "subtract": 6_000_000},
+        {"id": "ENCHANTMENT_LOOTING_5",     "label": "Enchantment Looting 5",     "num": 500000/1, "den": 100000},
+        {"id": "VAMPIRE_DENTIST_RELIC",     "label": "Vampire Dentist Relic",     "num": 18450/1, "den": 8000},
+        {"id": "WARDEN_HEART",              "label": "Warden Heart",              "num": 3600000/1, "den": 500000},
+        {"id": "TOXIC_ARROW_POISON",        "label": "Toxic Arrow Poison",        "num": 3300/1, "den": 400000},
+        {"id": "OVERFLUX_CAPACITOR",        "label": "Overflux Capacitor",        "num": 1200000/1, "den": 300000},
+        {"id": "HAMSTER_WHEEL",             "label": "Hamster Wheel",             "num": 3000/1, "den": 300000},
+        {"id": "JUDGEMENT_CORE",            "label": "Judgement Core",            "num": 885000/1, "den": 70000},
+        {"id": "CRUDE_GABAGOOL_DISTILLATE", "label": "Crude Gabagool Distillate", "num": 10649/1, "den": 85000},
+        {"id": "HIGH_CLASS_ARCHFIEND_DICE", "label": "High Class Archfiend Dice", "num": 195000/1, "den": 85000},
+        {"id": "FIRST_MASTER_STAR",         "label": "First Master Star",         "num": 11850/1, "den": 12000,   "subtract": 5_000_000},
+        {"id": "SECOND_MASTER_STAR",        "label": "Second Master Star",        "num": 10950/1, "den": 12000,   "subtract": 6_000_000},
+        {"id": "THIRD_MASTER_STAR",         "label": "Third Master Star",         "num": 48750/1, "den": 20000,   "subtract": 7_000_000},
+        {"id": "FOURTH_MASTER_STAR",        "label": "Fourth Master Star",        "num": 81240/1, "den": 20000,   "subtract": 8_000_000},
+        {"id": "FIFTH_MASTER_STAR",         "label": "Fifth Master Star",         "num": 94200/1, "den": 7000,    "subtract": 9_000_000},
+        {"id": "GIANTS_SWORD",              "label": "Giant's Sword",             "num": 160020/1, "den": 20000,   "subtract": 25_000_000}
     ]
 
     # 1. Fetch the Ananke Feather price first, as it's needed for all calculations.

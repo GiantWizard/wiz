@@ -272,7 +272,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600); // Default 1 hour
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
-        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(60); // Default 1 minute
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20); // Default 1 minute
 
     println!("Configuration: Exporting every {} seconds, polling API every {} seconds.", export_interval_secs, api_poll_interval_secs);
 
