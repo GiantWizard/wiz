@@ -164,9 +164,9 @@ impl ProductMetricsState {
             // This logic analyzes the buy offers (`sell_orders`) to find new ones.
             let prev_demand_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            
-            // FIX: Iterate by reference using `&` to avoid moving `current.sell_orders`
-            for offer in ¤t.sell_orders {
+
+            // CORRECTED: Iterate by reference using `current.sell_orders`
+            for offer in current.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_demand_orders.get(&key) {
                     None => { // New price level, all orders are new
@@ -190,8 +190,8 @@ impl ProductMetricsState {
             let prev_supply_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
 
-            // FIX: Iterate by reference using `&` to avoid moving `current.buy_orders`
-            for offer in ¤t.buy_orders {
+            // CORRECTED: Iterate by reference using `current.buy_orders`
+            for offer in current.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_supply_orders.get(&key) {
                     None => {
