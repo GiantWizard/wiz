@@ -107,7 +107,6 @@ impl ProductMetricsState {
             self.windows_processed += 1;
 
             // --- Player Instabuy Analysis (Order Book Consumption on Supply Side) ---
-            // This logic analyzes the sell offers (`buy_orders`) to see what was consumed.
             let prev_sell_offers: HashMap<u64, i64> = prev.buy_orders.iter()
                 .map(|o| (Self::price_to_key(o.price_per_unit), o.amount))
                 .collect();
@@ -123,7 +122,7 @@ impl ProductMetricsState {
                             consumed_volume += prev_amount - current_amount;
                         }
                     }
-                    None => { // Price level is gone, entire amount was consumed
+                    None => {
                         consumed_volume += prev_amount;
                     }
                 }
@@ -134,7 +133,6 @@ impl ProductMetricsState {
             }
 
             // --- Player Instasell Analysis (Order Book Consumption on Demand Side) ---
-            // This logic analyzes the buy offers (`sell_orders`) to see what was fulfilled.
             let prev_buy_offers: HashMap<u64, i64> = prev.sell_orders.iter()
                 .map(|o| (Self::price_to_key(o.price_per_unit), o.amount))
                 .collect();
@@ -150,7 +148,7 @@ impl ProductMetricsState {
                             fulfilled_volume += prev_amount - current_amount;
                         }
                     }
-                    None => { // Price level is gone, entire amount was fulfilled
+                    None => {
                         fulfilled_volume += prev_amount;
                     }
                 }
@@ -161,23 +159,22 @@ impl ProductMetricsState {
             }
 
             // --- New Demand Offer Analysis (Price-Level Anchor on Demand Side) ---
-            // This logic analyzes the buy offers (`sell_orders`) to find new ones.
             let prev_demand_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-
-            // CORRECTED: Iterate by reference using `current.sell_orders`
+            
+            // CORRECTED: Iterate by reference using `&`
             for offer in current.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_demand_orders.get(&key) {
-                    None => { // New price level, all orders are new
+                    None => {
                         self.total_new_demand_offers += offer.orders as f64;
                         self.total_new_demand_offer_amount += offer.amount as f64;
                     }
-                    Some(prev_orders) => { // Existing price level, check for more orders
+                    Some(prev_orders) => {
                         if offer.orders > *prev_orders {
                             self.total_new_demand_offers += (offer.orders - prev_orders) as f64;
                             let prev_amount = prev_demand_amount.get(&key).unwrap_or(&0);
-                            if offer.amount > *prev_amount { // Only count positive volume change
+                            if offer.amount > *prev_amount {
                                 self.total_new_demand_offer_amount += (offer.amount - prev_amount) as f64;
                             }
                         }
@@ -186,11 +183,10 @@ impl ProductMetricsState {
             }
             
             // --- New Supply Offer Analysis (Price-Level Anchor on Supply Side) ---
-            // This logic analyzes the sell offers (`buy_orders`) to find new ones.
             let prev_supply_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
 
-            // CORRECTED: Iterate by reference using `current.buy_orders`
+            // CORRECTED: Iterate by reference using `&`
             for offer in current.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_supply_orders.get(&key) {
