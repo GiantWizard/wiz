@@ -163,7 +163,7 @@ impl ProductMetricsState {
             let prev_demand_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             
             // CORRECTED: Iterate by reference using `&`
-            for offer in current.sell_orders {
+            for offer in &current.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_demand_orders.get(&key) {
                     None => {
@@ -187,7 +187,7 @@ impl ProductMetricsState {
             let prev_supply_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
 
             // CORRECTED: Iterate by reference using `&`
-            for offer in current.buy_orders {
+            for offer in &current.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_supply_orders.get(&key) {
                     None => {
