@@ -164,7 +164,9 @@ impl ProductMetricsState {
             // This logic analyzes the buy offers (`sell_orders`) to find new ones.
             let prev_demand_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            for offer in current.sell_orders {
+            
+            // FIX: Iterate by reference using `&` to avoid moving `current.sell_orders`
+            for offer in ¤t.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_demand_orders.get(&key) {
                     None => { // New price level, all orders are new
@@ -187,7 +189,9 @@ impl ProductMetricsState {
             // This logic analyzes the sell offers (`buy_orders`) to find new ones.
             let prev_supply_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            for offer in current.buy_orders {
+
+            // FIX: Iterate by reference using `&` to avoid moving `current.buy_orders`
+            for offer in ¤t.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 match prev_supply_orders.get(&key) {
                     None => {
@@ -213,8 +217,8 @@ impl ProductMetricsState {
         let windows = self.windows_processed as f64;
         
         // Finalize Price Averages
-        let instabuy_price_average = self.sum_instabuy_price / self.snapshot_count as f64;
-        let instasell_price_average = self.sum_instasell_price / self.snapshot_count as f64;
+        let instabuy_price_average = if self.snapshot_count > 0 { self.sum_instabuy_price / self.snapshot_count as f64 } else { 0.0 };
+        let instasell_price_average = if self.snapshot_count > 0 { self.sum_instasell_price / self.snapshot_count as f64 } else { 0.0 };
 
         // Finalize New Demand Offer metrics
         let new_demand_offer_frequency_average = if windows > 0.0 { self.total_new_demand_offers / windows } else { 0.0 };
@@ -323,7 +327,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut last_mod: Option<String> = None;
 
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
-        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(300);
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600);
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
 
