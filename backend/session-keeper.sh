@@ -5,34 +5,37 @@ set -o pipefail
 
 echo "[SESSION-KEEPER] Starting MEGA session keeper."
 
-# This script runs as 'appuser', so HOME is automatically set by supervisor's environment.
-# Check for credentials passed from supervisor
 if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PWD" ]; then
   echo "[SESSION-KEEPER] FATAL: MEGA_EMAIL and/or MEGA_PWD environment variables are not set."
   exit 1
 fi
 
+# --- CRITICAL ADDITION: CLEANUP ---
+# Ensure a clean slate on every start/restart.
+# mega-quit is the graceful way to stop the server if it's running.
+# The pkill and rm are a failsafe for corrupted states.
+echo "[SESSION-KEEPER] Performing initial cleanup..."
+mega-quit &> /dev/null
+sleep 2 # Give it a moment to shut down
+pkill mega-cmd-server &> /dev/null
+rm -f /home/appuser/.megaCmd/megacmd.lock /home/appuser/.megaCmd/srv_state.db &> /dev/null
+echo "[SESSION-KEEPER] Cleanup complete."
+# --- END CLEANUP ---
+
 while true; do
-  echo "[SESSION-KEEPER] Checking MEGA session status..."
+  # The rest of your script is already excellent, but we will make one change.
+  # We force a login attempt on the first run instead of checking first.
+  echo "[SESSION-KEEPER] Establishing MEGA session..."
 
-  # 'mega-whoami -l' is a reliable command that exits with a non-zero status if not logged in.
-  # This check works for both the initial startup and subsequent renewals.
-  if mega-whoami -l > /dev/null 2>&1; then
-    echo "[SESSION-KEEPER] Session is active. Checking again in 1 hour."
+  if mega-login "$MEGA_EMAIL" "$MEGA_PWD"; then
+    echo "[SESSION-KEEPER] Login successful. Session is active."
+    # Now that we are logged in, sleep for an hour before the next check.
+    echo "[SESSION-KEEPER] Checking again in 1 hour."
+    sleep 3600
   else
-    echo "[SESSION-KEEPER] Session is down, expired, or not yet started. Attempting to log in..."
-
-    # This command will perform the initial login and all subsequent re-logins.
-    if mega-login "$MEGA_EMAIL" "$MEGA_PWD"; then
-      echo "[SESSION-KEEPER] Login/Re-login successful."
-    else
-      # If login fails, log it and retry sooner to unblock the other apps.
-      echo "[SESSION-KEEPER] ERROR: Login FAILED. Retrying in 5 minutes."
-      sleep 300
-      continue # Skip the long sleep and retry the loop immediately
-    fi
+    # If login fails, log it and retry sooner.
+    echo "[SESSION-KEEPER] ERROR: Login FAILED. Retrying in 5 minutes."
+    sleep 300
+    continue # Retry the loop immediately
   fi
-
-  # Sleep for 1 hour (3600 seconds) before the next check.
-  sleep 3600
 done
