@@ -323,7 +323,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut last_mod: Option<String> = None;
 
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
-        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600);
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(300);
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
 
