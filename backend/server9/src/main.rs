@@ -238,14 +238,20 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
     Ok(Some(snapshot))
 }
 
+// In server9/src/main.rs, replace the entire main function with this:
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("metrics")?;
     let mut states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_mod: Option<String> = None;
 
-    let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS").ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(300);
-    let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS").ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
+    // Set default export interval to 300 seconds (5 minutes) for faster testing.
+    let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(300);
+
+    let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
 
     println!("Configuration: Exporting every {} seconds, polling API every {} seconds.", export_interval_secs, api_poll_interval_secs);
     let mut export_timer = Instant::now();
@@ -268,8 +274,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if !states.is_empty() {
                 let results: Vec<_> = states.iter().map(|(pid, st)| st.finalize(pid.clone())).collect();
                 let ts = Utc::now().format("%Y%m%d%H%M%S").to_string();
+                
                 let local_path = format!("metrics/metrics_{}.json", ts);
-                let remote_mega_path = format!("/metrics_{}", ts);
+                // Construct the full, correct remote path including the folder and the .json extension.
+                let remote_mega_path = format!("/remote_metrics/metrics_{}.json", ts);
                 
                 println!("Attempting to export local file '{}' to remote path '{}'", local_path, remote_mega_path);
 
@@ -278,7 +286,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         println!("Successfully wrote metrics for {} products to {}", results.len(), local_path);
                         let export_engine_path = std::env::var("EXPORT_ENGINE_PATH").unwrap_or_else(|_| "export_engine".to_string());
                         
-                        match Command::new(&export_engine_path).arg(&local_path).arg(&remote_mega_path).output() {
+                        // Pass the correct local path and the full desired remote path to the exporter.
+                        match Command::new(&export_engine_path)
+                            .arg(&local_path)
+                            .arg(&remote_mega_path)
+                            .output() {
                             Ok(output) => {
                                 println!("Export engine stdout:\n{}", String::from_utf8_lossy(&output.stdout));
                                 if !output.stderr.is_empty() { eprintln!("Export engine stderr:\n{}", String::from_utf8_lossy(&output.stderr)); }
@@ -291,6 +303,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("No state to export this round.");
             }
+            // Reset state and timer for the next aggregation window.
             states.clear();
             export_timer = Instant::now();
         }
