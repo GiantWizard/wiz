@@ -246,9 +246,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_mod: Option<String> = None;
 
-    // Set default export interval to 300 seconds (5 minutes) for faster testing.
+    // Set default export interval to 3600 seconds (1 hour) for faster testing.
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
-        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(300);
+        .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600);
 
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
