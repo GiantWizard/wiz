@@ -1,3 +1,3 @@
-module github.com/GiantWizard/wiz/backend
+module github.com/user/calculation_engine
 
-go 1.23.4
+go 1.23
