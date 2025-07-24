@@ -51,9 +51,9 @@ var (
 )
 
 func main() {
-	// Start background cache refresher
+	// Delay initial cache refresh to allow MEGA session-keeper to log in
 	go func() {
-		// Initial run
+		time.Sleep(10 * time.Second)
 		updateFileCache()
 		ticker := time.NewTicker(1 * time.Minute)
 		for range ticker.C {
@@ -99,11 +99,15 @@ func updateFileCache() {
 		log.Printf("Cache update: failed to list %s: %v", remoteDir, err)
 		return
 	}
+	// Parse lines for filenames
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	var files []string
 	for _, line := range lines {
-		if strings.HasPrefix(line, "metrics_") && strings.HasSuffix(line, ".json") {
-			files = append(files, line)
+		// Split fields and find tokens matching our pattern
+		for _, token := range strings.Fields(line) {
+			if strings.HasPrefix(token, "metrics_") && strings.HasSuffix(token, ".json") {
+				files = append(files, token)
+			}
 		}
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(files)))
@@ -177,12 +181,12 @@ func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute averages
-	final := calculateAverages(aggregator)
+	finalResults := calculateAverages(aggregator)
 
 	// Respond
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(final); err != nil {
+	if err := json.NewEncoder(w).Encode(finalResults); err != nil {
 		log.Printf("Failed to encode response: %v", err)
 	}
 	log.Println("Successfully served /latest_metrics/")
