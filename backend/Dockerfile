@@ -66,7 +66,7 @@ RUN groupadd --gid 999 appgroup && useradd --uid 999 --gid appgroup --shell /bin
 
 RUN mkdir -p /app /data/metrics_archive /var/log/supervisor /var/run \
     && chown -R appuser:appgroup /app /data /home/appuser /var/run \
-    && chown -R root:root /var/log/supervisor
+    && chown -R appuser:appgroup /var/log/supervisor
 
 WORKDIR /app
 
