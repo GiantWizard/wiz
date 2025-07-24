@@ -1,42 +1,50 @@
+# ------------------------------------------------------------
 # STAGE 1: Go Builder for Calculation Engine
+# ------------------------------------------------------------
 FROM golang:1.23-alpine AS go-builder
 LABEL stage=go-builder
 WORKDIR /app
 
-# Download and verify modules
+# Copy Go modules and download
 COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download && go mod verify
 
-# Copy the whole calculation_engine dir (including dependencies/) and build
+# Copy the rest of the code and build
 COPY calculation_engine/ ./
 RUN CGO_ENABLED=0 GOOS=linux \
-    go build -ldflags="-s -w" -trimpath -o /go_app_binary .
+    go build -ldflags="-s -w" -trimpath -o /go_app_binary
 
-# STAGE 2: Rust/C++ Builder for Metrics Generator and Export Engine
+# ------------------------------------------------------------
+# STAGE 2: Rust + C++ Builder for Metrics Generator & Export Engine
+# ------------------------------------------------------------
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
 LABEL stage=rust-cpp-builder
 
+# Install C/C++ toolchain
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       g++ make curl ca-certificates pkg-config libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# Build Rust metrics generator
 WORKDIR /app/metrics_generator
 COPY server9/Cargo.toml server9/Cargo.lock* ./
-RUN mkdir -p src && echo "fn main(){}" > src/main.rs
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
 RUN cargo fetch
-
 COPY server9/src ./src
 RUN cargo build --release
 
+# Build C++ export engine
 WORKDIR /app/export_engine_build
 COPY server9/export.cpp .
 RUN g++ -std=c++11 -O2 -Wall -o /app_export_engine export.cpp
 
+# ------------------------------------------------------------
 # STAGE 3: Final Runtime Image
+# ------------------------------------------------------------
 FROM debian:bookworm-slim AS final
 
-# Runtime deps + cap tool + MEGAcmd
+# Install runtime deps + libcap2-bin (if you ever want cap-based approach)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       supervisor \
@@ -44,8 +52,7 @@ RUN apt-get update && \
       libfuse2 \
       libssl3 \
       dbus \
-      curl \
-      libcap2-bin && \
+      curl && \
     curl -fsSL https://mega.nz/linux/repo/Debian_12/amd64/megacmd-Debian_12_amd64.deb \
       -o /tmp/megacmd.deb && \
     apt-get install -y /tmp/megacmd.deb && \
@@ -60,10 +67,11 @@ RUN apt-get update && \
     ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-mkdir && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Allow mega‑cmd‑server to bind privileged ports as non-root
-RUN setcap 'cap_net_bind_service=+ep' /usr/bin/mega-cmd-server
+# (Optional) if you want to try the capability approach, uncomment:
+# RUN apt-get update && apt-get install -y libcap2-bin && \
+#     setcap 'cap_net_bind_service=+ep' /usr/bin/mega-cmd-server
 
-# Create appuser/appgroup
+# Create non-root user
 RUN groupadd --gid 999 appgroup && \
     useradd --uid 999 --gid appgroup --shell /bin/bash --create-home appuser
 
@@ -74,11 +82,11 @@ RUN mkdir -p /app /data/metrics_archive /var/log/supervisor /var/run && \
 
 WORKDIR /app
 
-# Copy the Go binary and its dependencies
+# Copy Go binary
 COPY --from=go-builder --chown=appuser:appgroup /go_app_binary /app/calculation_service
 RUN chmod +x /app/calculation_service
 
-# **Fixed:** pull the dependencies tree from /app/dependencies in the go-builder
+# Copy Go dependencies (if any)
 COPY --from=go-builder --chown=appuser:appgroup /app/dependencies /app/dependencies
 
 # Copy Rust & C++ binaries
@@ -89,11 +97,13 @@ RUN chmod +x /app/metrics_generator
 COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/export_engine
 RUN chmod +x /app/export_engine
 
-# Copy session-keeper script and supervisor config
+# Copy session-keeper script & supervisor config
 COPY session-keeper.sh /usr/local/bin/session-keeper.sh
-COPY supervisor.conf /etc/supervisor/supervisor.conf
+COPY supervisor.conf   /etc/supervisor/supervisor.conf
 RUN chmod +x /usr/local/bin/session-keeper.sh
 
+# Expose port for calculation service
 EXPOSE 9000
 
+# Launch supervisord
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisor.conf", "-n"]
