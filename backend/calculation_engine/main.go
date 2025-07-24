@@ -94,7 +94,7 @@ func runCommand(name string, args ...string) (string, error) {
 // updateFileCache refreshes the list of latest 12 metric files.
 func updateFileCache() {
 	const remoteDir = "/remote_metrics"
-	out, err := runCommand("megals", remoteDir)
+	out, err := runCommand("megals -q", remoteDir)
 	if err != nil {
 		log.Printf("Cache update: failed to list %s: %v", remoteDir, err)
 		return
