@@ -54,7 +54,7 @@ func runCommand(name string, args ...string) (string, error) {
 		log.Printf("Error running command '%s %s': %v. Output: %s", name, strings.Join(args, " "), err, string(output))
 		return string(output), err
 	}
-	log.Printf("Successfully ran command '%s %s'.", name, strings.Join(args, " "))
+	// We don't log success here to avoid clutter, the calling function will log context.
 	return string(output), nil
 }
 
@@ -62,15 +62,20 @@ func runCommand(name string, args ...string) (string, error) {
 func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received request for /latest_metrics/")
 
-	// 1. Check MEGA login status
-	// mega-whoami returns a non-zero exit code if not logged in.
-	if _, err := runCommand("mega-whoami"); err != nil {
+	// --- ADDED DIAGNOSTIC ---
+	// 1. Check MEGA login status and report which user is logged in.
+	whoamiOutput, err := runCommand("mega-whoami")
+	if err != nil {
 		http.Error(w, "Failed to verify MEGA session. Is the session-keeper running and logged in?", http.StatusInternalServerError)
 		return
 	}
+	// This log line is the most important one for debugging.
+	log.Printf("MEGA session check successful. Application is running as user: %s", strings.TrimSpace(whoamiOutput))
+	// --- END DIAGNOSTIC ---
 
 	// 2. List remote files
 	remoteDir := "/remote_metrics"
+	log.Printf("Listing files in '%s'...", remoteDir)
 	output, err := runCommand("megals", remoteDir)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to list files in MEGA directory '%s'", remoteDir), http.StatusInternalServerError)
@@ -87,26 +92,22 @@ func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(filenames) == 0 {
+		log.Println("megals command succeeded but found 0 metric files.")
 		http.Error(w, "No metric files found in MEGA directory.", http.StatusNotFound)
 		return
 	}
 
 	// 3. Sort files to find the most recent ones
-	// The timestamp format YYYYMMDDHHMMSS allows for simple string sorting.
 	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
 
-	// 4. Select the latest 12 files (or fewer if not available)
+	// 4. Select the latest 12 files
 	numFilesToProcess := 12
 	if len(filenames) < numFilesToProcess {
 		numFilesToProcess = len(filenames)
 	}
 	filesToProcess := filenames[:numFilesToProcess]
-	log.Printf("Found %d total metric files. Will process the latest %d.", len(filenames), numFilesToProcess)
-
-	// --- ADDED LOGGING ---
-	// This new line will show exactly which files were selected for processing.
-	log.Printf("Selected files for processing: [%s]", strings.Join(filesToProcess, ", "))
-	// --- END ADDED LOGGING ---
+	// --- THIS LINE IS NOW CORRECTED ---
+	log.Printf("Found %d total metric files. Will process the latest %d: [%s]", len(filenames), numFilesToProcess, strings.Join(filesToProcess, ", "))
 
 	// 5. Create a temporary directory for downloaded files
 	tmpDir, err := os.MkdirTemp("", "metrics-aggregator-*")
@@ -115,18 +116,14 @@ func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer os.RemoveAll(tmpDir)
-	log.Printf("Created temporary directory: %s", tmpDir)
 
 	// 6. Download, parse, and aggregate data
 	aggregator := make(map[string]*AggregatedMetrics)
-
 	for _, filename := range filesToProcess {
 		remotePath := filepath.Join(remoteDir, filename)
 		localPath := filepath.Join(tmpDir, filename)
 
-		log.Printf("Downloading %s to %s", remotePath, localPath)
 		if _, err := runCommand("megaget", remotePath, localPath); err != nil {
-			// Log the error but continue to the next file if possible
 			log.Printf("Warning: Failed to download %s: %v", remotePath, err)
 			continue
 		}
@@ -142,7 +139,6 @@ func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Warning: Failed to parse JSON from %s: %v", filename, err)
 			continue
 		}
-
 		updateAggregator(aggregator, results)
 	}
 
@@ -169,7 +165,6 @@ func updateAggregator(aggregator map[string]*AggregatedMetrics, results []Analys
 		if _, ok := aggregator[r.ProductID]; !ok {
 			aggregator[r.ProductID] = &AggregatedMetrics{ProductID: r.ProductID}
 		}
-
 		a := aggregator[r.ProductID]
 		a.FileCount++
 		a.SumInstabuyPriceAverage += r.InstabuyPriceAverage
@@ -191,7 +186,7 @@ func calculateAverages(aggregator map[string]*AggregatedMetrics) []AnalysisResul
 	for _, a := range aggregator {
 		count := float64(a.FileCount)
 		if count == 0 {
-			continue // Should not happen if updateAggregator is used correctly
+			continue
 		}
 		avgResult := AnalysisResult{
 			ProductID:                             a.ProductID,
