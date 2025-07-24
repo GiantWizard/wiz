@@ -103,6 +103,11 @@ func latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	filesToProcess := filenames[:numFilesToProcess]
 	log.Printf("Found %d total metric files. Will process the latest %d.", len(filenames), numFilesToProcess)
 
+	// --- ADDED LOGGING ---
+	// This new line will show exactly which files were selected for processing.
+	log.Printf("Selected files for processing: [%s]", strings.Join(filesToProcess, ", "))
+	// --- END ADDED LOGGING ---
+
 	// 5. Create a temporary directory for downloaded files
 	tmpDir, err := os.MkdirTemp("", "metrics-aggregator-*")
 	if err != nil {
