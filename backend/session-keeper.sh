@@ -14,7 +14,6 @@ fi
 
 # --- CLEANUP on every start ---
 echo "[SESSION-KEEPER] Performing initial cleanup..."
-# Ensure the ready file does not exist on startup
 rm -f "$READY_FILE"
 mega-quit &> /dev/null
 sleep 2
@@ -26,23 +25,25 @@ echo "[SESSION-KEEPER] Cleanup complete."
 while true; do
   echo "[SESSION-KEEPER] Establishing MEGA session..."
 
-  if megalogin "$MEGA_EMAIL" "$MEGA_PWD"; then
-    echo "[SESSION-KEEPER] Login command sent successfully."
+  # --- THIS IS THE CRITICAL FIX ---
+  # Redirect stdin from /dev/null to force non-interactive mode and prevent hangs.
+  if megalogin "$MEGA_EMAIL" "$MEGA_PWD" < /dev/null; then
+    echo "[SESSION-KEEPER] Login command exited successfully."
     echo "[SESSION-KEEPER] Waiting 5 seconds for session server to stabilize..."
     sleep 5
     
-    # --- THIS IS THE KEY ---
-    # Create the ready file to signal that the session is active.
-    echo "[SESSION-KEEPER] Creating ready file at $READY_FILE. Session is active."
+    echo "[SESSION-KEEPER] Creating ready file at $READY_FILE to signal other services."
     touch "$READY_FILE"
     
-    echo "[SESSION-KEEPER] Initialization complete. Checking again in 1 hour."
+    echo "[SESSION-KEEPER] Initialization complete. Session is active. Will check again in 1 hour."
     sleep 3600
     
-    # In case of a loop, remove the ready file before trying again.
+    # Clean up for the next loop iteration
     rm -f "$READY_FILE"
   else
-    echo "[SESSION-KEEPER] ERROR: Login FAILED. Retrying in 5 minutes."
+    # Capture the exit code for better error reporting
+    exit_code=$?
+    echo "[SESSION-KEEPER] ERROR: Login FAILED with exit code $exit_code. Retrying in 5 minutes."
     sleep 300
     continue
   fi
