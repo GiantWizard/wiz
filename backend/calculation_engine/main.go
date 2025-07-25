@@ -28,16 +28,16 @@ func isMegaSessionReady() bool {
 	return false // File does not exist
 }
 
-// runAndLogMegaLs executes the 'megals' command and prints its output to the log.
+// runAndLogMegaLs executes the 'mega-ls' command and prints its output to the log.
 func runAndLogMegaLs() {
-	log.Println("[ACTION] Executing 'megals -q' to list files in /remote_metrics...")
+	log.Println("[ACTION] Executing 'mega-ls -q' to list files in /remote_metrics...")
 
-	cmd := exec.Command("megals", "-q", "/remote_metrics")
+	cmd := exec.Command("mega-ls", "-q", "/remote_metrics")
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[ERROR] Failed to run 'megals'. Error: %v", err)
+		log.Printf("[ERROR] Failed to run 'mega-ls'. Error: %v", err)
 		log.Printf("[ERROR_OUTPUT] %s", string(out))
 		return
 	}
