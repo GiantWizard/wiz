@@ -30,23 +30,29 @@ func isMegaSessionReady() bool {
 
 // runAndLogMegaLs executes the 'mega-ls' command and prints its output to the log.
 func runAndLogMegaLs() {
-	log.Println("[ACTION] Executing 'mega-ls /remote_metrics' to list files…")
+	log.Println("[ACTION] Spawning interactive megacmd to list /remote_metrics…")
 
-	// Invoke the client; it will connect over the MEGA_CMD_SOCKET you exported
-	cmd := exec.Command("mega-ls", "/remote_metrics")
-
-	// Inherit the current environment, which should include:
-	//   MEGA_CMD_SOCKET=/home/appuser/.megaCmd/megacmd.sock
+	// Build a little here‑doc that starts the shell, runs megacmd, then exits.
+	script := `
+      set -e
+      megacmd << 'EOF'
+cd /remote_metrics
+ls
+exit
+EOF
+`
+	cmd := exec.Command("bash", "-lc", script)
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[ERROR] mega-ls failed: %v\n%s", err, string(out))
+		log.Printf("[ERROR] interactive megacmd failed: %v", err)
+		log.Printf("[ERROR_OUTPUT]\n%s", string(out))
 		return
 	}
 
-	listing := strings.TrimSpace(string(out))
-	log.Printf("[SUCCESS] Remote file listing:\n--- Remote Files in /remote_metrics ---\n%s\n---------------------------------------", listing)
+	output := strings.TrimSpace(string(out))
+	log.Printf("[SUCCESS] Remote file listing:\n%s", output)
 }
 
 func main() {
