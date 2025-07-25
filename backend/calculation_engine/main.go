@@ -10,32 +10,24 @@ import (
 	"time"
 )
 
-// isMegaSessionReady now checks for the existence of a "ready file"
-// created by the session-keeper. This is 100% reliable.
 func isMegaSessionReady() bool {
 	readyFile := "/tmp/mega.ready"
 	log.Printf("[CHECK] Looking for ready file: %s", readyFile)
-
-	// os.Stat returns an error if the file does not exist.
-	_, err := os.Stat(readyFile)
-
-	if err == nil {
+	if _, err := os.Stat(readyFile); err == nil {
 		log.Println("[CHECK] SUCCESS: Ready file found. MEGA session is active.")
-		return true // File exists
+		return true
 	}
-
-	log.Println("[CHECK] Ready file not found. Waiting for session-keeper...")
-	return false // File does not exist
+	log.Println("[CHECK] Ready file not found. Waiting for session-keeper…")
+	return false
 }
 
-// runAndLogMegaLs executes the 'mega-ls' command and prints its output to the log.
 func runAndLogMegaLs() {
-	log.Println("[ACTION] Spawning interactive megacmd to list /remote_metrics…")
+	log.Println("[ACTION] Spawning interactive mega-cmd to list /remote_metrics…")
 
-	// Build a little here‑doc that starts the shell, runs megacmd, then exits.
+	// Use absolute path and non-interactive mode to run the client commands
 	script := `
-      set -e
-      megacmd << 'EOF'
+set -e
+/usr/bin/mega-cmd --non-interactive << 'EOF'
 cd /remote_metrics
 ls
 exit
@@ -46,7 +38,7 @@ EOF
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[ERROR] interactive megacmd failed: %v", err)
+		log.Printf("[ERROR] interactive mega-cmd failed: %v", err)
 		log.Printf("[ERROR_OUTPUT]\n%s", string(out))
 		return
 	}
@@ -56,25 +48,21 @@ EOF
 }
 
 func main() {
-	// --- Background task to wait for session and then list files ---
+	// Background task: wait for ready-file, then list files every minute.
 	go func() {
-		log.Println("[SETUP] Waiting for MEGA session to become fully active...")
-
-		// This loop will now reliably wait for the ready file.
+		log.Println("[SETUP] Waiting for MEGA session to become fully active…")
 		for !isMegaSessionReady() {
 			time.Sleep(10 * time.Second)
 		}
-
 		log.Println("[SETUP] MEGA session is now active. Starting periodic file listing.")
 		runAndLogMegaLs()
-
 		ticker := time.NewTicker(60 * time.Second)
 		for range ticker.C {
 			runAndLogMegaLs()
 		}
 	}()
 
-	// --- HTTP server for health checks ---
+	// Expose health check endpoint
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
@@ -84,7 +72,6 @@ func main() {
 	if port == "" {
 		port = "9000"
 	}
-
 	log.Printf("[SETUP] Calculation Engine is running. Starting health check server on port :%s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("[FATAL] Failed to start HTTP server: %v", err)
