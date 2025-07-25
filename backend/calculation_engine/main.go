@@ -10,41 +10,28 @@ import (
 	"time"
 )
 
-// isMegaSessionActive provides the most reliable check for an active session.
-// It returns true only if the output of 'mega-whoami' contains an email address ('@').
-func isMegaSessionActive() bool {
-	log.Println("[CHECK] Verifying MEGA session status with 'mega-whoami'...")
+// isMegaSessionReady now checks for the existence of a "ready file"
+// created by the session-keeper. This is 100% reliable.
+func isMegaSessionReady() bool {
+	readyFile := "/tmp/mega.ready"
+	log.Printf("[CHECK] Looking for ready file: %s", readyFile)
 
-	// Use the --non-interactive flag to prevent the command from hanging.
-	cmd := exec.Command("mega-whoami", "--non-interactive")
-	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
+	// os.Stat returns an error if the file does not exist.
+	_, err := os.Stat(readyFile)
 
-	out, err := cmd.CombinedOutput()
-	outputStr := string(out)
-
-	if err != nil {
-		// This is normal if the server isn't ready. Log it and continue.
-		log.Printf("[CHECK] 'mega-whoami' command failed, which is expected if the session is not ready. Error: %v", err)
-		return false
+	if err == nil {
+		log.Println("[CHECK] SUCCESS: Ready file found. MEGA session is active.")
+		return true // File exists
 	}
 
-	// THIS IS THE CRITICAL LOGIC THAT IS MISSING IN YOUR CURRENT DEPLOYMENT:
-	// A successful login will always contain an email. The banner does not.
-	if strings.Contains(outputStr, "@") {
-		log.Printf("[CHECK] SUCCESS: Session is confirmed active for user: %s", strings.TrimSpace(outputStr))
-		return true
-	}
-
-	// If the command ran but did not output an email, the session is not ready.
-	log.Println("[CHECK] Session is not ready yet (no '@' in output). Waiting...")
-	return false
+	log.Println("[CHECK] Ready file not found. Waiting for session-keeper...")
+	return false // File does not exist
 }
 
 // runAndLogMegaLs executes the 'megals' command and prints its output to the log.
 func runAndLogMegaLs() {
 	log.Println("[ACTION] Executing 'megals -q' to list files in /remote_metrics...")
 
-	// The -q flag will successfully quiet the banner once the command can connect.
 	cmd := exec.Command("megals", "-q", "/remote_metrics")
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
@@ -55,7 +42,10 @@ func runAndLogMegaLs() {
 		return
 	}
 
-	log.Printf("[SUCCESS] Remote file listing:\n--- Remote Files in /remote_metrics ---\n%s\n---------------------------------------", string(out))
+	// Trim whitespace to avoid extra newlines from the command output
+	output := strings.TrimSpace(string(out))
+
+	log.Printf("[SUCCESS] Remote file listing:\n--- Remote Files in /remote_metrics ---\n%s\n---------------------------------------", output)
 }
 
 func main() {
@@ -63,8 +53,8 @@ func main() {
 	go func() {
 		log.Println("[SETUP] Waiting for MEGA session to become fully active...")
 
-		// This loop will now correctly wait because isMegaSessionActive is fixed.
-		for !isMegaSessionActive() {
+		// This loop will now reliably wait for the ready file.
+		for !isMegaSessionReady() {
 			time.Sleep(10 * time.Second)
 		}
 
