@@ -17,7 +17,7 @@ while true; do
   # --- CLEANUP on every start of the loop ---
   echo "[SESSION-KEEPER] Performing cleanup..."
   rm -f "$READY_FILE"
-  mega-quit &> /dev/null
+  mega-quit &> /dev/null         # Correct subcommand: mega-quit
   sleep 2
   pkill mega-cmd-server &> /dev/null
   rm -f /home/appuser/.megaCmd/megacmd.lock /home/appuser/.megaCmd/srv_state.db &> /dev/null
@@ -33,19 +33,19 @@ while true; do
 
   # --- STEP 2: VERIFY READINESS ---
   echo "[SESSION-KEEPER] Login command sent. Now verifying that the server is fully operational..."
-  
   server_ready=false
+
   # Try for up to 2 minutes (12 attempts * 10 seconds)
   for i in {1..12}; do
-    # We run 'mega-ls' on the root. When it stops returning the banner, the server is ready.
+    # Run 'mega-ls' on the root. It should no longer print the banner once ready.
     ls_output=$(mega-ls -q / 2>&1)
 
-    # The most reliable check is to see if the output contains the welcome banner.
     if ! echo "$ls_output" | grep -q 'Welcome to MEGAcmd'; then
       echo "[SESSION-KEEPER] SUCCESS: Server is responsive and ready."
       server_ready=true
-      break # Exit the 'for' loop
+      break
     fi
+
     echo "[SESSION-KEEPER] Server not ready yet (check $i/12). Retrying in 10 seconds..."
     sleep 10
   done
@@ -58,7 +58,9 @@ while true; do
     sleep 3600
   else
     echo "[SESSION-KEEPER] ERROR: Server did not become ready after 2 minutes. Restarting the entire process."
-    sleep 60 # Wait a minute before a full restart to avoid hammering the service.
+    sleep 60
   fi
 
 done
+
+# This script will keep running indefinitely, maintaining the MEGA session.
