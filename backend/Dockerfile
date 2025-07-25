@@ -33,8 +33,8 @@ RUN apt-get update && \
     apt-get install -y /tmp/megacmd.deb && \
     rm -f /tmp/megacmd.deb && \
     ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-ls && \
-    ln -sf /usr/bin/mega-cmd /usr/local/bin/megaget && \
-    ln -sf /usr/bin/mega-cmd /usr/local/bin/megalogin && \
+    ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-get && \
+    ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-login && \
     ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-put && \
     ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-ipc && \
     ln -sf /usr/bin/mega-cmd /usr/local/bin/mega-whoami && \
