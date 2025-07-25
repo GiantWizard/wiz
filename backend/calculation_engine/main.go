@@ -30,9 +30,9 @@ func isMegaSessionReady() bool {
 
 // runAndLogMegaLs executes the 'mega-ls' command and prints its output to the log.
 func runAndLogMegaLs() {
-	log.Println("[ACTION] Executing 'mega-ls --non-interactive -l' to list files in /remote_metrics...")
+	log.Println("[ACTION] Executing 'mega-cmd --non-interactive -l' to list files in /remote_metrics...")
 
-	cmd := exec.Command("mega-ls", "--non-interactive", "-l", "/remote_metrics")
+	cmd := exec.Command("mega-cmd", "--non-interactive", "-l", "/remote_metrics")
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
 	out, err := cmd.CombinedOutput()
