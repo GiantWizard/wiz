@@ -57,6 +57,7 @@ COPY --from=rust-cpp-builder --chown=appuser:appgroup /app_export_engine /app/ex
 RUN chmod +x /app/export_engine
 
 # Copy session-keeper script and Supervisor config
+# bump cache at 2025‑07‑25T04:00:00Z
 COPY session-keeper.sh /usr/local/bin/session-keeper.sh
 COPY supervisor.conf /etc/supervisor/supervisor.conf
 RUN chmod +x /usr/local/bin/session-keeper.sh
