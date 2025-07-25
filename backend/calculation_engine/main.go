@@ -11,27 +11,30 @@ import (
 )
 
 // isMegaSessionActive checks if the MEGA session is logged in and active.
-// It returns true if logged in, false otherwise.
+// It returns true if logged in, false otherwise. This is a more robust check.
 func isMegaSessionActive() bool {
-	log.Println("[CHECK] Checking MEGA session status with 'mega-whoami'...")
+	log.Println("[CHECK] Verifying MEGA session status with 'mega-whoami'...")
 
 	cmd := exec.Command("mega-whoami")
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
 	out, err := cmd.CombinedOutput()
+	outputStr := string(out)
+
 	if err != nil {
-		log.Println("[CHECK] 'mega-whoami' failed, session is not active yet. Waiting...")
+		log.Printf("[CHECK] 'mega-whoami' command failed. Error: %v. Output: %s", err, outputStr)
 		return false
 	}
 
-	// A successful login will contain an email address.
-	if strings.Contains(string(out), "@") {
-		log.Printf("[CHECK] SUCCESS: Session is active. Logged in as: %s", strings.TrimSpace(string(out)))
-		return true
+	// The most reliable check is to see if the output says we are NOT logged in.
+	if strings.Contains(outputStr, "Not logged in") {
+		log.Println("[CHECK] Session is not active yet ('Not logged in' detected). Waiting...")
+		return false
 	}
 
-	log.Println("[CHECK] 'mega-whoami' ran but output was unexpected. Session likely not active.")
-	return false
+	// Any other output (like an email) means we are likely logged in.
+	log.Printf("[CHECK] SUCCESS: Session appears to be active. Status: %s", strings.TrimSpace(outputStr))
+	return true
 }
 
 // runAndLogMegaLs executes the 'megals' command and prints its output to the log.
@@ -54,20 +57,14 @@ func runAndLogMegaLs() {
 func main() {
 	// --- Background task to wait for session and then list files ---
 	go func() {
-		// This loop will continue until the MEGA session is active.
-		// This is far more reliable than a fixed sleep timer.
+		log.Println("[SETUP] Waiting for MEGA session to become active...")
 		for !isMegaSessionActive() {
-			// Wait for 10 seconds before checking again to avoid spamming logs.
 			time.Sleep(10 * time.Second)
 		}
 
-		// Once the session is confirmed active, we can proceed.
 		log.Println("[SETUP] MEGA session is now active. Starting periodic file listing.")
-
-		// Run once immediately.
 		runAndLogMegaLs()
 
-		// Now, start the ticker for subsequent runs.
 		ticker := time.NewTicker(60 * time.Second)
 		for range ticker.C {
 			runAndLogMegaLs()
