@@ -6,91 +6,87 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
-// runAndLogMegaLs executes the 'megals' command and prints its output and any errors to the standard log.
-func runAndLogMegaLs() {
-	log.Println("ACTION: Executing 'megals' to list remote files in /remote_metrics...")
+// isMegaSessionActive checks if the MEGA session is logged in and active.
+// It returns true if logged in, false otherwise.
+func isMegaSessionActive() bool {
+	log.Println("[CHECK] Checking MEGA session status with 'mega-whoami'...")
 
-	// Define the command to be executed.
-	// The '-q' flag can be used for less verbose output from megals, but we'll remove it
-	// for now to get as much information as possible during debugging.
-	cmd := exec.Command("megals", "/remote_metrics")
-
-	// Crucially, set the HOME environment variable so that mega-cmd can find its
-	// configuration and session files located in /home/appuser/.megaCmd
+	cmd := exec.Command("mega-whoami")
 	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
 
-	// Run the command and capture its combined standard output and standard error.
 	out, err := cmd.CombinedOutput()
-
-	// Check if the command execution resulted in an error.
 	if err != nil {
-		// If there's an error, log the error message itself and include any
-		// output the command produced, which often contains valuable diagnostic info.
-		log.Printf("ERROR: Failed to run 'megals'. Error: %v", err)
-		log.Printf("ERROR_OUTPUT: %s", string(out))
+		log.Println("[CHECK] 'mega-whoami' failed, session is not active yet. Waiting...")
+		return false
+	}
+
+	// A successful login will contain an email address.
+	if strings.Contains(string(out), "@") {
+		log.Printf("[CHECK] SUCCESS: Session is active. Logged in as: %s", strings.TrimSpace(string(out)))
+		return true
+	}
+
+	log.Println("[CHECK] 'mega-whoami' ran but output was unexpected. Session likely not active.")
+	return false
+}
+
+// runAndLogMegaLs executes the 'megals' command and prints its output to the log.
+func runAndLogMegaLs() {
+	log.Println("[ACTION] Executing 'megals' to list files in /remote_metrics...")
+
+	cmd := exec.Command("megals", "/remote_metrics")
+	cmd.Env = append(os.Environ(), "HOME=/home/appuser")
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("[ERROR] Failed to run 'megals'. Error: %v", err)
+		log.Printf("[ERROR_OUTPUT] %s", string(out))
 		return
 	}
 
-	// If the command was successful, log the list of files.
-	log.Println("SUCCESS: 'megals' executed correctly. Remote file listing:")
-	log.Printf("--- Remote Files in /remote_metrics ---\n%s\n---------------------------------------", string(out))
+	log.Printf("[SUCCESS] Remote file listing:\n--- Remote Files in /remote_metrics ---\n%s\n---------------------------------------", string(out))
 }
 
 func main() {
-	// --- Background task to periodically list files ---
-
-	// Create a ticker that will fire at a set interval.
-	// We'll set it to 60 seconds.
-	const listingInterval = 60 * time.Second
-	ticker := time.NewTicker(listingInterval)
-	log.Printf("SETUP: Background task configured to list MEGA files every %v.", listingInterval)
-
-	// Start a new goroutine (a concurrent background process).
-	// This allows our periodic task to run without blocking the HTTP server.
+	// --- Background task to wait for session and then list files ---
 	go func() {
-		// It's important to wait for a moment on the first run.
-		// This gives the 'session-keeper' service enough time to start and
-		// successfully log in to the MEGA service. Without this, the first
-		// command will likely fail because the session isn't ready.
-		const initialDelay = 20 * time.Second
-		log.Printf("SETUP: Waiting %v for MEGA session to be established before the first run...", initialDelay)
-		time.Sleep(initialDelay)
+		// This loop will continue until the MEGA session is active.
+		// This is far more reliable than a fixed sleep timer.
+		for !isMegaSessionActive() {
+			// Wait for 10 seconds before checking again to avoid spamming logs.
+			time.Sleep(10 * time.Second)
+		}
 
-		// Perform the first run immediately after the initial delay.
+		// Once the session is confirmed active, we can proceed.
+		log.Println("[SETUP] MEGA session is now active. Starting periodic file listing.")
+
+		// Run once immediately.
 		runAndLogMegaLs()
 
-		// This loop runs forever in the background.
+		// Now, start the ticker for subsequent runs.
+		ticker := time.NewTicker(60 * time.Second)
 		for range ticker.C {
-			// Every time the ticker fires (e.g., every 60 seconds),
-			// it will call our function to list the files.
 			runAndLogMegaLs()
 		}
 	}()
 
 	// --- HTTP server for health checks ---
-
-	// The web server runs in the main goroutine. Its primary purpose here
-	// is to provide a health check endpoint, which is standard practice for
-	// containerized services.
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
-	// Determine the port to listen on.
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9000"
 	}
 
-	log.Printf("SETUP: Calculation Engine is running. Starting health check server on port :%s", port)
-
-	// Start the HTTP server. This is a blocking call and will keep the main
-	// function from exiting, allowing the background goroutine to continue its work.
+	log.Printf("[SETUP] Calculation Engine is running. Starting health check server on port :%s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("FATAL: Failed to start HTTP server: %v", err)
+		log.Fatalf("[FATAL] Failed to start HTTP server: %v", err)
 	}
 }
