@@ -25,8 +25,8 @@ while true; do
 
   # --- STEP 1: LOGIN ---
   echo "[SESSION-KEEPER] Establishing MEGA session..."
-  if ! megalogin "$MEGA_EMAIL" "$MEGA_PWD" < /dev/null; then
-    echo "[SESSION-KEEPER] ERROR: megalogin command failed to start. Retrying in 5 minutes."
+  if ! mega-login "$MEGA_EMAIL" "$MEGA_PWD" < /dev/null; then
+    echo "[SESSION-KEEPER] ERROR: mega-login command failed to start. Retrying in 5 minutes."
     sleep 300
     continue # Restart the while loop
   fi
