@@ -18,8 +18,17 @@ RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 # This stage creates the lean, final image
 FROM alpine:3.18
 
-# Install supervisor and megacmd
-RUN apk add --no-cache supervisor megacmd
+# --- MODIFIED SECTION START ---
+# Install supervisor and dependencies for megacmd download.
+# We need ca-certificates and wget.
+RUN apk add --no-cache supervisor ca-certificates wget
+
+# Manually download and install the latest version of megacmd for Alpine 3.18
+# This ensures we have modern features like --sort-by and --limit.
+RUN wget https://mega.nz/linux/MEGAsync/Alpine_3.18/amd64/megacmd-x86_64.apk -O /tmp/megacmd.apk \
+    && apk add --allow-untrusted /tmp/megacmd.apk \
+    && rm /tmp/megacmd.apk
+# --- MODIFIED SECTION END ---
 
 # Create a non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -44,7 +53,6 @@ RUN chmod +x /app/calculation_engine \
 RUN mkdir -p /var/log/supervisor /home/appuser/.megaCmd \
     && chown -R appuser:appgroup /home/appuser /app /var/log/supervisor
 
-# --- NEW LINE ---
 # Expose the port the web server will run on
 EXPOSE 8080
 
