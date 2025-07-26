@@ -1,54 +1,54 @@
+# File: Dockerfile
+
 # ---- Build Stage ----
-# Use an official Go image to build the application
+# This stage compiles your Go application
 FROM golang:1.22-alpine AS builder
 
+# Set the working directory for the build
 WORKDIR /src
 
-# Copy Go source files
-COPY main.go go.mod go.sum ./
+# Copy the Go module files first to leverage Docker's layer caching
+COPY calculation_engine/go.mod calculation_engine/go.sum ./
+RUN go mod download
 
-# Build the Go application binary
-# CGO_ENABLED=0 is important for creating a static binary on Alpine
-# -o /app/go-app specifies the output path and name for the binary
-RUN CGO_ENABLED=0 go build -o /app/go-app .
+# Copy the rest of your application's source code
+COPY calculation_engine/main.go .
+
+# Build the Go application, creating a static binary
+RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 
 # ---- Final Stage ----
-# Use a lean base image for the final container
+# This stage creates the lean, final image
 FROM alpine:3.18
 
-# Install necessary dependencies: supervisor for process management,
-# and megacmd for interacting with MEGA.
+# Install supervisor and megacmd
 RUN apk add --no-cache supervisor megacmd
 
-# Create the application directory and a non-root user for security
+# Create a non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 ENV HOME=/home/appuser
 WORKDIR /app
 
-# Copy the built Go binary from the builder stage
-COPY --from=builder /app/go-app /app/go-app
+# Copy the compiled application binary from the builder stage
+COPY --from=builder /app/calculation_engine /app/calculation_engine
 
-# Copy all configuration and script files into the container
+# Copy your other server assets
+COPY server9/ /app/server9/
+
+# Copy the new supervisor config and the reliable session manager script
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY mega-session-manager.sh /usr/local/bin/mega-session-manager.sh
-# Add any other application binaries you have
-COPY calculation_service /app/calculation_service
-COPY metrics_generator /app/metrics_generator
+COPY scripts/mega-session-manager.sh /usr/local/bin/mega-session-manager.sh
 
-# Make scripts and application binaries executable
-RUN chmod +x /usr/local/bin/mega-session-manager.sh \
-    && chmod +x /app/go-app \
-    && chmod +x /app/calculation_service \
-    && chmod +x /app/metrics_generator
+# Make binaries and scripts executable
+RUN chmod +x /app/calculation_engine \
+    && chmod +x /usr/local/bin/mega-session-manager.sh
 
-# Create log directories for supervisor
-RUN mkdir -p /var/log/supervisor
-# Create the .megaCmd directory and give the appuser ownership
-RUN mkdir -p /home/appuser/.megaCmd && chown -R appuser:appgroup /home/appuser /app
+# Create necessary directories and set correct permissions
+RUN mkdir -p /var/log/supervisor /home/appuser/.megaCmd \
+    && chown -R appuser:appgroup /home/appuser /app
 
 # Switch to the non-root user
 USER appuser
 
-# Define the command to run when the container starts.
-# supervisord will read the config file and manage all our processes.
+# The command to run when the container starts. Supervisor will manage all our processes.
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
