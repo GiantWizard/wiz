@@ -18,17 +18,16 @@ RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 # This stage creates the lean, final image
 FROM alpine:3.18
 
-# --- MODIFIED SECTION START ---
 # Install supervisor and dependencies for megacmd download.
-# We need ca-certificates and wget.
 RUN apk add --no-cache supervisor ca-certificates wget
 
-# Manually download and install the latest version of megacmd for Alpine 3.18
-# This ensures we have modern features like --sort-by and --limit.
-RUN wget https://mega.nz/linux/MEGAsync/Alpine_3.18/amd64/megacmd-x86_64.apk -O /tmp/megacmd.apk \
+# --- CORRECTED SECTION START ---
+# Manually download and install the latest version of megacmd.
+# This URL has been corrected to the official 'repo' path.
+RUN wget https://mega.nz/linux/repo/Alpine_3.18/amd64/megacmd-x86_64.apk -O /tmp/megacmd.apk \
     && apk add --allow-untrusted /tmp/megacmd.apk \
     && rm /tmp/megacmd.apk
-# --- MODIFIED SECTION END ---
+# --- CORRECTED SECTION END ---
 
 # Create a non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
