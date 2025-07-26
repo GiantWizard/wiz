@@ -42,9 +42,9 @@ COPY scripts/mega-session-manager.sh /usr/local/bin/mega-session-manager.sh
 RUN chmod +x /app/calculation_engine \
     && chmod +x /usr/local/bin/mega-session-manager.sh
 
-# Create necessary directories and set correct permissions
+# --- NEW, CORRECTED LINE ---
 RUN mkdir -p /var/log/supervisor /home/appuser/.megaCmd \
-    && chown -R appuser:appgroup /home/appuser /app
+    && chown -R appuser:appgroup /home/appuser /app /var/log/supervisor
 
 # Switch to the non-root user
 USER appuser
