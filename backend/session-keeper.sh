@@ -1,48 +1,73 @@
-#!/bin/bash
-# file: session-keeper.sh
+[unix_http_server]
+file=/var/run/supervisor.sock
+chmod=0700
 
-set -o pipefail
+[supervisord]
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+childlogdir=/var/log/supervisor
+nodaemon=true
+minfds=1024
+minprocs=200
 
-READY_FILE="/tmp/mega.ready"
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
-echo "[SESSION-KEEPER] Starting MEGA session keeper."
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
 
-# Ensure credentials are set
-if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PWD" ]; then
-  echo "[SESSION-KEEPER] FATAL: MEGA_EMAIL and/or MEGA_PWD environment variables are not set."
-  exit 1
-fi
+; -------------------------------------------------------------------
+; MEGA Session Manager - The single source of truth for the MEGA session
+; -------------------------------------------------------------------
+[program:mega-session-manager]
+command=/usr/local/bin/mega-session-manager.sh
+user=appuser
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+environment=HOME="/home/appuser",PATH="/usr/local/bin:/usr/bin:/bin",MEGA_EMAIL="%(ENV_MEGA_EMAIL)s",MEGA_PWD="%(ENV_MEGA_PWD)s",MEGA_CMD_SOCKET="/home/appuser/.megaCmd/megacmd.sock"
 
-# Infinite loop to keep session alive
-while true; do
-  # --- CLEANUP ---
-  echo "[SESSION-KEEPER] Cleaning up old session…"
-  rm -f "$READY_FILE"
-  mega-quit &> /dev/null
-  pkill mega-cmd-server &> /dev/null
-  rm -f /home/appuser/.megaCmd/megacmd.lock /home/appuser/.megaCmd/srv_state.db
-  sleep 2
+; -------------------------------------------------------------------
+; Metrics generator
+; -------------------------------------------------------------------
+[program:metrics-generator]
+command=/app/metrics_generator
+user=appuser
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+environment=HOME="/home/appuser",PATH="/usr/local/bin:/usr/bin:/bin:/app",MEGA_CMD_SOCKET="/home/appuser/.megaCmd/megacmd.sock"
 
-  # --- LOGIN ---
-  echo "[SESSION-KEEPER] Logging in…"
-  if mega-login "$MEGA_EMAIL" "$MEGA_PWD" < /dev/null; then
-    echo "[SESSION-KEEPER] SUCCESS: Logged in."
+; -------------------------------------------------------------------
+; Calculation engine - Relies on the managed session
+; -------------------------------------------------------------------
+[program:calculation-engine]
+command=/app/calculation_service
+user=appuser
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+environment=HOME="/home/appuser",PATH="/usr/local/bin:/usr/bin:/bin:/app",PORT="9000",LOG_LEVEL="debug",MEGA_CMD_SOCKET="/home/appuser/.megaCmd/megacmd.sock"
 
-    # --- LAUNCH DAEMON ---
-    echo "[SESSION-KEEPER] Starting MEGAcmd server in background…"
-    mega-cmd-server &> /home/appuser/.megaCmd/megacmdserver.log &
-    
-    # Wait briefly for server to finish starting
-    echo "[SESSION-KEEPER] Waiting 10s for server startup…"
-    sleep 10
-
-    # --- SIGNAL READY ---
-    echo "[SESSION-KEEPER] Creating ready file at $READY_FILE."
-    touch "$READY_FILE"
-    echo "[SESSION-KEEPER] Session active; idling 1 hour before next refresh."
-    sleep 3600
-  else
-    echo "[SESSION-KEEPER] ERROR: Login failed; retrying in 5 minutes."
-    sleep 300
-  fi
-done
+; -------------------------------------------------------------------
+; Your Go Application
+; -------------------------------------------------------------------
+[program:go-app]
+command=/app/your-go-app-binary # Make sure to use the correct binary name
+user=appuser
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+environment=HOME="/home/appuser",PATH="/usr/local/bin:/usr/bin:/bin:/app",PORT="8080",MEGA_CMD_SOCKET="/home/appuser/.megaCmd/megacmd.sock"
