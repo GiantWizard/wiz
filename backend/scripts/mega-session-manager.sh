@@ -1,6 +1,6 @@
-#!/bin/sh
-# File: scripts/mega-session-manager.sh
-set -eo pipefail
+#!/bin/bash
+# MODIFIED: Use bash and remove pipefail for Debian compatibility.
+set -e
 
 # Check that credentials from the environment are set
 if [ -z "$MEGA_EMAIL" ] || [ -z "$MEGA_PWD" ]; then

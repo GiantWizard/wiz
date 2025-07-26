@@ -7,12 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
-// Represents the structure of a single metric object in the JSON files.
+// Metric struct remains the same...
 type Metric struct {
 	ProductID                             string  `json:"product_id"`
 	InstabuyPriceAverage                  float64 `json:"instabuy_price_average"`
@@ -27,44 +28,27 @@ type Metric struct {
 	PlayerInstasellTransactionSizeAverage float64 `json:"player_instasell_transaction_size_average"`
 }
 
-// Holds the aggregated and averaged metrics that will be served.
 type AveragedMetrics map[string]Metric
 
-// Global variable to store the latest averaged metrics, with a mutex for safe concurrent access.
 var (
 	latestAveragedMetrics AveragedMetrics
 	metricsMutex          sync.RWMutex
 )
 
-// --- Main Application Logic ---
-
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
-
-	// Create a temporary directory for downloading metric files.
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Could not create temp directory: %v", err)
 	}
-
-	// Launch the web server in a separate goroutine.
 	go startWebServer()
-
-	// A small initial delay to ensure the mega-session-manager is fully initialized.
 	time.Sleep(10 * time.Second)
-
-	// Main loop to periodically update the metrics.
-	// Updates every 5 minutes, you can adjust this duration.
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-
-	// Run once immediately, then on every tick.
 	updateLatestMetrics()
 	for range ticker.C {
 		updateLatestMetrics()
 	}
 }
-
-// --- Web Server ---
 
 func startWebServer() {
 	http.HandleFunc("/latest_metrics/", metricsHandler)
@@ -77,63 +61,62 @@ func startWebServer() {
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
-
 	if latestAveragedMetrics == nil {
-		http.Error(w, "Metrics not available yet, please try again shortly.", http.StatusServiceUnavailable)
+		http.Error(w, "Metrics not available yet.", http.StatusServiceUnavailable)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(latestAveragedMetrics); err != nil {
-		log.Printf("[CALC-ENGINE] ERROR: Failed to encode metrics to JSON: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
-
-// --- Metrics Processing ---
 
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
 	localDir := "/tmp/metrics"
 
-	// 1. Clean up old files from the previous cycle.
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
 
-	// 2. Find the 12 most recent files directly using mega-find.
-	// This command asks the server to sort by modification time descending and return the top 12.
-	log.Println("[CALC-ENGINE] Finding 12 most recent remote files...")
-	cmd := exec.Command("mega-find", remoteDir, "--sort-by", "mtime-desc", "--limit", "12")
+	// --- MODIFIED LOGIC ---
+	// Revert to using 'mega-ls' as 'mega-find' flags are not supported.
+	log.Println("[CALC-ENGINE] Listing all remote files...")
+	cmd := exec.Command("mega-ls", remoteDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[CALC-ENGINE] ERROR: Failed to find remote files: %v\nOutput: %s", err, out)
+		log.Printf("[CALC-ENGINE] ERROR: Failed to list remote files: %v\nOutput: %s", err, out)
 		return
 	}
 
-	// 3. Get the list of full file paths from the output.
-	filePaths := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(filePaths) == 0 || (len(filePaths) == 1 && filePaths[0] == "") {
+	// The Go application will now handle sorting and limiting.
+	filenames := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(filenames) == 0 || (len(filenames) == 1 && filenames[0] == "") {
 		log.Println("[CALC-ENGINE] No metric files found in remote directory.")
 		return
 	}
-	log.Printf("[CALC-ENGINE] Identified %d files to process.", len(filePaths))
+	// Sort descending to get latest filenames first (e.g., "metrics_2025...").
+	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
 
-	// 4. Download the identified files.
+	numToDownload := 12
+	if len(filenames) < numToDownload {
+		numToDownload = len(filenames)
+	}
+	latestFiles := filenames[:numToDownload]
+	log.Printf("[CALC-ENGINE] Identified latest %d files to process.", len(latestFiles))
+	// --- END OF MODIFIED LOGIC ---
+
 	var downloadedFiles []string
-	for _, remotePath := range filePaths {
-		if remotePath == "" {
+	for _, filename := range latestFiles {
+		if filename == "" {
 			continue
 		}
+		remotePath := filepath.Join(remoteDir, filename)
 		log.Printf("[CALC-ENGINE] Downloading %s...", remotePath)
 		getCmd := exec.Command("mega-get", remotePath, localDir)
 		if out, err := getCmd.CombinedOutput(); err != nil {
 			log.Printf("[CALC-ENGINE] ERROR: Failed to download %s: %v\nOutput: %s", remotePath, err, out)
-			continue // Skip this file and try the next one.
+			continue
 		}
-		// Construct the full local path for the downloaded file.
-		localFilePath := filepath.Join(localDir, filepath.Base(remotePath))
-		downloadedFiles = append(downloadedFiles, localFilePath)
+		downloadedFiles = append(downloadedFiles, filepath.Join(localDir, filename))
 	}
 
 	if len(downloadedFiles) == 0 {
@@ -141,7 +124,6 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// 5. Read and parse the JSON from each downloaded file.
 	var allMetrics [][]Metric
 	for _, localPath := range downloadedFiles {
 		file, err := os.Open(localPath)
@@ -149,7 +131,6 @@ func updateLatestMetrics() {
 			log.Printf("[CALC-ENGINE] ERROR: Failed to open downloaded file %s: %v", localPath, err)
 			continue
 		}
-
 		var metrics []Metric
 		if err := json.NewDecoder(file).Decode(&metrics); err != nil {
 			log.Printf("[CALC-ENGINE] ERROR: Failed to parse JSON from %s: %v", localPath, err)
@@ -165,11 +146,9 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// 6. Aggregate and average the data.
 	log.Printf("[CALC-ENGINE] Averaging data from %d files.", len(allMetrics))
 	newAverages := calculateAverages(allMetrics)
 
-	// 7. Safely update the global metrics variable.
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
 	metricsMutex.Unlock()
@@ -177,15 +156,14 @@ func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
 }
 
+// calculateAverages function remains the same...
 func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
-	// Intermediate struct to hold sums and counts before averaging.
 	type aggregator struct {
 		Metric
 		count int
 	}
 	aggregates := make(map[string]*aggregator)
 
-	// Sum up all values for each product_id.
 	for _, metricFile := range allMetrics {
 		for _, metric := range metricFile {
 			if _, ok := aggregates[metric.ProductID]; !ok {
@@ -207,7 +185,6 @@ func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 		}
 	}
 
-	// Divide sums by counts to get the final averages.
 	finalAverages := make(AveragedMetrics)
 	for id, agg := range aggregates {
 		c := float64(agg.count)
