@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -102,45 +101,39 @@ func updateLatestMetrics() {
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
 
-	// 2. List files on MEGA.
-	log.Println("[CALC-ENGINE] Listing remote files...")
-	cmd := exec.Command("mega-ls", remoteDir)
+	// 2. Find the 12 most recent files directly using mega-find.
+	// This command asks the server to sort by modification time descending and return the top 12.
+	log.Println("[CALC-ENGINE] Finding 12 most recent remote files...")
+	cmd := exec.Command("mega-find", remoteDir, "--sort-by", "mtime-desc", "--limit", "12")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[CALC-ENGINE] ERROR: Failed to list remote files: %v\nOutput: %s", err, out)
+		log.Printf("[CALC-ENGINE] ERROR: Failed to find remote files: %v\nOutput: %s", err, out)
 		return
 	}
 
-	// 3. Parse filenames and sort them to find the most recent ones.
-	filenames := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(filenames) == 0 || (len(filenames) == 1 && filenames[0] == "") {
+	// 3. Get the list of full file paths from the output.
+	filePaths := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(filePaths) == 0 || (len(filePaths) == 1 && filePaths[0] == "") {
 		log.Println("[CALC-ENGINE] No metric files found in remote directory.")
 		return
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(filenames))) // Sort descending to get latest first.
+	log.Printf("[CALC-ENGINE] Identified %d files to process.", len(filePaths))
 
-	// 4. Determine the latest 12 files to download.
-	numToDownload := 12
-	if len(filenames) < numToDownload {
-		numToDownload = len(filenames)
-	}
-	latestFiles := filenames[:numToDownload]
-	log.Printf("[CALC-ENGINE] Identified latest %d files to process.", len(latestFiles))
-
-	// 5. Download the identified files.
+	// 4. Download the identified files.
 	var downloadedFiles []string
-	for _, filename := range latestFiles {
-		if filename == "" {
+	for _, remotePath := range filePaths {
+		if remotePath == "" {
 			continue
 		}
-		remotePath := filepath.Join(remoteDir, filename)
 		log.Printf("[CALC-ENGINE] Downloading %s...", remotePath)
 		getCmd := exec.Command("mega-get", remotePath, localDir)
 		if out, err := getCmd.CombinedOutput(); err != nil {
 			log.Printf("[CALC-ENGINE] ERROR: Failed to download %s: %v\nOutput: %s", remotePath, err, out)
 			continue // Skip this file and try the next one.
 		}
-		downloadedFiles = append(downloadedFiles, filepath.Join(localDir, filename))
+		// Construct the full local path for the downloaded file.
+		localFilePath := filepath.Join(localDir, filepath.Base(remotePath))
+		downloadedFiles = append(downloadedFiles, localFilePath)
 	}
 
 	if len(downloadedFiles) == 0 {
@@ -148,7 +141,7 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// 6. Read and parse the JSON from each downloaded file.
+	// 5. Read and parse the JSON from each downloaded file.
 	var allMetrics [][]Metric
 	for _, localPath := range downloadedFiles {
 		file, err := os.Open(localPath)
@@ -172,11 +165,11 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// 7. Aggregate and average the data.
+	// 6. Aggregate and average the data.
 	log.Printf("[CALC-ENGINE] Averaging data from %d files.", len(allMetrics))
 	newAverages := calculateAverages(allMetrics)
 
-	// 8. Safely update the global metrics variable.
+	// 7. Safely update the global metrics variable.
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
 	metricsMutex.Unlock()
