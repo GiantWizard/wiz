@@ -34,62 +34,63 @@ type AveragedMetrics map[string]Metric
 var (
 	latestAveragedMetrics AveragedMetrics
 	metricsMutex          sync.RWMutex
-	isHealthy             bool // NEW: Flag to track if the first update was successful
+	isHealthy             bool
 )
 
+
+// --- MODIFIED main function ---
+// This new structure prevents the startup race condition.
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Could not create temp directory: %v", err)
 	}
 
-	// Start the web server immediately. It will report healthy as soon as the first metric cycle succeeds.
+	// 1. Start the web server in a goroutine. It will be ready to serve health checks immediately.
 	go startWebServer()
 
-	// Run the first update immediately in the foreground to populate data.
-	// This ensures the service is ready before the ticker starts.
-	updateLatestMetrics()
-
-	// Now start the periodic updates.
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
+	// 2. Start the entire metrics processing logic in another goroutine.
+	// This prevents the long initial download from blocking the main thread.
+	go func() {
+		// Run the first update to populate data and become healthy.
 		updateLatestMetrics()
-	}
+
+		// After the first run, start the ticker for periodic updates.
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			updateLatestMetrics()
+		}
+	}()
+
+	// 3. Block the main goroutine forever.
+	// If main() exits, the entire application will shut down.
+	// `select {}` is a standard Go pattern to make a goroutine wait indefinitely.
+	select {}
 }
 
-// --- Web Server Section with Health Check ---
+// --- Web Server and other functions remain the same ---
 
 func startWebServer() {
-	// Register the health check handler. This is what the platform will hit.
 	http.HandleFunc("/", healthCheckHandler)
-
-	// Keep the existing metrics handler for your data.
 	http.HandleFunc("/latest_metrics/", metricsHandler)
-
 	log.Println("[CALC-ENGINE] Starting web server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
 	}
 }
 
-// A more robust health check handler.
-// It responds with 200 OK only after the first successful data processing cycle.
-// This prevents the service from receiving traffic before it's actually ready.
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
-
 	if isHealthy {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "OK: Metrics are loaded and ready.")
 	} else {
-		// Respond with 503 Service Unavailable if the first update hasn't completed.
 		w.WriteHeader(http.StatusServiceUnavailable)
 		fmt.Fprintln(w, "Service Starting: Metrics are not yet available.")
 	}
@@ -106,14 +107,10 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
 
-// --- Metrics Update Section with Robust Parsing ---
-
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
 	localDir := "/tmp/metrics"
-
-	// Cleanup local directory for fresh downloads
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
 
@@ -125,8 +122,6 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// --- ROBUST FILTERING ---
-	// Filter out promotional messages and keep only valid metric filenames.
 	allLines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	var filenames []string
 	for _, line := range allLines {
@@ -135,7 +130,6 @@ func updateLatestMetrics() {
 			filenames = append(filenames, trimmedLine)
 		}
 	}
-	// --- END OF FILTERING ---
 
 	if len(filenames) == 0 {
 		log.Println("[CALC-ENGINE] No valid metric files found in remote directory.")
@@ -156,7 +150,6 @@ func updateLatestMetrics() {
 		log.Printf("[CALC-ENGINE] Downloading %s...", remotePath)
 		getCmd := exec.Command("mega-get", remotePath, localDir)
 		if out, err := getCmd.CombinedOutput(); err != nil {
-			// This error should no longer happen for parsing issues, only real download failures.
 			log.Printf("[CALC-ENGINE] ERROR: Failed to download %s: %v\nOutput: %s", remotePath, err, out)
 			continue
 		}
@@ -168,7 +161,6 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// Parsing logic remains the same...
 	var allMetrics [][]Metric
 	for _, localPath := range downloadedFiles {
 		file, err := os.Open(localPath)
@@ -196,20 +188,19 @@ func updateLatestMetrics() {
 
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
-	isHealthy = true // Set the healthy flag to true AFTER the first successful run
+	isHealthy = true
 	metricsMutex.Unlock()
 
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
 }
 
-// calculateAverages function remains the same...
 func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
+	// ... this function remains unchanged ...
 	type aggregator struct {
 		Metric
 		count int
 	}
 	aggregates := make(map[string]*aggregator)
-
 	for _, metricFile := range allMetrics {
 		for _, metric := range metricFile {
 			if _, ok := aggregates[metric.ProductID]; !ok {
@@ -230,7 +221,6 @@ func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 			agg.PlayerInstasellTransactionSizeAverage += metric.PlayerInstasellTransactionSizeAverage
 		}
 	}
-
 	finalAverages := make(AveragedMetrics)
 	for id, agg := range aggregates {
 		c := float64(agg.count)
