@@ -34,28 +34,34 @@ type AveragedMetrics map[string]Metric
 var (
 	latestAveragedMetrics AveragedMetrics
 	metricsMutex          sync.RWMutex
+	isHealthy             bool // NEW: Flag to track if the first update was successful
 )
 
-// main function remains the same...
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Could not create temp directory: %v", err)
 	}
+
+	// Start the web server immediately. It will report healthy as soon as the first metric cycle succeeds.
 	go startWebServer()
-	time.Sleep(10 * time.Second)
+
+	// Run the first update immediately in the foreground to populate data.
+	// This ensures the service is ready before the ticker starts.
+	updateLatestMetrics()
+
+	// Now start the periodic updates.
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	updateLatestMetrics()
 	for range ticker.C {
 		updateLatestMetrics()
 	}
 }
 
-// --- MODIFIED Web Server Section ---
+// --- Web Server Section with Health Check ---
 
 func startWebServer() {
-	// NEW: Register the health check handler for the root path.
+	// Register the health check handler. This is what the platform will hit.
 	http.HandleFunc("/", healthCheckHandler)
 
 	// Keep the existing metrics handler for your data.
@@ -67,24 +73,32 @@ func startWebServer() {
 	}
 }
 
-// NEW: A simple handler for health checks.
-// It responds with a 200 OK status to let the platform know the app is alive.
+// A more robust health check handler.
+// It responds with 200 OK only after the first successful data processing cycle.
+// This prevents the service from receiving traffic before it's actually ready.
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	// We only want to respond to the root path for health checks.
-	// If the platform checks any other path, it will correctly get a 404.
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "OK")
+
+	metricsMutex.RLock()
+	defer metricsMutex.RUnlock()
+
+	if isHealthy {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "OK: Metrics are loaded and ready.")
+	} else {
+		// Respond with 503 Service Unavailable if the first update hasn't completed.
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintln(w, "Service Starting: Metrics are not yet available.")
+	}
 }
 
-// metricsHandler remains the same...
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
-	if latestAveragedMetrics == nil {
+	if !isHealthy {
 		http.Error(w, "Metrics not available yet.", http.StatusServiceUnavailable)
 		return
 	}
@@ -92,12 +106,14 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
 
-// updateLatestMetrics function remains the same...
+// --- Metrics Update Section with Robust Parsing ---
+
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
 	localDir := "/tmp/metrics"
 
+	// Cleanup local directory for fresh downloads
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
 
@@ -109,9 +125,20 @@ func updateLatestMetrics() {
 		return
 	}
 
-	filenames := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(filenames) == 0 || (len(filenames) == 1 && filenames[0] == "") {
-		log.Println("[CALC-ENGINE] No metric files found in remote directory.")
+	// --- ROBUST FILTERING ---
+	// Filter out promotional messages and keep only valid metric filenames.
+	allLines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	var filenames []string
+	for _, line := range allLines {
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "metrics_") && strings.HasSuffix(trimmedLine, ".json") {
+			filenames = append(filenames, trimmedLine)
+		}
+	}
+	// --- END OF FILTERING ---
+
+	if len(filenames) == 0 {
+		log.Println("[CALC-ENGINE] No valid metric files found in remote directory.")
 		return
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
@@ -125,13 +152,11 @@ func updateLatestMetrics() {
 
 	var downloadedFiles []string
 	for _, filename := range latestFiles {
-		if filename == "" {
-			continue
-		}
 		remotePath := filepath.Join(remoteDir, filename)
 		log.Printf("[CALC-ENGINE] Downloading %s...", remotePath)
 		getCmd := exec.Command("mega-get", remotePath, localDir)
 		if out, err := getCmd.CombinedOutput(); err != nil {
+			// This error should no longer happen for parsing issues, only real download failures.
 			log.Printf("[CALC-ENGINE] ERROR: Failed to download %s: %v\nOutput: %s", remotePath, err, out)
 			continue
 		}
@@ -143,6 +168,7 @@ func updateLatestMetrics() {
 		return
 	}
 
+	// Parsing logic remains the same...
 	var allMetrics [][]Metric
 	for _, localPath := range downloadedFiles {
 		file, err := os.Open(localPath)
@@ -170,6 +196,7 @@ func updateLatestMetrics() {
 
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
+	isHealthy = true // Set the healthy flag to true AFTER the first successful run
 	metricsMutex.Unlock()
 
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
