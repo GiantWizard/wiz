@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # File: scripts/mega-session-manager.sh
 set -eo pipefail
 
@@ -25,6 +25,5 @@ fi
 echo "[SESSION-MANAGER] Login successful."
 
 # Use 'exec' to replace this script's process with the server process.
-# This allows supervisord to monitor the server directly.
 echo "[SESSION-MANAGER] Starting MEGAcmd server in the foreground..."
 exec mega-cmd-server
