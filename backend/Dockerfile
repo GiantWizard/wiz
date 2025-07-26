@@ -18,16 +18,21 @@ RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 # This stage creates the lean, final image
 FROM alpine:3.18
 
-# Install supervisor and dependencies for megacmd download.
-RUN apk add --no-cache supervisor ca-certificates wget
+# --- NEW, RELIABLE METHOD TO INSTALL MEGACMD ---
+# 1. Install prerequisites. We need wget and ca-certificates to fetch the key.
+RUN apk add --no-cache supervisor wget ca-certificates
 
-# --- CORRECTED SECTION START ---
-# Manually download and install the latest version of megacmd.
-# This URL has been corrected to the official 'repo' path.
-RUN wget https://mega.nz/linux/repo/Alpine_3.18/amd64/megacmd-x86_64.apk -O /tmp/megacmd.apk \
-    && apk add --allow-untrusted /tmp/megacmd.apk \
-    && rm /tmp/megacmd.apk
-# --- CORRECTED SECTION END ---
+# 2. Fetch MEGA's public GPG key, which is used to sign their packages, and add it to apk's trusted keys.
+RUN wget https://mega.nz/linux/repo/MEGAsync/repo_mega.asc -O /etc/apk/keys/repo_mega.asc
+
+# 3. Add the official MEGA package repository to Alpine's list of sources.
+#    The '!testing' tag is an important part of their repository definition.
+RUN echo "https://mega.nz/linux/repo/Alpine_3.18 !testing" >> /etc/apk/repositories
+
+# 4. Update the package index to fetch the list of packages from the new repository,
+#    then install megacmd. apk will now know where to find it.
+RUN apk update && apk add megacmd
+# --- END OF NEW METHOD ---
 
 # Create a non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
