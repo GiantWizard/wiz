@@ -22,8 +22,8 @@ FROM alpine:3.18
 # 1. Install prerequisites. We need wget and ca-certificates to fetch the key.
 RUN apk add --no-cache supervisor wget ca-certificates
 
-# 2. Fetch MEGA's public GPG key, which is used to sign their packages, and add it to apk's trusted keys.
-RUN wget https://mega.nz/linux/repo/MEGAsync/repo_mega.asc -O /etc/apk/keys/repo_mega.asc
+# 2. Fetch MEGA's public GPG key from the correct URL and add it to apk's trusted keys.
+RUN wget https://mega.nz/linux/repo/repo_mega.asc -O /etc/apk/keys/repo_mega.asc
 
 # 3. Add the official MEGA package repository to Alpine's list of sources.
 #    The '!testing' tag is an important part of their repository definition.
