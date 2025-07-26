@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -13,19 +14,30 @@ func performMegaOperation() {
 	remoteDir := "/some/remote/path"
 	log.Printf("[CALC-ENGINE] Performing operation on: %s", remoteDir)
 
-	// Use a non-interactive command like 'mega-ls', 'mega-put', etc.
-	cmd := exec.Command("mega-ls", remoteDir)
+	const maxRetries = 5
+	var backoff = time.Second * 2
 
-	// The command inherits the environment (including MEGA_CMD_SOCKET) from supervisord.
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("[CALC-ENGINE] ERROR: mega command failed: %v\nOutput: %s", err, out)
-		return
+	for i := 0; i < maxRetries; i++ {
+		cmd := exec.Command("mega-ls", remoteDir)
+		out, err := cmd.CombinedOutput()
+
+		if err == nil {
+			log.Printf("[CALC-ENGINE] SUCCESS: Command output:\n%s", out)
+			return // Success, exit the function
+		}
+
+		// Check if the error is the one we're expecting during startup
+		if strings.Contains(string(out), "Couldn't find") && i < maxRetries-1 {
+			log.Printf("[CALC-ENGINE] WARN: mega command failed, retrying in %v... (Attempt %d/%d)", backoff, i+1, maxRetries)
+			time.Sleep(backoff)
+			backoff *= 2 // Exponential backoff
+			continue
+		}
+
+		log.Printf("[CALC-ENGINE] ERROR: mega command failed after retries: %v\nOutput: %s", err, out)
+		return // Permanent error or max retries reached
 	}
-
-	log.Printf("[CALC-ENGINE] SUCCESS: Command output:\n%s", out)
 }
-
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 
