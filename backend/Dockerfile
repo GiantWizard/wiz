@@ -2,8 +2,7 @@
 
 # ---- Build Stage ----
 # This stage compiles your Go application
-FROM golang:1.22-alpine AS builder
-
+FROM golang:1.23-alpine AS builder
 # Set the working directory for the build
 WORKDIR /src
 
