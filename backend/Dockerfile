@@ -1,5 +1,3 @@
-# File: Dockerfile
-
 # ---- Build Stage ----
 # This stage compiles your Go application
 FROM golang:1.23-alpine AS builder
@@ -42,9 +40,13 @@ COPY scripts/mega-session-manager.sh /usr/local/bin/mega-session-manager.sh
 RUN chmod +x /app/calculation_engine \
     && chmod +x /usr/local/bin/mega-session-manager.sh
 
-# --- NEW, CORRECTED LINE ---
+# Create required directories and set permissions
 RUN mkdir -p /var/log/supervisor /home/appuser/.megaCmd \
     && chown -R appuser:appgroup /home/appuser /app /var/log/supervisor
+
+# --- NEW LINE ---
+# Expose the port the web server will run on
+EXPOSE 8080
 
 # Switch to the non-root user
 USER appuser
