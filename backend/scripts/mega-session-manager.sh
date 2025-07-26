@@ -15,15 +15,14 @@ pkill -f mega-cmd-server &> /dev/null || true
 rm -f /home/appuser/.megaCmd/megacmd.lock /home/appuser/.megaCmd/srv_state.db*
 sleep 2
 
-# Log in to MEGA
+# Log in to MEGA. This command also starts the server in the background.
 echo "[SESSION-MANAGER] Attempting to log in as $MEGA_EMAIL..."
 if ! mega-login "$MEGA_EMAIL" "$MEGA_PWD" < /dev/null; then
   echo "[SESSION-MANAGER] FATAL: MEGA login failed."
   exit 1
 fi
 
-echo "[SESSION-MANAGER] Login successful."
-
-# Use 'exec' to replace this script's process with the server process.
-echo "[SESSION-MANAGER] Starting MEGAcmd server in the foreground..."
-exec mega-cmd-server
+# The script's only remaining job is to stay alive.
+echo "[SESSION-MANAGER] Login successful. Session is now active in the background."
+echo "[SESSION-MANAGER] This script will now idle to keep the container running."
+tail -f /dev/null
