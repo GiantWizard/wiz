@@ -7,6 +7,7 @@ COPY calculation_engine/go.mod calculation_engine/go.sum ./
 RUN go mod download
 
 COPY calculation_engine/main.go .
+# Build the Go application, creating a static binary
 RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 
 
@@ -14,29 +15,26 @@ RUN CGO_ENABLED=0 go build -o /app/calculation_engine .
 # This stage creates the lean, final image using Debian for stability.
 FROM debian:11-slim
 
-# --- RELIABLE METHOD TO INSTALL MEGACMD ON DEBIAN ---
-# 1. Install prerequisites using Debian's apt package manager.
-#    --no-install-recommends keeps the image lean.
+# --- NEW, DIRECT INSTALLATION METHOD ---
+# 1. Update apt and install prerequisites.
+#    Based on the SO post, ensuring ca-certificates is present is critical.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     wget \
     ca-certificates \
-    gpg \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Download MEGA's public GPG key, de-armor it, and store it in the standard keyring location.
-#    This is the modern, secure way to add repository keys.
-RUN wget -qO- https://mega.nz/linux/repo/repo_mega.asc | gpg --dearmor > /usr/share/keyrings/mega-archive-keyring.gpg
+# 2. Download the official .deb package for megacmd directly.
+#    This bypasses all repository and GPG key issues.
+RUN wget https://mega.nz/linux/repo/Debian_11/amd64/megacmd_1.6.5-1_amd64.deb -O /tmp/megacmd.deb
 
-# 3. Add the official MEGA package repository for Debian 11 (Bullseye) to the sources list.
-#    This tells apt where to find the 'megacmd' package.
-RUN echo "deb [signed-by=/usr/share/keyrings/mega-archive-keyring.gpg] https://mega.nz/linux/repo/Debian_11/ ./" > /etc/apt/sources.list.d/mega.list
-
-# 4. Update the package index again and install megacmd.
+# 3. Install the package from the downloaded file.
+#    apt will automatically handle and install any necessary dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    megacmd \
+    /tmp/megacmd.deb \
+    && rm /tmp/megacmd.deb \
     && rm -rf /var/lib/apt/lists/*
-# --- END OF RELIABLE METHOD ---
+# --- END OF DIRECT INSTALLATION METHOD ---
 
 
 # Create a non-root user for security (Debian syntax).
