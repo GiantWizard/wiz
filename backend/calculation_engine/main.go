@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-// Metric struct remains the same...
+// Metric struct and other variables remain unchanged...
 type Metric struct {
 	ProductID                             string  `json:"product_id"`
 	InstabuyPriceAverage                  float64 `json:"instabuy_price_average"`
@@ -35,6 +36,7 @@ var (
 	metricsMutex          sync.RWMutex
 )
 
+// main function remains the same...
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
@@ -50,14 +52,35 @@ func main() {
 	}
 }
 
+// --- MODIFIED Web Server Section ---
+
 func startWebServer() {
+	// NEW: Register the health check handler for the root path.
+	http.HandleFunc("/", healthCheckHandler)
+
+	// Keep the existing metrics handler for your data.
 	http.HandleFunc("/latest_metrics/", metricsHandler)
+
 	log.Println("[CALC-ENGINE] Starting web server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
 	}
 }
 
+// NEW: A simple handler for health checks.
+// It responds with a 200 OK status to let the platform know the app is alive.
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	// We only want to respond to the root path for health checks.
+	// If the platform checks any other path, it will correctly get a 404.
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "OK")
+}
+
+// metricsHandler remains the same...
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
@@ -69,6 +92,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
 
+// updateLatestMetrics function remains the same...
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
@@ -77,8 +101,6 @@ func updateLatestMetrics() {
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
 
-	// --- MODIFIED LOGIC ---
-	// Revert to using 'mega-ls' as 'mega-find' flags are not supported.
 	log.Println("[CALC-ENGINE] Listing all remote files...")
 	cmd := exec.Command("mega-ls", remoteDir)
 	out, err := cmd.CombinedOutput()
@@ -87,13 +109,11 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// The Go application will now handle sorting and limiting.
 	filenames := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(filenames) == 0 || (len(filenames) == 1 && filenames[0] == "") {
 		log.Println("[CALC-ENGINE] No metric files found in remote directory.")
 		return
 	}
-	// Sort descending to get latest filenames first (e.g., "metrics_2025...").
 	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
 
 	numToDownload := 12
@@ -102,7 +122,6 @@ func updateLatestMetrics() {
 	}
 	latestFiles := filenames[:numToDownload]
 	log.Printf("[CALC-ENGINE] Identified latest %d files to process.", len(latestFiles))
-	// --- END OF MODIFIED LOGIC ---
 
 	var downloadedFiles []string
 	for _, filename := range latestFiles {
