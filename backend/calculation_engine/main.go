@@ -34,18 +34,16 @@ type AveragedMetrics map[string]Metric
 var (
 	latestAveragedMetrics AveragedMetrics
 	metricsMutex          sync.RWMutex
-	isHealthy             bool // This is for data readiness, not liveness
+	isHealthy             bool
 )
 
-// The main function from the previous attempt is correct and should be kept.
+// The main function is correct and remains unchanged.
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Could not create temp directory: %v", err)
 	}
-
 	go startWebServer()
-
 	go func() {
 		updateLatestMetrics()
 		ticker := time.NewTicker(5 * time.Minute)
@@ -54,58 +52,57 @@ func main() {
 			updateLatestMetrics()
 		}
 	}()
-	
 	select {}
 }
 
+// --- MODIFIED Web Server with a better router ---
 func startWebServer() {
-	// The liveness probe for the platform
-	http.HandleFunc("/", healthCheckHandler)
-	// The readiness/data probe for clients
-	http.HandleFunc("/latest_metrics/", metricsHandler)
+	// 1. Create a new, non-global ServeMux (router). This is a best practice.
+	mux := http.NewServeMux()
+
+	// 2. Register your specific data endpoint first. No trailing slash for an exact match.
+	mux.HandleFunc("/latest_metrics", metricsHandler)
+
+	// 3. Register your catch-all health check handler for the root path.
+	// This will now handle ANY request that doesn't match the more specific routes above.
+	mux.HandleFunc("/", healthCheckHandler)
 
 	log.Println("[CALC-ENGINE] Starting web server on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 4. Start the server with your custom router.
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
 	}
 }
 
-// --- THIS IS THE KEY CHANGE ---
-// A simple Liveness probe. Its only job is to tell the platform the process is alive.
-// It always returns 200 OK.
+// --- MODIFIED Health Check Handler ---
+// This is now a perfect, simple liveness probe. It will always pass.
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
+	// If the path isn't the data endpoint, we assume it's a health check or
+	// a user browsing to the root. In either case, 200 OK is the correct response.
+	// We no longer check if the path is exactly "/".
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "OK")
+	fmt.Fprintln(w, "OK. Metrics are available at /latest_metrics")
 }
 
-// The metrics handler correctly acts as a Readiness probe for the data.
-// It will return a 503 error until the first data load is complete.
+// The metrics handler is correct and remains unchanged.
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
-	
 	if !isHealthy {
 		http.Error(w, "Metrics not available yet. Please try again in a moment.", http.StatusServiceUnavailable)
 		return
 	}
-	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
 
-
-// No changes needed for updateLatestMetrics or calculateAverages
+// updateLatestMetrics and calculateAverages are correct and remain unchanged.
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
 	localDir := "/tmp/metrics"
 	_ = os.RemoveAll(localDir)
 	_ = os.MkdirAll(localDir, os.ModePerm)
-
 	log.Println("[CALC-ENGINE] Listing all remote files...")
 	cmd := exec.Command("mega-ls", remoteDir)
 	out, err := cmd.CombinedOutput()
@@ -113,7 +110,6 @@ func updateLatestMetrics() {
 		log.Printf("[CALC-ENGINE] ERROR: Failed to list remote files: %v\nOutput: %s", err, out)
 		return
 	}
-
 	allLines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	var filenames []string
 	for _, line := range allLines {
@@ -122,20 +118,17 @@ func updateLatestMetrics() {
 			filenames = append(filenames, trimmedLine)
 		}
 	}
-
 	if len(filenames) == 0 {
 		log.Println("[CALC-ENGINE] No valid metric files found in remote directory.")
 		return
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
-
 	numToDownload := 12
 	if len(filenames) < numToDownload {
 		numToDownload = len(filenames)
 	}
 	latestFiles := filenames[:numToDownload]
 	log.Printf("[CALC-ENGINE] Identified latest %d files to process.", len(latestFiles))
-
 	var downloadedFiles []string
 	for _, filename := range latestFiles {
 		remotePath := filepath.Join(remoteDir, filename)
@@ -147,12 +140,10 @@ func updateLatestMetrics() {
 		}
 		downloadedFiles = append(downloadedFiles, filepath.Join(localDir, filename))
 	}
-
 	if len(downloadedFiles) == 0 {
 		log.Println("[CALC-ENGINE] No files were successfully downloaded. Aborting cycle.")
 		return
 	}
-
 	var allMetrics [][]Metric
 	for _, localPath := range downloadedFiles {
 		file, err := os.Open(localPath)
@@ -169,23 +160,18 @@ func updateLatestMetrics() {
 		file.Close()
 		allMetrics = append(allMetrics, metrics)
 	}
-
 	if len(allMetrics) == 0 {
 		log.Println("[CALC-ENGINE] No metric files could be successfully parsed. Aborting cycle.")
 		return
 	}
-
 	log.Printf("[CALC-ENGINE] Averaging data from %d files.", len(allMetrics))
 	newAverages := calculateAverages(allMetrics)
-
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
-	isHealthy = true // Set the readiness flag
+	isHealthy = true
 	metricsMutex.Unlock()
-
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
 }
-
 func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 	type aggregator struct {
 		Metric
