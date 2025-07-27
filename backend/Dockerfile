@@ -1,16 +1,19 @@
 # STAGE 1: Rust/C++ Builder for Metrics Generator and Export Engine
 # This stage compiles the data producer and its uploader.
-#
-# ---- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED ----
 FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
-# ---------------------------------------------------
-#
 LABEL stage=rust-cpp-builder
 
-# Install C++ compiler and build tools
+# Install C++ compiler and ALL required build dependencies for Rust crates
+#
+# ---- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED ----
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends g++ make && \
+    apt-get install -y --no-install-recommends \
+        g++ \
+        make \
+        pkg-config \
+        libssl-dev && \
     rm -rf /var/lib/apt/lists/*
+# ---------------------------------------------------
 
 # Build the C++ export engine first
 WORKDIR /app/export_engine_build
