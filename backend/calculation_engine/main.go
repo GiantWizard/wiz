@@ -34,79 +34,71 @@ type AveragedMetrics map[string]Metric
 var (
 	latestAveragedMetrics AveragedMetrics
 	metricsMutex          sync.RWMutex
-	isHealthy             bool
+	isHealthy             bool // This is for data readiness, not liveness
 )
 
-
-// --- MODIFIED main function ---
-// This new structure prevents the startup race condition.
+// The main function from the previous attempt is correct and should be kept.
 func main() {
 	log.Println("[CALC-ENGINE] Application starting up...")
 	if err := os.MkdirAll("/tmp/metrics", os.ModePerm); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Could not create temp directory: %v", err)
 	}
 
-	// 1. Start the web server in a goroutine. It will be ready to serve health checks immediately.
 	go startWebServer()
 
-	// 2. Start the entire metrics processing logic in another goroutine.
-	// This prevents the long initial download from blocking the main thread.
 	go func() {
-		// Run the first update to populate data and become healthy.
 		updateLatestMetrics()
-
-		// After the first run, start the ticker for periodic updates.
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
 			updateLatestMetrics()
 		}
 	}()
-
-	// 3. Block the main goroutine forever.
-	// If main() exits, the entire application will shut down.
-	// `select {}` is a standard Go pattern to make a goroutine wait indefinitely.
+	
 	select {}
 }
 
-// --- Web Server and other functions remain the same ---
-
 func startWebServer() {
+	// The liveness probe for the platform
 	http.HandleFunc("/", healthCheckHandler)
+	// The readiness/data probe for clients
 	http.HandleFunc("/latest_metrics/", metricsHandler)
+
 	log.Println("[CALC-ENGINE] Starting web server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
 	}
 }
 
+// --- THIS IS THE KEY CHANGE ---
+// A simple Liveness probe. Its only job is to tell the platform the process is alive.
+// It always returns 200 OK.
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	metricsMutex.RLock()
-	defer metricsMutex.RUnlock()
-	if isHealthy {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "OK: Metrics are loaded and ready.")
-	} else {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		fmt.Fprintln(w, "Service Starting: Metrics are not yet available.")
-	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "OK")
 }
 
+// The metrics handler correctly acts as a Readiness probe for the data.
+// It will return a 503 error until the first data load is complete.
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
+	
 	if !isHealthy {
-		http.Error(w, "Metrics not available yet.", http.StatusServiceUnavailable)
+		http.Error(w, "Metrics not available yet. Please try again in a moment.", http.StatusServiceUnavailable)
 		return
 	}
+	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(latestAveragedMetrics)
 }
 
+
+// No changes needed for updateLatestMetrics or calculateAverages
 func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Starting metrics update cycle...")
 	remoteDir := "/remote_metrics"
@@ -188,14 +180,13 @@ func updateLatestMetrics() {
 
 	metricsMutex.Lock()
 	latestAveragedMetrics = newAverages
-	isHealthy = true
+	isHealthy = true // Set the readiness flag
 	metricsMutex.Unlock()
 
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
 }
 
 func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
-	// ... this function remains unchanged ...
 	type aggregator struct {
 		Metric
 		count int
