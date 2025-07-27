@@ -1,6 +1,10 @@
 # STAGE 1: Rust/C++ Builder for Metrics Generator and Export Engine
 # This stage compiles the data producer and its uploader.
-FROM rust:1.80-slim-bookworm AS rust-cpp-builder
+#
+# ---- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED ----
+FROM rust:1.87.0-slim-bookworm AS rust-cpp-builder
+# ---------------------------------------------------
+#
 LABEL stage=rust-cpp-builder
 
 # Install C++ compiler and build tools
