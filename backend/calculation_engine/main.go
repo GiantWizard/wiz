@@ -57,32 +57,24 @@ func main() {
 
 // --- MODIFIED Web Server with a better router ---
 func startWebServer() {
-	// 1. Create a new, non-global ServeMux (router). This is a best practice.
-	mux := http.NewServeMux()
+    // Liveness probe: always returns 200 OK on /healthz
+    http.HandleFunc("/healthz", healthCheckHandler)
 
-	// 2. Register your specific data endpoint first. No trailing slash for an exact match.
-	mux.HandleFunc("/latest_metrics", metricsHandler)
+    // Readiness/data probe
+    http.HandleFunc("/latest_metrics/", metricsHandler)
 
-	// 3. Register your catch-all health check handler for the root path.
-	// This will now handle ANY request that doesn't match the more specific routes above.
-	mux.HandleFunc("/", healthCheckHandler)
-
-	log.Println("[CALC-ENGINE] Starting web server on :8080")
-	// 4. Start the server with your custom router.
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
-	}
+    log.Println("[CALC-ENGINE] Starting web server on :8080")
+    if err := http.ListenAndServe(":8080", nil); err != nil {
+        log.Fatalf("[CALC-ENGINE] FATAL: Web server failed: %v", err)
+    }
 }
 
-// --- MODIFIED Health Check Handler ---
-// This is now a perfect, simple liveness probe. It will always pass.
+// Liveness handler: unconditionally 200 OK
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	// If the path isn't the data endpoint, we assume it's a health check or
-	// a user browsing to the root. In either case, 200 OK is the correct response.
-	// We no longer check if the path is exactly "/".
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "OK. Metrics are available at /latest_metrics")
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintln(w, "OK")
 }
+
 
 // The metrics handler is correct and remains unchanged.
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
