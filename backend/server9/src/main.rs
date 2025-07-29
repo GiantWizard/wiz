@@ -1,5 +1,3 @@
-// file: server9/src/main.rs
-
 use chrono::{Utc, Local};
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -23,10 +21,13 @@ struct Order {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct BazaarInfo {
     product_id: String,
-    buy_price: f64,
-    sell_price: f64,
+    buy_price: f64,    // Top buy order price (what you can instasell for)
+    sell_price: f64,   // Top sell order price (what you must pay to instabuy)
     buy_orders: Vec<Order>,
     sell_orders: Vec<Order>,
+    // --- ADDED ---
+    buy_moving_week: i64,  // Total items bought by players via instabuy
+    sell_moving_week: i64, // Total items sold by players via instasell
 }
 
 /// Holds the final analysis metrics for one product.
@@ -61,13 +62,19 @@ struct ProductMetricsState {
     player_instabuy_volume_total: f64,
     player_instasell_event_count: usize,
     player_instasell_volume_total: f64,
+    // --- ADDED ---
+    prev_buy_moving_week: i64,
+    prev_sell_moving_week: i64,
 }
 
+// Replace the existing ProductMetricsState implementation with this new one.
 impl ProductMetricsState {
     fn new(first: &BazaarInfo) -> Self {
         Self {
-            sum_instabuy_price: first.buy_price,
-            sum_instasell_price: first.sell_price,
+            // The price to instabuy is the top sell_price
+            sum_instabuy_price: first.sell_price,
+            // The price to instasell is the top buy_price
+            sum_instasell_price: first.buy_price,
             snapshot_count: 1,
             windows_processed: 0,
             prev_snapshot: Some(first.clone()),
@@ -79,6 +86,8 @@ impl ProductMetricsState {
             player_instabuy_volume_total: 0.0,
             player_instasell_event_count: 0,
             player_instasell_volume_total: 0.0,
+            prev_buy_moving_week: first.buy_moving_week,
+            prev_sell_moving_week: first.sell_moving_week,
         }
     }
 
@@ -86,44 +95,54 @@ impl ProductMetricsState {
 
     fn update(&mut self, current: &BazaarInfo) {
         self.snapshot_count += 1;
-        self.sum_instabuy_price += current.buy_price;
-        self.sum_instasell_price += current.sell_price;
+        self.sum_instabuy_price += current.sell_price;
+        self.sum_instasell_price += current.buy_price;
 
         if let Some(prev) = &self.prev_snapshot {
             self.windows_processed += 1;
 
-            // --- Player Instabuy Analysis ---
-            let prev_sell_offers: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            let current_sell_offers: HashMap<u64, i64> = current.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            let mut consumed_volume = 0;
+            // --- Player Instabuy Analysis (consuming sell_orders) ---
+            let prev_sell_offers: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            let current_sell_offers: HashMap<u64, i64> = current.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            let mut inferred_instabuy_volume = 0;
+            let mut inferred_instabuy_events = 0;
             for (price_key, prev_amount) in &prev_sell_offers {
-                if let Some(current_amount) = current_sell_offers.get(price_key) {
-                    if prev_amount > current_amount { consumed_volume += prev_amount - current_amount; }
-                } else {
-                    consumed_volume += prev_amount;
+                let current_amount = current_sell_offers.get(price_key).unwrap_or(&0);
+                if prev_amount > current_amount {
+                    inferred_instabuy_volume += prev_amount - current_amount;
+                    inferred_instabuy_events += 1;
                 }
             }
-            if consumed_volume > 0 { self.player_instabuy_event_count += 1; self.player_instabuy_volume_total += consumed_volume as f64; }
-
-            // --- Player Instasell Analysis ---
-            let prev_buy_offers: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            let current_buy_offers: HashMap<u64, i64> = current.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            let mut fulfilled_volume = 0;
-            for (price_key, prev_amount) in &prev_buy_offers {
-                if let Some(current_amount) = current_buy_offers.get(price_key) {
-                    if prev_amount > current_amount { fulfilled_volume += prev_amount - current_amount; }
-                } else {
-                    fulfilled_volume += prev_amount;
-                }
-            }
-            if fulfilled_volume > 0 { self.player_instasell_event_count += 1; self.player_instasell_volume_total += fulfilled_volume as f64; }
-
-            // --- New Demand Offer Analysis ---
-            let prev_demand_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
-            let prev_demand_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             
-            // --- CORRECTED CODE BLOCK ---
-            for offer in &current.sell_orders {
+            let actual_instabuy_volume = (current.buy_moving_week - self.prev_buy_moving_week).max(0);
+            if inferred_instabuy_volume > 0 && actual_instabuy_volume > 0 {
+                self.player_instabuy_event_count += inferred_instabuy_events;
+                self.player_instabuy_volume_total += actual_instabuy_volume as f64;
+            }
+
+            // --- Player Instasell Analysis (fulfilling buy_orders) ---
+            let prev_buy_offers: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            let current_buy_offers: HashMap<u64, i64> = current.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            let mut inferred_instasell_volume = 0;
+            let mut inferred_instasell_events = 0;
+            for (price_key, prev_amount) in &prev_buy_offers {
+                let current_amount = current_buy_offers.get(price_key).unwrap_or(&0);
+                if prev_amount > current_amount {
+                    inferred_instasell_volume += prev_amount - current_amount;
+                    inferred_instasell_events += 1;
+                }
+            }
+
+            let actual_instasell_volume = (current.sell_moving_week - self.prev_sell_moving_week).max(0);
+            if inferred_instasell_volume > 0 && actual_instasell_volume > 0 {
+                self.player_instasell_event_count += inferred_instasell_events;
+                self.player_instasell_volume_total += actual_instasell_volume as f64;
+            }
+
+            // --- New Demand Offer Analysis (new buy_orders) ---
+            let prev_demand_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
+            let prev_demand_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            for offer in ¤t.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 if let Some(prev_orders) = prev_demand_orders.get(&key) {
                     if offer.orders > *prev_orders {
@@ -139,12 +158,10 @@ impl ProductMetricsState {
                 }
             }
 
-            // --- New Supply Offer Analysis ---
-            let prev_supply_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
-            let prev_supply_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-
-            // --- CORRECTED CODE BLOCK ---
-            for offer in &current.buy_orders {
+            // --- New Supply Offer Analysis (new sell_orders) ---
+            let prev_supply_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
+            let prev_supply_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
+            for offer in ¤t.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 if let Some(prev_orders) = prev_supply_orders.get(&key) {
                     if offer.orders > *prev_orders {
@@ -161,6 +178,8 @@ impl ProductMetricsState {
             }
         }
         self.prev_snapshot = Some(current.clone());
+        self.prev_buy_moving_week = current.buy_moving_week;
+        self.prev_sell_moving_week = current.sell_moving_week;
     }
 
     fn finalize(&self, product_id: String) -> AnalysisResult {
@@ -172,9 +191,9 @@ impl ProductMetricsState {
         let new_supply_offer_frequency_average = if windows > 0.0 { self.total_new_supply_offers / windows } else { 0.0 };
         let new_supply_offer_size_average = if self.total_new_supply_offers > 0.0 { self.total_new_supply_offer_amount / self.total_new_supply_offers } else { 0.0 };
         let player_instabuy_transaction_frequency = if windows > 0.0 { self.player_instabuy_event_count as f64 / windows } else { 0.0 };
-        let player_instabuy_transaction_size_average = if self.player_instabuy_event_count > 0 { self.player_instabuy_volume_total / self.player_instabuy_event_count as f64 } else { 0.0 };
+        let player_instabuy_transaction_size_average = if self.player_instabuy_volume_total > 0.0 { self.player_instabuy_volume_total / self.player_instabuy_event_count as f64 } else { 0.0 };
         let player_instasell_transaction_frequency = if windows > 0.0 { self.player_instasell_event_count as f64 / windows } else { 0.0 };
-        let player_instasell_transaction_size_average = if self.player_instasell_event_count > 0 { self.player_instasell_volume_total / self.player_instasell_event_count as f64 } else { 0.0 };
+        let player_instasell_transaction_size_average = if self.player_instasell_volume_total > 0.0 { self.player_instasell_volume_total / self.player_instasell_event_count as f64 } else { 0.0 };
         AnalysisResult { product_id, instabuy_price_average, instasell_price_average, new_demand_offer_frequency_average, new_demand_offer_size_average, player_instabuy_transaction_frequency, player_instabuy_transaction_size_average, new_supply_offer_frequency_average, new_supply_offer_size_average, player_instasell_transaction_frequency, player_instasell_transaction_size_average }
     }
 }
@@ -197,8 +216,15 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
         let pid = pid.clone();
         let prod = prod.clone();
         tasks.push(tokio::spawn(async move {
-            let instasell_price = prod["sell_summary"].get(0).and_then(|o| o["pricePerUnit"].as_f64()).unwrap_or_default();
-            let instabuy_price = prod["buy_summary"].get(0).and_then(|o| o["pricePerUnit"].as_f64()).unwrap_or_default();
+            // Correctly parse prices based on API definitions
+            let instasell_price = prod["quick_status"]["buyPrice"].as_f64().unwrap_or_default();
+            let instabuy_price = prod["quick_status"]["sellPrice"].as_f64().unwrap_or_default();
+            
+            // --- ADDED ---
+            // Parse the moving week data from the quick_status field.
+            let buy_moving_week = prod["quick_status"]["buyMovingWeek"].as_i64().unwrap_or_default();
+            let sell_moving_week = prod["quick_status"]["sellMovingWeek"].as_i64().unwrap_or_default();
+
             let mut sell_orders_vec = Vec::new();
             if let Some(arr) = prod["sell_summary"].as_array() {
                 for o in arr {
@@ -221,10 +247,13 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
             }
             BazaarInfo {
                 product_id: pid,
-                sell_price: instasell_price,
-                buy_price: instabuy_price,
+                sell_price: instabuy_price,
+                buy_price: instasell_price,
                 sell_orders: sell_orders_vec,
                 buy_orders: buy_orders_vec,
+                // --- ADDED ---
+                buy_moving_week,
+                sell_moving_week,
             }
         }));
     }
@@ -238,15 +267,12 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
     Ok(Some(snapshot))
 }
 
-// In server9/src/main.rs, replace the entire main function with this:
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("metrics")?;
     let mut states: HashMap<String, ProductMetricsState> = HashMap::new();
     let mut last_mod: Option<String> = None;
 
-    // Set default export interval to 3600 seconds (1 hour) for faster testing.
     let export_interval_secs = std::env::var("EXPORT_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(3600);
 
@@ -276,7 +302,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let ts = Utc::now().format("%Y%m%d%H%M%S").to_string();
                 
                 let local_path = format!("metrics/metrics_{}.json", ts);
-                // Construct the full, correct remote path including the folder and the .json extension.
                 let remote_mega_path = format!("/remote_metrics/metrics_{}.json", ts);
                 
                 println!("Attempting to export local file '{}' to remote path '{}'", local_path, remote_mega_path);
@@ -286,7 +311,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         println!("Successfully wrote metrics for {} products to {}", results.len(), local_path);
                         let export_engine_path = std::env::var("EXPORT_ENGINE_PATH").unwrap_or_else(|_| "export_engine".to_string());
                         
-                        // Pass the correct local path and the full desired remote path to the exporter.
                         match Command::new(&export_engine_path)
                             .arg(&local_path)
                             .arg(&remote_mega_path)
@@ -303,7 +327,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("No state to export this round.");
             }
-            // Reset state and timer for the next aggregation window.
             states.clear();
             export_timer = Instant::now();
         }
