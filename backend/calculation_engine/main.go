@@ -130,7 +130,7 @@ func updateLatestMetrics() {
 		return
 	}
 
-	// Sort newest first and pick up to 12
+	// Sort newest first and pick up to 24
 	sort.Sort(sort.Reverse(sort.StringSlice(filenames)))
 	n := 24
 	if len(filenames) < n {
