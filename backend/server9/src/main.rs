@@ -142,7 +142,7 @@ impl ProductMetricsState {
             // --- New Demand Offer Analysis (new buy_orders) ---
             let prev_demand_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            for offer in ¤t.buy_orders {
+            for offer in &current.buy_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 if let Some(prev_orders) = prev_demand_orders.get(&key) {
                     if offer.orders > *prev_orders {
@@ -161,7 +161,7 @@ impl ProductMetricsState {
             // --- New Supply Offer Analysis (new sell_orders) ---
             let prev_supply_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
-            for offer in ¤t.sell_orders {
+            for offer in &current.sell_orders {
                 let key = Self::price_to_key(offer.price_per_unit);
                 if let Some(prev_orders) = prev_supply_orders.get(&key) {
                     if offer.orders > *prev_orders {
