@@ -260,41 +260,48 @@ impl ProductMetricsState {
             return None;
         }
         // Group patterns by (delta, ratio)
-        let mut cluster_map: HashMap<(i64, i64), Vec<&PatternPeriod>> = HashMap::new();
+        let mut cluster_map: HashMap<(i64, i64), Vec<PatternPeriod>> = HashMap::new();
         for p in pattern_periods {
             let ratio = if p.inferred_volume > 0 {
                 (p.moving_week_delta as f64 / p.inferred_volume as f64 * 10000.0).round() as i64
             } else {
                 0
             };
-            cluster_map.entry((p.moving_week_delta, ratio)).or_default().push(p);
+            cluster_map
+                .entry((p.moving_week_delta, ratio))
+                .or_default()
+                .push(p.clone());
         }
         // Find cluster with most entries where it appears at least 3 times
-        let mut modal: Option<(&Vec<&PatternPeriod>, i64, i64)> = None;
+        let mut modal: Option<(Vec<PatternPeriod>, i64, i64)> = None;
         for ((delta, ratio), cluster) in &cluster_map {
-            if cluster.len() >= 3 && (modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len()) {
-                modal = Some((cluster, *delta, *ratio));
+            if cluster.len() >= 3
+                && (modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len())
+            {
+                modal = Some((cluster.clone(), *delta, *ratio));
             }
         }
         // If no exact modal, try cluster by ratio within 10% tolerance
         if modal.is_none() {
-            let mut ratio_map: HashMap<i64, Vec<&PatternPeriod>> = HashMap::new();
+            let mut ratio_map: HashMap<i64, Vec<PatternPeriod>> = HashMap::new();
             for p in pattern_periods {
                 let ratio = if p.inferred_volume > 0 {
                     (p.moving_week_delta as f64 / p.inferred_volume as f64 * 10000.0).round() as i64
                 } else {
                     0
                 };
-                ratio_map.entry(ratio).or_default().push(p);
+                ratio_map.entry(ratio).or_default().push(p.clone());
             }
             for (ratio, cluster) in &ratio_map {
                 if cluster.len() < 3 {
                     continue;
                 }
+                // Find average delta for this ratio cluster
                 let avg_delta = cluster.iter().map(|p| p.moving_week_delta).sum::<i64>() / cluster.len() as i64;
+                // Accept cluster if all deltas are within 10% of mean
                 if cluster.iter().all(|p| (p.moving_week_delta - avg_delta).abs() <= (avg_delta as f64 * 0.1).max(1.0) as i64) {
                     if modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len() {
-                        modal = Some((cluster, avg_delta, *ratio));
+                        modal = Some((cluster.clone(), avg_delta, *ratio));
                     }
                 }
             }
