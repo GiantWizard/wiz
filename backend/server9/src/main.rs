@@ -9,7 +9,6 @@ use std::process::Command;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 
-/// Represents an individual order (can be a buy or sell order).
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct Order {
     amount: i64,
@@ -17,19 +16,17 @@ struct Order {
     orders: i64,
 }
 
-/// Represents the Bazaar snapshot for one product.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct BazaarInfo {
     product_id: String,
-    buy_price: f64,    // Top buy order price (what you can instasell for)
-    sell_price: f64,   // Top sell order price (what you must pay to instabuy)
+    buy_price: f64,
+    sell_price: f64,
     buy_orders: Vec<Order>,
     sell_orders: Vec<Order>,
     buy_moving_week: i64,
     sell_moving_week: i64,
 }
 
-/// Represents a detected pattern period
 #[derive(Debug, Clone)]
 struct PatternPeriod {
     position: usize,
@@ -38,16 +35,15 @@ struct PatternPeriod {
     timestamp: u64,
 }
 
-/// Represents a modal pattern with its characteristics
 #[derive(Debug, Clone)]
 struct ModalPattern {
     size: i64,
+    ratio: f64,
     frequency_minutes: f64,
     occurrence_count: usize,
     confidence: f64,
 }
 
-/// Holds the final analysis metrics for one product.
 #[derive(Debug, Serialize)]
 struct AnalysisResult {
     product_id: String,
@@ -61,7 +57,6 @@ struct AnalysisResult {
     new_supply_offer_size_average: f64,
     player_instasell_transaction_frequency: f64,
     player_instasell_transaction_size_average: f64,
-    // Pattern-based fields
     instabuy_modal_size: i64,
     instabuy_pattern_frequency: f64,
     instabuy_scale_factor: f64,
@@ -73,7 +68,6 @@ struct AnalysisResult {
     pattern_detection_confidence: f64,
 }
 
-/// Incremental state for each product; updated on each new snapshot.
 #[derive(Debug)]
 struct ProductMetricsState {
     sum_instabuy_price: f64,
@@ -91,17 +85,11 @@ struct ProductMetricsState {
     player_instasell_volume_total: f64,
     prev_buy_moving_week: i64,
     prev_sell_moving_week: i64,
-    
-    // Time series data for pattern detection (180 data points = 1 hour)
     buy_moving_week_history: Vec<i64>,
     sell_moving_week_history: Vec<i64>,
     inferred_buy_volume_history: Vec<i64>,
     inferred_sell_volume_history: Vec<i64>,
     timestamps: Vec<u64>,
-    
-    // Pattern analysis state - accumulate instead of overwrite
-    instabuy_patterns: Vec<PatternPeriod>,
-    instasell_patterns: Vec<PatternPeriod>,
     total_buy_moving_week_activity: i64,
     total_sell_moving_week_activity: i64,
 }
@@ -112,19 +100,9 @@ impl ProductMetricsState {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
-        let mut timestamps = Vec::with_capacity(180);
-        timestamps.push(current_timestamp);
-        
-        let mut buy_history = Vec::with_capacity(180);
-        buy_history.push(first.buy_moving_week);
-        
-        let mut sell_history = Vec::with_capacity(180);
-        sell_history.push(first.sell_moving_week);
-        
         Self {
-            sum_instabuy_price: first.sell_price,
-            sum_instasell_price: first.buy_price,
+            sum_instabuy_price: first.buy_price, // corrected: instabuy uses buy_price
+            sum_instasell_price: first.sell_price, // corrected: instasell uses sell_price
             snapshot_count: 1,
             windows_processed: 0,
             prev_snapshot: Some(first.clone()),
@@ -138,13 +116,11 @@ impl ProductMetricsState {
             player_instasell_volume_total: 0.0,
             prev_buy_moving_week: first.buy_moving_week,
             prev_sell_moving_week: first.sell_moving_week,
-            buy_moving_week_history: buy_history,
-            sell_moving_week_history: sell_history,
-            inferred_buy_volume_history: Vec::with_capacity(180),
-            inferred_sell_volume_history: Vec::with_capacity(180),
-            timestamps,
-            instabuy_patterns: Vec::new(),
-            instasell_patterns: Vec::new(),
+            buy_moving_week_history: vec![first.buy_moving_week],
+            sell_moving_week_history: vec![first.sell_moving_week],
+            inferred_buy_volume_history: vec![],
+            inferred_sell_volume_history: vec![],
+            timestamps: vec![current_timestamp],
             total_buy_moving_week_activity: 0,
             total_sell_moving_week_activity: 0,
         }
@@ -154,233 +130,23 @@ impl ProductMetricsState {
         (price * 1000.0).round() as u64 
     }
 
-    fn maintain_rolling_window<T>(vec: &mut Vec<T>, capacity: usize) {
-        while vec.len() > capacity {
-            vec.remove(0);
-        }
-    }
-
-    fn find_instabuy_patterns(&self) -> Vec<PatternPeriod> {
-        let mut patterns = Vec::new();
-        
-        // Need at least 2 points to calculate deltas
-        if self.buy_moving_week_history.len() < 2 || self.inferred_buy_volume_history.len() < 2 {
-            return patterns;
-        }
-        
-        for i in 1..self.buy_moving_week_history.len() {
-            let moving_week_delta = self.buy_moving_week_history[i] - self.buy_moving_week_history[i-1];
-            let inferred_volume = if i-1 < self.inferred_buy_volume_history.len() {
-                self.inferred_buy_volume_history[i-1]
-            } else {
-                0
-            };
-            
-            // Record pattern when both values are positive
-            if moving_week_delta > 0 && inferred_volume > 0 {
-                let timestamp = if i < self.timestamps.len() {
-                    self.timestamps[i]
-                } else {
-                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
-                };
-                
-                patterns.push(PatternPeriod {
-                    position: i,
-                    moving_week_delta,
-                    inferred_volume,
-                    timestamp,
-                });
-            }
-        }
-        
-        patterns
-    }
-
-    fn find_instasell_patterns(&self) -> Vec<PatternPeriod> {
-        let mut patterns = Vec::new();
-        
-        // Need at least 2 points to calculate deltas
-        if self.sell_moving_week_history.len() < 2 || self.inferred_sell_volume_history.len() < 2 {
-            return patterns;
-        }
-        
-        for i in 1..self.sell_moving_week_history.len() {
-            let moving_week_delta = self.sell_moving_week_history[i] - self.sell_moving_week_history[i-1];
-            let inferred_volume = if i-1 < self.inferred_sell_volume_history.len() {
-                self.inferred_sell_volume_history[i-1]
-            } else {
-                0
-            };
-            
-            // Record pattern when both values are positive
-            if moving_week_delta > 0 && inferred_volume > 0 {
-                let timestamp = if i < self.timestamps.len() {
-                    self.timestamps[i]
-                } else {
-                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
-                };
-                
-                patterns.push(PatternPeriod {
-                    position: i,
-                    moving_week_delta,
-                    inferred_volume,
-                    timestamp,
-                });
-            }
-        }
-        
-        patterns
-    }
-
-    fn calculate_pattern_frequency(pattern_periods: &[PatternPeriod], modal_size: i64, occurrence_count: usize) -> Option<ModalPattern> {
-        let matching_timestamps: Vec<u64> = pattern_periods
-            .iter()
-            .filter(|p| (p.moving_week_delta - modal_size).abs() <= ((modal_size as f64 * 0.1) as i64).max(1)) // ±10% tolerance
-            .map(|p| p.timestamp)
-            .collect();
-        
-        if matching_timestamps.len() < 2 {
-            return None;
-        }
-        
-        let mut intervals = Vec::new();
-        for i in 1..matching_timestamps.len() {
-            let interval_seconds = matching_timestamps[i].saturating_sub(matching_timestamps[i-1]);
-            intervals.push(interval_seconds as f64 / 60.0);
-        }
-        
-        let frequency_minutes = if !intervals.is_empty() {
-            intervals.iter().sum::<f64>() / intervals.len() as f64
-        } else {
-            60.0
-        };
-        
-        let confidence = occurrence_count as f64 / pattern_periods.len() as f64;
-        
-        Some(ModalPattern {
-            size: modal_size,
-            frequency_minutes,
-            occurrence_count,
-            confidence,
-        })
-    }
-
-    fn detect_modal_pattern(pattern_periods: &[PatternPeriod]) -> Option<ModalPattern> {
-        if pattern_periods.len() < 3 {
-            return None;
-        }
-        
-        // Phase 1: Exact Match Phase
-        let mut delta_counts: HashMap<i64, usize> = HashMap::new();
-        for period in pattern_periods {
-            *delta_counts.entry(period.moving_week_delta).or_insert(0) += 1;
-        }
-        
-        // Find most frequent delta appearing 3+ times
-        if let Some((&modal_size, &occurrence_count)) = delta_counts
-            .iter()
-            .filter(|(_, &count)| count >= 3)
-            .max_by_key(|(_, &count)| count) {
-            
-            return Self::calculate_pattern_frequency(pattern_periods, modal_size, occurrence_count);
-        }
-        
-        // Phase 2: Relationship Phase - look for consistent ratios between MovingWeek and inferred volumes
-        let mut ratio_groups: HashMap<u32, Vec<&PatternPeriod>> = HashMap::new();
-        
-        for period in pattern_periods {
-            if period.inferred_volume > 0 {
-                // Calculate ratio with scaling to avoid floating point precision issues
-                let ratio = ((period.moving_week_delta as f64 / period.inferred_volume as f64) * 1000.0) as u32;
-                ratio_groups.entry(ratio).or_insert_with(Vec::new).push(period);
-            }
-        }
-        
-        // Group pattern periods showing same ratio (within 5% tolerance)
-        let mut consolidated_groups: Vec<Vec<&PatternPeriod>> = Vec::new();
-        
-        for (ratio, periods) in ratio_groups {
-            let mut found_group = false;
-            for existing_group in &mut consolidated_groups {
-                if let Some(first_period) = existing_group.first() {
-                    let existing_ratio = ((first_period.moving_week_delta as f64 / first_period.inferred_volume as f64) * 1000.0) as u32;
-                    let ratio_diff = (ratio as i32 - existing_ratio as i32).abs() as f64 / existing_ratio as f64;
-                    
-                    if ratio_diff <= 0.05 { // 5% tolerance
-                        existing_group.extend(periods);
-                        found_group = true;
-                        break;
-                    }
-                }
-            }
-            if !found_group {
-                consolidated_groups.push(periods);
-            }
-        }
-        
-        // Find largest group with consistent ratios
-        let largest_group = consolidated_groups
-            .iter()
-            .filter(|group| group.len() >= 3)
-            .max_by_key(|group| group.len())?;
-        
-        // Calculate average MovingWeek value from largest consistent group
-        let avg_moving_week = largest_group.iter()
-            .map(|p| p.moving_week_delta)
-            .sum::<i64>() / largest_group.len() as i64;
-        
-        Self::calculate_pattern_frequency(pattern_periods, avg_moving_week, largest_group.len())
-    }
-
-    fn calculate_scaled_volume(&self, modal_pattern: &ModalPattern, total_observed: i64) -> (f64, f64) {
-        // Calculate expected events in 1-hour window
-        let window_minutes = 60.0;
-        let expected_events = if modal_pattern.frequency_minutes > 0.0 {
-            window_minutes / modal_pattern.frequency_minutes
-        } else {
-            1.0
-        };
-        
-        let observed_events = modal_pattern.occurrence_count as f64;
-        
-        // Calculate scale factor (capped at 5.0, minimum 1.0)
-        let scale_factor = if observed_events > 0.0 {
-            (expected_events / observed_events).min(5.0).max(1.0)
-        } else {
-            1.0
-        };
-        
-        let estimated_true_volume = total_observed as f64 * scale_factor;
-        
-        (scale_factor, estimated_true_volume)
-    }
-
     fn update(&mut self, current: &BazaarInfo) {
         let current_timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
         self.snapshot_count += 1;
-        self.sum_instabuy_price += current.sell_price;
-        self.sum_instasell_price += current.buy_price;
+        self.sum_instabuy_price += current.buy_price; // corrected: instabuy uses buy_price
+        self.sum_instasell_price += current.sell_price; // corrected: instasell uses sell_price
 
-        // Update time series data
         self.buy_moving_week_history.push(current.buy_moving_week);
         self.sell_moving_week_history.push(current.sell_moving_week);
         self.timestamps.push(current_timestamp);
-        
-        // Maintain rolling window of 180 data points
-        Self::maintain_rolling_window(&mut self.buy_moving_week_history, 180);
-        Self::maintain_rolling_window(&mut self.sell_moving_week_history, 180);
-        Self::maintain_rolling_window(&mut self.inferred_buy_volume_history, 180);
-        Self::maintain_rolling_window(&mut self.inferred_sell_volume_history, 180);
-        Self::maintain_rolling_window(&mut self.timestamps, 180);
 
         if let Some(prev) = &self.prev_snapshot {
             self.windows_processed += 1;
 
-            // --- Player Instabuy Analysis (buy_orders vs buyMovingWeek) ---
+            // INSTABUY: buy_orders (buysummary) and buy_moving_week
             let prev_buy_offers: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let current_buy_offers: HashMap<u64, i64> = current.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let mut inferred_instabuy_volume = 0;
@@ -392,20 +158,16 @@ impl ProductMetricsState {
                     inferred_instabuy_events += 1;
                 }
             }
-            
-            // Store inferred volume for pattern analysis
             self.inferred_buy_volume_history.push(inferred_instabuy_volume);
-            
             let actual_instabuy_volume = (current.buy_moving_week - self.prev_buy_moving_week).max(0);
             self.total_buy_moving_week_activity += actual_instabuy_volume;
-            
             if inferred_instabuy_events > 0 && actual_instabuy_volume > 0 {
                 self.player_instabuy_event_count += inferred_instabuy_events;
                 let volume_to_log = (inferred_instabuy_volume as i64).min(actual_instabuy_volume);
                 self.player_instabuy_volume_total += volume_to_log as f64;
             }
 
-            // --- Player Instasell Analysis (sell_orders vs sellMovingWeek) ---
+            // INSTASELL: sell_orders (sellsummmary) and sell_moving_week
             let prev_sell_offers: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let current_sell_offers: HashMap<u64, i64> = current.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let mut inferred_instasell_volume = 0;
@@ -417,20 +179,16 @@ impl ProductMetricsState {
                     inferred_instasell_events += 1;
                 }
             }
-
-            // Store inferred volume for pattern analysis
             self.inferred_sell_volume_history.push(inferred_instasell_volume);
-
             let actual_instasell_volume = (current.sell_moving_week - self.prev_sell_moving_week).max(0);
             self.total_sell_moving_week_activity += actual_instasell_volume;
-            
             if inferred_instasell_events > 0 && actual_instasell_volume > 0 {
                 self.player_instasell_event_count += inferred_instasell_events;
                 let volume_to_log = (inferred_instasell_volume as i64).min(actual_instasell_volume);
                 self.player_instasell_volume_total += volume_to_log as f64;
             }
 
-            // --- New Demand Offer Analysis (new buy_orders) ---
+            // New demand offers (buy_orders)
             let prev_demand_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             for offer in &current.buy_orders {
@@ -449,7 +207,7 @@ impl ProductMetricsState {
                 }
             }
 
-            // --- New Supply Offer Analysis (new sell_orders) ---
+            // New supply offers (sell_orders)
             let prev_supply_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             for offer in &current.sell_orders {
@@ -467,36 +225,123 @@ impl ProductMetricsState {
                     self.total_new_supply_offer_amount += offer.amount as f64;
                 }
             }
-
-            // Update pattern analysis every 20 data points to reduce overhead (as specified in instructions)
-            if self.windows_processed % 20 == 0 && self.buy_moving_week_history.len() >= 10 {
-                // Accumulate new patterns instead of overwriting
-                let new_instabuy_patterns = self.find_instabuy_patterns();
-                let new_instasell_patterns = self.find_instasell_patterns();
-                
-                // Add new patterns while maintaining rolling window
-                self.instabuy_patterns.extend(new_instabuy_patterns);
-                self.instasell_patterns.extend(new_instasell_patterns);
-                
-                // Keep only patterns from last 180 data points
-                let cutoff_position = if self.buy_moving_week_history.len() > 180 {
-                    self.buy_moving_week_history.len() - 180
-                } else {
-                    0
-                };
-                
-                self.instabuy_patterns.retain(|p| p.position >= cutoff_position);
-                self.instasell_patterns.retain(|p| p.position >= cutoff_position);
-            }
         } else {
-            // First update, initialize inferred volume histories
             self.inferred_buy_volume_history.push(0);
             self.inferred_sell_volume_history.push(0);
         }
-        
         self.prev_snapshot = Some(current.clone());
         self.prev_buy_moving_week = current.buy_moving_week;
         self.prev_sell_moving_week = current.sell_moving_week;
+    }
+
+    fn find_patterns(
+        moving_week_history: &[i64],
+        inferred_volume_history: &[i64],
+        timestamps: &[u64],
+    ) -> Vec<PatternPeriod> {
+        let mut patterns = Vec::new();
+        for i in 1..moving_week_history.len().min(inferred_volume_history.len()).min(timestamps.len()) {
+            let delta = moving_week_history[i] - moving_week_history[i - 1];
+            let inferred = inferred_volume_history[i - 1];
+            if delta > 0 && inferred > 0 {
+                patterns.push(PatternPeriod {
+                    position: i,
+                    moving_week_delta: delta,
+                    inferred_volume: inferred,
+                    timestamp: timestamps[i],
+                });
+            }
+        }
+        patterns
+    }
+
+    fn detect_modal_pattern(pattern_periods: &[PatternPeriod]) -> Option<ModalPattern> {
+        if pattern_periods.len() < 3 {
+            return None;
+        }
+        // Group patterns by (delta, ratio)
+        let mut cluster_map: HashMap<(i64, i64), Vec<&PatternPeriod>> = HashMap::new();
+        for p in pattern_periods {
+            let ratio = if p.inferred_volume > 0 {
+                (p.moving_week_delta as f64 / p.inferred_volume as f64 * 10000.0).round() as i64
+            } else {
+                0
+            };
+            cluster_map.entry((p.moving_week_delta, ratio)).or_default().push(p);
+        }
+        // Find cluster with most entries where it appears at least 3 times
+        let mut modal: Option<(&Vec<&PatternPeriod>, i64, i64)> = None;
+        for ((delta, ratio), cluster) in &cluster_map {
+            if cluster.len() >= 3 && (modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len()) {
+                modal = Some((cluster, *delta, *ratio));
+            }
+        }
+        // If no exact modal, try cluster by ratio within 10% tolerance
+        if modal.is_none() {
+            let mut ratio_map: HashMap<i64, Vec<&PatternPeriod>> = HashMap::new();
+            for p in pattern_periods {
+                let ratio = if p.inferred_volume > 0 {
+                    (p.moving_week_delta as f64 / p.inferred_volume as f64 * 10000.0).round() as i64
+                } else {
+                    0
+                };
+                ratio_map.entry(ratio).or_default().push(p);
+            }
+            for (ratio, cluster) in &ratio_map {
+                if cluster.len() < 3 {
+                    continue;
+                }
+                let avg_delta = cluster.iter().map(|p| p.moving_week_delta).sum::<i64>() / cluster.len() as i64;
+                if cluster.iter().all(|p| (p.moving_week_delta - avg_delta).abs() <= (avg_delta as f64 * 0.1).max(1.0) as i64) {
+                    if modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len() {
+                        modal = Some((cluster, avg_delta, *ratio));
+                    }
+                }
+            }
+        }
+        let (pattern_set, modal_size, modal_ratio) = match modal {
+            Some(v) => v,
+            None => return None,
+        };
+        let timestamps: Vec<u64> = pattern_set.iter().map(|p| p.timestamp).collect();
+        if timestamps.len() < 2 {
+            return None;
+        }
+        let mut intervals = Vec::new();
+        for i in 1..timestamps.len() {
+            let interval_seconds = timestamps[i].saturating_sub(timestamps[i - 1]);
+            intervals.push(interval_seconds as f64 / 60.0);
+        }
+        let frequency_minutes = if !intervals.is_empty() {
+            intervals.iter().sum::<f64>() / intervals.len() as f64
+        } else {
+            60.0
+        };
+        let confidence = pattern_set.len() as f64 / pattern_periods.len() as f64;
+        Some(ModalPattern {
+            size: modal_size,
+            ratio: modal_ratio as f64 / 10000.0,
+            frequency_minutes,
+            occurrence_count: pattern_set.len(),
+            confidence,
+        })
+    }
+
+    fn calculate_scaled_volume(modal_pattern: &ModalPattern, total_observed: i64) -> (f64, f64) {
+        let window_minutes = 60.0;
+        let expected_events = if modal_pattern.frequency_minutes > 0.0 {
+            window_minutes / modal_pattern.frequency_minutes
+        } else {
+            1.0
+        };
+        let observed_events = modal_pattern.occurrence_count as f64;
+        let scale_factor = if observed_events > 0.0 {
+            (expected_events / observed_events).min(5.0).max(1.0)
+        } else {
+            1.0
+        };
+        let estimated_true_volume = total_observed as f64 * scale_factor;
+        (scale_factor, estimated_true_volume)
     }
 
     fn finalize(&self, product_id: String) -> AnalysisResult {
@@ -511,29 +356,31 @@ impl ProductMetricsState {
         let player_instabuy_transaction_size_average = if self.player_instabuy_event_count > 0 { self.player_instabuy_volume_total / self.player_instabuy_event_count as f64 } else { 0.0 };
         let player_instasell_transaction_frequency = if windows > 0.0 { self.player_instasell_event_count as f64 / windows } else { 0.0 };
         let player_instasell_transaction_size_average = if self.player_instasell_event_count > 0 { self.player_instasell_volume_total / self.player_instasell_event_count as f64 } else { 0.0 };
-        
-        // Pattern-based analysis with both exact matching and relationship phases
-        let instabuy_modal_pattern = Self::detect_modal_pattern(&self.instabuy_patterns);
-        let instasell_modal_pattern = Self::detect_modal_pattern(&self.instasell_patterns);
-        
+
+        // Pattern-based analysis
+        let instabuy_patterns = Self::find_patterns(&self.buy_moving_week_history, &self.inferred_buy_volume_history, &self.timestamps);
+        let instasell_patterns = Self::find_patterns(&self.sell_moving_week_history, &self.inferred_sell_volume_history, &self.timestamps);
+        let instabuy_modal_pattern = Self::detect_modal_pattern(&instabuy_patterns);
+        let instasell_modal_pattern = Self::detect_modal_pattern(&instasell_patterns);
+
         let (instabuy_modal_size, instabuy_pattern_frequency, instabuy_scale_factor, instabuy_estimated_true_volume) = 
             if let Some(pattern) = &instabuy_modal_pattern {
-                let (scale_factor, estimated_volume) = self.calculate_scaled_volume(pattern, self.total_buy_moving_week_activity);
+                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(pattern, self.total_buy_moving_week_activity);
                 (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
             } else {
                 (0, 0.0, 1.0, self.total_buy_moving_week_activity as f64)
             };
-        
+
         let (instasell_modal_size, instasell_pattern_frequency, instasell_scale_factor, instasell_estimated_true_volume) = 
             if let Some(pattern) = &instasell_modal_pattern {
-                let (scale_factor, estimated_volume) = self.calculate_scaled_volume(pattern, self.total_sell_moving_week_activity);
+                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(pattern, self.total_sell_moving_week_activity);
                 (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
             } else {
                 (0, 0.0, 1.0, self.total_sell_moving_week_activity as f64)
             };
-        
+
         let pattern_detection_confidence = {
-            let total_patterns = self.instabuy_patterns.len() + self.instasell_patterns.len();
+            let total_patterns = instabuy_patterns.len() + instasell_patterns.len();
             let total_possible = self.buy_moving_week_history.len().saturating_sub(1) + self.sell_moving_week_history.len().saturating_sub(1);
             if total_possible > 0 {
                 (total_patterns as f64 / total_possible as f64) * 100.0
@@ -541,7 +388,7 @@ impl ProductMetricsState {
                 0.0
             }
         };
-        
+
         AnalysisResult { 
             product_id, 
             instabuy_price_average, 
@@ -585,12 +432,10 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
         let pid = pid.clone();
         let prod = prod.clone();
         tasks.push(tokio::spawn(async move {
-            let instasell_price = prod["quick_status"]["buyPrice"].as_f64().unwrap_or_default();
-            let instabuy_price = prod["quick_status"]["sellPrice"].as_f64().unwrap_or_default();
-            
+            let instabuy_price = prod["quick_status"]["buyPrice"].as_f64().unwrap_or_default();
+            let instasell_price = prod["quick_status"]["sellPrice"].as_f64().unwrap_or_default();
             let buy_moving_week = prod["quick_status"]["buyMovingWeek"].as_i64().unwrap_or_default();
             let sell_moving_week = prod["quick_status"]["sellMovingWeek"].as_i64().unwrap_or_default();
-
             let mut sell_orders_vec = Vec::new();
             if let Some(arr) = prod["sell_summary"].as_array() {
                 for o in arr {
@@ -613,8 +458,8 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
             }
             BazaarInfo {
                 product_id: pid,
-                sell_price: instabuy_price,
-                buy_price: instasell_price,
+                buy_price: instabuy_price, // corrected: instabuy uses buyPrice
+                sell_price: instasell_price, // corrected: instasell uses sellPrice
                 sell_orders: sell_orders_vec,
                 buy_orders: buy_orders_vec,
                 buy_moving_week,
@@ -645,7 +490,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
 
     println!("Configuration: Exporting every {} seconds, polling API every {} seconds.", export_interval_secs, api_poll_interval_secs);
-    println!("Pattern detection: 180-point rolling window (1 hour), modal pattern detection with exact match + relationship phases.");
+    println!("Pattern detection: 1-hour window, modal pattern detection, 1:1 or ratio clusters, 10% tolerance, minimum 3 occurrences.");
     let mut export_timer = Instant::now();
 
     loop {
@@ -656,27 +501,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     states.entry(info.product_id.clone()).and_modify(|st| st.update(&info)).or_insert_with(|| ProductMetricsState::new(&info));
                 }
                 println!("Updated {} product states with new snapshot.", states.len());
-                
-                // Log pattern detection stats and quality monitoring every 5 minutes
-                if states.len() > 0 && export_timer.elapsed().as_secs() % 300 == 0 {
-                    let pattern_stats: Vec<_> = states.iter()
-                        .filter(|(_, state)| state.instabuy_patterns.len() > 0 || state.instasell_patterns.len() > 0)
-                        .map(|(id, state)| (id.clone(), state.instabuy_patterns.len(), state.instasell_patterns.len()))
-                        .collect();
-                    
-                    if !pattern_stats.is_empty() {
-                        println!("Pattern detection active for {} products", pattern_stats.len());
-                        
-                        // Monitor for insufficient pattern data (< 3 pattern periods)
-                        let insufficient_patterns = states.iter()
-                            .filter(|(_, state)| state.instabuy_patterns.len() < 3 && state.instasell_patterns.len() < 3)
-                            .count();
-                        
-                        if insufficient_patterns > 0 {
-                            println!("Quality monitoring: {} products with insufficient pattern data (< 3 patterns)", insufficient_patterns);
-                        }
-                    }
-                }
             }
             Ok(None) => println!("No new snapshot data from API (Last-Modified unchanged)."),
             Err(e) => eprintln!("Error fetching snapshot: {}", e),
@@ -687,39 +511,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if !states.is_empty() {
                 let results: Vec<_> = states.iter().map(|(pid, st)| st.finalize(pid.clone())).collect();
                 let ts = Utc::now().format("%Y%m%d%H%M%S").to_string();
-                
                 let local_path = format!("metrics/metrics_{}.json", ts);
                 let remote_mega_path = format!("/remote_metrics/metrics_{}.json", ts);
-                
                 println!("Attempting to export local file '{}' to remote path '{}'", local_path, remote_mega_path);
-
-                // Enhanced pattern detection statistics and quality monitoring
-                let with_patterns = results.iter().filter(|r| r.instabuy_modal_size > 0 || r.instasell_modal_size > 0).count();
-                let avg_confidence = if !results.is_empty() {
-                    results.iter().map(|r| r.pattern_detection_confidence).sum::<f64>() / results.len() as f64
-                } else {
-                    0.0
-                };
-                
-                // Monitor scale factors exceeding reasonable bounds (1.1-3.0)
-                let unreasonable_scale_factors = results.iter()
-                    .filter(|r| (r.instabuy_scale_factor < 1.1 || r.instabuy_scale_factor > 3.0) || 
-                               (r.instasell_scale_factor < 1.1 || r.instasell_scale_factor > 3.0))
-                    .count();
-                
-                println!("Pattern detection summary: {}/{} products with patterns, avg confidence: {:.1}%", 
-                        with_patterns, results.len(), avg_confidence);
-                
-                if unreasonable_scale_factors > 0 {
-                    println!("Quality monitoring: {} products with scale factors outside reasonable bounds (1.1-3.0)", 
-                            unreasonable_scale_factors);
-                }
-
                 match fs::write(&local_path, serde_json::to_string_pretty(&results)?) {
                     Ok(_) => {
                         println!("Successfully wrote metrics for {} products to {}", results.len(), local_path);
                         let export_engine_path = std::env::var("EXPORT_ENGINE_PATH").unwrap_or_else(|_| "export_engine".to_string());
-                        
                         match Command::new(&export_engine_path)
                             .arg(&local_path)
                             .arg(&remote_mega_path)
