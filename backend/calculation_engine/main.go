@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// Metric represents the schema for each metric entry.
+// Metric represents the schema for each metric entry, now including scaling fields.
 type Metric struct {
 	ProductID                             string  `json:"product_id"`
 	InstabuyPriceAverage                  float64 `json:"instabuy_price_average"`
@@ -27,6 +27,16 @@ type Metric struct {
 	NewSupplyOfferSizeAverage             float64 `json:"new_supply_offer_size_average"`
 	PlayerInstasellTransactionFrequency   float64 `json:"player_instasell_transaction_frequency"`
 	PlayerInstasellTransactionSizeAverage float64 `json:"player_instasell_transaction_size_average"`
+
+	InstabuyModalSize            float64 `json:"instabuy_modal_size"`
+	InstabuyPatternFrequency     float64 `json:"instabuy_pattern_frequency"`
+	InstabuyScaleFactor          float64 `json:"instabuy_scale_factor"`
+	InstabuyEstimatedTrueVolume  float64 `json:"instabuy_estimated_true_volume"`
+	InstasellModalSize           float64 `json:"instasell_modal_size"`
+	InstasellPatternFrequency    float64 `json:"instasell_pattern_frequency"`
+	InstasellScaleFactor         float64 `json:"instasell_scale_factor"`
+	InstasellEstimatedTrueVolume float64 `json:"instasell_estimated_true_volume"`
+	PatternDetectionConfidence   float64 `json:"pattern_detection_confidence"`
 }
 
 type AveragedMetrics map[string]Metric
@@ -180,7 +190,7 @@ func updateLatestMetrics() {
 	log.Println("[CALC-ENGINE] Metrics update cycle finished successfully.")
 }
 
-// calculateAverages computes the average of each metric over all files.
+// calculateAverages computes the average of each metric over all files, including scaling fields.
 func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 	type agg struct {
 		Metric
@@ -205,6 +215,17 @@ func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 			a.NewSupplyOfferSizeAverage += met.NewSupplyOfferSizeAverage
 			a.PlayerInstasellTransactionFrequency += met.PlayerInstasellTransactionFrequency
 			a.PlayerInstasellTransactionSizeAverage += met.PlayerInstasellTransactionSizeAverage
+
+			// scaling fields
+			a.InstabuyModalSize += met.InstabuyModalSize
+			a.InstabuyPatternFrequency += met.InstabuyPatternFrequency
+			a.InstabuyScaleFactor += met.InstabuyScaleFactor
+			a.InstabuyEstimatedTrueVolume += met.InstabuyEstimatedTrueVolume
+			a.InstasellModalSize += met.InstasellModalSize
+			a.InstasellPatternFrequency += met.InstasellPatternFrequency
+			a.InstasellScaleFactor += met.InstasellScaleFactor
+			a.InstasellEstimatedTrueVolume += met.InstasellEstimatedTrueVolume
+			a.PatternDetectionConfidence += met.PatternDetectionConfidence
 		}
 	}
 	final := make(AveragedMetrics)
@@ -223,6 +244,15 @@ func calculateAverages(allMetrics [][]Metric) AveragedMetrics {
 				NewSupplyOfferSizeAverage:             a.NewSupplyOfferSizeAverage / c,
 				PlayerInstasellTransactionFrequency:   a.PlayerInstasellTransactionFrequency / c,
 				PlayerInstasellTransactionSizeAverage: a.PlayerInstasellTransactionSizeAverage / c,
+				InstabuyModalSize:                     a.InstabuyModalSize / c,
+				InstabuyPatternFrequency:              a.InstabuyPatternFrequency / c,
+				InstabuyScaleFactor:                   a.InstabuyScaleFactor / c,
+				InstabuyEstimatedTrueVolume:           a.InstabuyEstimatedTrueVolume / c,
+				InstasellModalSize:                    a.InstasellModalSize / c,
+				InstasellPatternFrequency:             a.InstasellPatternFrequency / c,
+				InstasellScaleFactor:                  a.InstasellScaleFactor / c,
+				InstasellEstimatedTrueVolume:          a.InstasellEstimatedTrueVolume / c,
+				PatternDetectionConfidence:            a.PatternDetectionConfidence / c,
 			}
 		}
 	}
