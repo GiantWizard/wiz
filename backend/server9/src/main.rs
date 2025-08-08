@@ -101,8 +101,8 @@ impl ProductMetricsState {
             .unwrap_or_default()
             .as_secs();
         Self {
-            sum_instabuy_price: first.buy_price, // corrected: instabuy uses buy_price
-            sum_instasell_price: first.sell_price, // corrected: instasell uses sell_price
+            sum_instabuy_price: first.buy_price,
+            sum_instasell_price: first.sell_price,
             snapshot_count: 1,
             windows_processed: 0,
             prev_snapshot: Some(first.clone()),
@@ -136,8 +136,8 @@ impl ProductMetricsState {
             .unwrap_or_default()
             .as_secs();
         self.snapshot_count += 1;
-        self.sum_instabuy_price += current.buy_price; // corrected: instabuy uses buy_price
-        self.sum_instasell_price += current.sell_price; // corrected: instasell uses sell_price
+        self.sum_instabuy_price += current.buy_price;
+        self.sum_instasell_price += current.sell_price;
 
         self.buy_moving_week_history.push(current.buy_moving_week);
         self.sell_moving_week_history.push(current.sell_moving_week);
@@ -161,10 +161,12 @@ impl ProductMetricsState {
             self.inferred_buy_volume_history.push(inferred_instabuy_volume);
             let actual_instabuy_volume = (current.buy_moving_week - self.prev_buy_moving_week).max(0);
             self.total_buy_moving_week_activity += actual_instabuy_volume;
-            if inferred_instabuy_events > 0 && actual_instabuy_volume > 0 {
+            
+            // PHASE 1 FIX: Always trust detected volume when we detect events
+            if inferred_instabuy_events > 0 {
                 self.player_instabuy_event_count += inferred_instabuy_events;
-                let volume_to_log = (inferred_instabuy_volume as i64).min(actual_instabuy_volume);
-                self.player_instabuy_volume_total += volume_to_log as f64;
+                // Remove the .min() cap - always log detected volume
+                self.player_instabuy_volume_total += inferred_instabuy_volume as f64;
             }
 
             // INSTASELL: sell_orders (sellsummmary) and sell_moving_week
@@ -182,10 +184,12 @@ impl ProductMetricsState {
             self.inferred_sell_volume_history.push(inferred_instasell_volume);
             let actual_instasell_volume = (current.sell_moving_week - self.prev_sell_moving_week).max(0);
             self.total_sell_moving_week_activity += actual_instasell_volume;
-            if inferred_instasell_events > 0 && actual_instasell_volume > 0 {
+            
+            // PHASE 1 FIX: Always trust detected volume when we detect events
+            if inferred_instasell_events > 0 {
                 self.player_instasell_event_count += inferred_instasell_events;
-                let volume_to_log = (inferred_instasell_volume as i64).min(actual_instasell_volume);
-                self.player_instasell_volume_total += volume_to_log as f64;
+                // Remove the .min() cap - always log detected volume
+                self.player_instasell_volume_total += inferred_instasell_volume as f64;
             }
 
             // New demand offers (buy_orders)
@@ -334,20 +338,30 @@ impl ProductMetricsState {
         })
     }
 
-    fn calculate_scaled_volume(modal_pattern: &ModalPattern, total_observed: i64) -> (f64, f64) {
-        let window_minutes = 60.0;
-        let expected_events = if modal_pattern.frequency_minutes > 0.0 {
-            window_minutes / modal_pattern.frequency_minutes
+    // PHASE 4 FIX: Volume-aware scaling instead of event-based scaling
+    fn calculate_scaled_volume(
+        modal_pattern: &ModalPattern, 
+        total_observed: i64,
+        detected_volume_total: f64,
+        executed_volume_total: i64
+    ) -> (f64, f64) {
+        // Calculate volume coverage ratio
+        let volume_coverage = if executed_volume_total > 0 {
+            detected_volume_total / executed_volume_total as f64
         } else {
             1.0
         };
-        let observed_events = modal_pattern.occurrence_count as f64;
-        let scale_factor = if observed_events > 0.0 {
-            (expected_events / observed_events).min(5.0).max(1.0)
+
+        // Only scale if we're missing significant volume
+        let scale_factor = if volume_coverage < 0.7 {
+            // Conservative scaling based on volume coverage
+            (1.0 / volume_coverage).min(2.0).max(1.0)
         } else {
+            // High volume coverage: no scaling needed
             1.0
         };
-        let estimated_true_volume = total_observed as f64 * scale_factor;
+
+        let estimated_true_volume = executed_volume_total as f64 * scale_factor;
         (scale_factor, estimated_true_volume)
     }
 
@@ -370,19 +384,32 @@ impl ProductMetricsState {
         let instabuy_modal_pattern = Self::detect_modal_pattern(&instabuy_patterns);
         let instasell_modal_pattern = Self::detect_modal_pattern(&instasell_patterns);
 
+        // PHASE 4 FIX: Use volume-aware scaling for both buy and sell
         let (instabuy_modal_size, instabuy_pattern_frequency, instabuy_scale_factor, instabuy_estimated_true_volume) = 
             if let Some(pattern) = &instabuy_modal_pattern {
-                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(pattern, self.total_buy_moving_week_activity);
+                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(
+                    pattern, 
+                    self.total_buy_moving_week_activity,
+                    self.player_instabuy_volume_total,
+                    self.total_buy_moving_week_activity
+                );
                 (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
             } else {
+                // No pattern detected: use moving week as ground truth
                 (0, 0.0, 1.0, self.total_buy_moving_week_activity as f64)
             };
 
         let (instasell_modal_size, instasell_pattern_frequency, instasell_scale_factor, instasell_estimated_true_volume) = 
             if let Some(pattern) = &instasell_modal_pattern {
-                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(pattern, self.total_sell_moving_week_activity);
+                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(
+                    pattern, 
+                    self.total_sell_moving_week_activity,
+                    self.player_instasell_volume_total,
+                    self.total_sell_moving_week_activity
+                );
                 (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
             } else {
+                // No pattern detected: use moving week as ground truth
                 (0, 0.0, 1.0, self.total_sell_moving_week_activity as f64)
             };
 
@@ -465,8 +492,8 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
             }
             BazaarInfo {
                 product_id: pid,
-                buy_price: instabuy_price, // corrected: instabuy uses buyPrice
-                sell_price: instasell_price, // corrected: instasell uses sellPrice
+                buy_price: instabuy_price,
+                sell_price: instasell_price,
                 sell_orders: sell_orders_vec,
                 buy_orders: buy_orders_vec,
                 buy_moving_week,
