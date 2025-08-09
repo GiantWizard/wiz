@@ -365,6 +365,8 @@ impl ProductMetricsState {
         (scale_factor, estimated_true_volume)
     }
 
+    // Replace the finalize function with this corrected version:
+
     fn finalize(&self, product_id: String) -> AnalysisResult {
         let windows = self.windows_processed as f64;
         let instabuy_price_average = if self.snapshot_count > 0 { self.sum_instabuy_price / self.snapshot_count as f64 } else { 0.0 };
@@ -384,32 +386,42 @@ impl ProductMetricsState {
         let instabuy_modal_pattern = Self::detect_modal_pattern(&instabuy_patterns);
         let instasell_modal_pattern = Self::detect_modal_pattern(&instasell_patterns);
 
-        // PHASE 4 FIX: Use volume-aware scaling for both buy and sell
+        // CORRECTED: Use moving week total as ground truth (no scaling)
         let (instabuy_modal_size, instabuy_pattern_frequency, instabuy_scale_factor, instabuy_estimated_true_volume) = 
             if let Some(pattern) = &instabuy_modal_pattern {
-                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(
-                    pattern, 
-                    self.total_buy_moving_week_activity,
-                    self.player_instabuy_volume_total,
-                    self.total_buy_moving_week_activity
-                );
-                (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
+                // Calculate scale factor for diagnostics, but don't use it for final volume
+                let volume_coverage = if self.total_buy_moving_week_activity > 0 {
+                    self.player_instabuy_volume_total / self.total_buy_moving_week_activity as f64
+                } else {
+                    1.0
+                };
+                let scale_factor = if volume_coverage < 0.7 {
+                    (1.0 / volume_coverage).min(2.0).max(1.0)
+                } else {
+                    1.0
+                };
+                // Use moving week total as ground truth
+                (pattern.size, pattern.frequency_minutes, scale_factor, self.total_buy_moving_week_activity as f64)
             } else {
-                // No pattern detected: use moving week as ground truth
                 (0, 0.0, 1.0, self.total_buy_moving_week_activity as f64)
             };
 
         let (instasell_modal_size, instasell_pattern_frequency, instasell_scale_factor, instasell_estimated_true_volume) = 
             if let Some(pattern) = &instasell_modal_pattern {
-                let (scale_factor, estimated_volume) = Self::calculate_scaled_volume(
-                    pattern, 
-                    self.total_sell_moving_week_activity,
-                    self.player_instasell_volume_total,
-                    self.total_sell_moving_week_activity
-                );
-                (pattern.size, pattern.frequency_minutes, scale_factor, estimated_volume)
+                // Calculate scale factor for diagnostics, but don't use it for final volume
+                let volume_coverage = if self.total_sell_moving_week_activity > 0 {
+                    self.player_instasell_volume_total / self.total_sell_moving_week_activity as f64
+                } else {
+                    1.0
+                };
+                let scale_factor = if volume_coverage < 0.7 {
+                    (1.0 / volume_coverage).min(2.0).max(1.0)
+                } else {
+                    1.0
+                };
+                // Use moving week total as ground truth
+                (pattern.size, pattern.frequency_minutes, scale_factor, self.total_sell_moving_week_activity as f64)
             } else {
-                // No pattern detected: use moving week as ground truth
                 (0, 0.0, 1.0, self.total_sell_moving_week_activity as f64)
             };
 
