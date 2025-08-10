@@ -57,13 +57,13 @@ struct ModalPattern {
 
 #[derive(Debug, Serialize)]
 struct DeltaSequences {
-    buy_moving_week: Vec<i64>,     // 179 values
-    sell_moving_week: Vec<i64>,    // 179 values
-    buy_orders: Vec<i64>,          // 179 values
-    sell_orders: Vec<i64>,         // 179 values
-    buy_amount: Vec<i64>,          // 179 values
-    sell_amount: Vec<i64>,         // 179 values
-    timestamps: Vec<u64>,          // 180 values (snapshots)
+    buy_moving_week: Vec<i64>,
+    sell_moving_week: Vec<i64>,
+    buy_orders: Vec<i64>,
+    sell_orders: Vec<i64>,
+    buy_amount: Vec<i64>,
+    sell_amount: Vec<i64>,
+    timestamps: Vec<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -211,13 +211,12 @@ impl ProductMetricsState {
             let prev_sell_amount_total: i64 = prev.sell_orders.iter().map(|o| o.amount).sum();
             let current_sell_amount_total: i64 = current.sell_orders.iter().map(|o| o.amount).sum();
 
-            // Store ALL deltas - zeros are crucial for frequency analysis
             self.buy_orders_deltas.push(current_buy_orders_total - prev_buy_orders_total);
             self.sell_orders_deltas.push(current_sell_orders_total - prev_sell_orders_total);
             self.buy_amount_deltas.push(current_buy_amount_total - prev_buy_amount_total);
             self.sell_amount_deltas.push(current_sell_amount_total - prev_sell_amount_total);
 
-            // INSTABUY: buy_orders (buysummary) and buy_moving_week
+            // INSTABUY analysis
             let prev_buy_offers: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let current_buy_offers: HashMap<u64, i64> = current.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let mut inferred_instabuy_volume = 0;
@@ -233,13 +232,12 @@ impl ProductMetricsState {
             let actual_instabuy_volume = (current.buy_moving_week - self.prev_buy_moving_week).max(0);
             self.total_buy_moving_week_activity += actual_instabuy_volume;
             
-            // Always trust detected volume when we detect events
             if inferred_instabuy_events > 0 {
                 self.player_instabuy_event_count += inferred_instabuy_events;
                 self.player_instabuy_volume_total += inferred_instabuy_volume as f64;
             }
 
-            // INSTASELL: sell_orders (sellsummmary) and sell_moving_week
+            // INSTASELL analysis
             let prev_sell_offers: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let current_sell_offers: HashMap<u64, i64> = current.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             let mut inferred_instasell_volume = 0;
@@ -255,13 +253,12 @@ impl ProductMetricsState {
             let actual_instasell_volume = (current.sell_moving_week - self.prev_sell_moving_week).max(0);
             self.total_sell_moving_week_activity += actual_instasell_volume;
             
-            // Always trust detected volume when we detect events
             if inferred_instasell_events > 0 {
                 self.player_instasell_event_count += inferred_instasell_events;
                 self.player_instasell_volume_total += inferred_instasell_volume as f64;
             }
 
-            // New demand offers (buy_orders)
+            // New offer tracking
             let prev_demand_orders: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_demand_amount: HashMap<u64, i64> = prev.buy_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             for offer in &current.buy_orders {
@@ -280,7 +277,6 @@ impl ProductMetricsState {
                 }
             }
 
-            // New supply offers (sell_orders)
             let prev_supply_orders: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.orders)).collect();
             let prev_supply_amount: HashMap<u64, i64> = prev.sell_orders.iter().map(|o| (Self::price_to_key(o.price_per_unit), o.amount)).collect();
             for offer in &current.sell_orders {
@@ -307,221 +303,74 @@ impl ProductMetricsState {
         self.prev_sell_moving_week = current.sell_moving_week;
     }
 
-    // FUZZY PATTERN DETECTION IMPLEMENTATION
+    // CORRECTED: More efficient fuzzy pattern detection
 
-    // Method 1: Sequence Similarity Detection using Simple DTW
-    fn detect_sequence_similarity_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
-        let mut patterns = Vec::new();
-        let min_pattern_length = 3;
-        let max_pattern_length = 15;
-        let similarity_threshold = 0.6;
-
-        for pattern_length in min_pattern_length..=max_pattern_length {
-            for start in 0..=(deltas.len().saturating_sub(pattern_length)) {
-                let pattern_candidate = &deltas[start..start + pattern_length];
-                
-                // Skip patterns that are all zeros
-                if pattern_candidate.iter().all(|&x| x == 0) {
-                    continue;
-                }
-
-                let mut similar_occurrences = Vec::new();
-                
-                // Find similar sequences elsewhere
-                for search_start in (start + pattern_length)..=(deltas.len().saturating_sub(pattern_length)) {
-                    let test_sequence = &deltas[search_start..search_start + pattern_length];
-                    
-                    if Self::sequence_similarity(pattern_candidate, test_sequence, similarity_threshold) {
-                        similar_occurrences.push(search_start);
-                    }
-                }
-
-                if similar_occurrences.len() >= 2 { // Including original, need at least 3 total
-                    let avg_size = pattern_candidate.iter().filter(|&&x| x > 0).map(|&x| x as f64).sum::<f64>() 
-                        / pattern_candidate.iter().filter(|&&x| x > 0).count().max(1) as f64;
-                    
-                    let frequency = if similar_occurrences.len() > 1 {
-                        let first_timestamp = timestamps.get(start + 1).unwrap_or(&0);
-                        let last_occurrence = similar_occurrences.last().unwrap_or(&start);
-                        let last_timestamp = timestamps.get(last_occurrence + 1).unwrap_or(&0);
-                        let total_time = last_timestamp.saturating_sub(*first_timestamp) as f64 / 60.0;
-                        total_time / similar_occurrences.len() as f64
-                    } else {
-                        60.0
-                    };
-
-                    let confidence = (similar_occurrences.len() + 1) as f64 / (deltas.len() / pattern_length).max(1) as f64;
-
-                    patterns.push(FuzzyPattern {
-                        pattern_type: "sequence_similarity".to_string(),
-                        size: avg_size,
-                        frequency_minutes: frequency,
-                        confidence: confidence.min(1.0),
-                        occurrences: similar_occurrences.len() + 1,
-                        method_confidence: confidence * 0.8, // Weight sequence detection
-                    });
-                }
-            }
-        }
-
-        patterns.sort_by(|a, b| b.method_confidence.partial_cmp(&a.method_confidence).unwrap_or(std::cmp::Ordering::Equal));
-        patterns.into_iter().take(3).collect() // Return top 3 patterns
-    }
-
-    fn sequence_similarity(seq1: &[i64], seq2: &[i64], tolerance: f64) -> bool {
-        if seq1.len() != seq2.len() {
-            return false;
-        }
-
-        if seq1.len() == 0 {
-            return true;
-        }
-
-        let mut similarity_score = 0.0;
-        let mut total_comparisons = 0;
-
-        for (a, b) in seq1.iter().zip(seq2.iter()) {
-            total_comparisons += 1;
-            
-            if *a == 0 && *b == 0 {
-                similarity_score += 1.0;
-            } else if *a == 0 || *b == 0 {
-                similarity_score += 0.1; // Small penalty for zero vs non-zero
-            } else {
-                let max_val = (*a).abs().max((*b).abs()) as f64;
-                let diff = (*a - *b).abs() as f64;
-                let local_similarity = 1.0 - (diff / max_val.max(1.0)).min(1.0);
-                similarity_score += local_similarity;
-            }
-        }
-
-        (similarity_score / total_comparisons as f64) >= tolerance
-    }
-
-    // Method 2: Velocity Pattern Detection
     fn detect_velocity_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
         let mut patterns = Vec::new();
-        let velocity_tolerance = 0.4;
+        let mut activity_periods = Vec::new();
 
-        // Extract non-zero periods and calculate velocities
-        let mut velocities = Vec::new();
+        // Extract activity periods with proper bounds checking
         for (i, &delta) in deltas.iter().enumerate() {
-            if delta > 0 && i > 0 {
-                let time_diff = timestamps.get(i + 1).unwrap_or(&0)
-                    .saturating_sub(*timestamps.get(i).unwrap_or(&0)) as f64 / 60.0; // minutes
-                let velocity = delta as f64 / time_diff.max(0.33); // min 20 seconds
-                velocities.push((i, velocity, delta));
-            }
-        }
-
-        if velocities.len() < 3 {
-            return patterns;
-        }
-
-        // Cluster similar velocities
-        let mut velocity_clusters: HashMap<u32, Vec<(usize, f64, i64)>> = HashMap::new();
-        
-        for &(pos, velocity, delta) in &velocities {
-            let velocity_key = (velocity * 100.0).round() as u32;
-            
-            // Find existing cluster within tolerance
-            let mut found_cluster = None;
-            for &existing_key in velocity_clusters.keys() {
-                let existing_velocity = existing_key as f64 / 100.0;
-                if (velocity - existing_velocity).abs() / existing_velocity.max(0.01) <= velocity_tolerance {
-                    found_cluster = Some(existing_key);
-                    break;
-                }
-            }
-
-            let cluster_key = found_cluster.unwrap_or(velocity_key);
-            velocity_clusters.entry(cluster_key).or_default().push((pos, velocity, delta));
-        }
-
-        // Find clusters with temporal regularity
-        for (velocity_key, cluster) in velocity_clusters {
-            if cluster.len() >= 3 {
-                let positions: Vec<usize> = cluster.iter().map(|&(pos, _, _)| pos).collect();
-                let intervals: Vec<f64> = positions.windows(2)
-                    .map(|w| {
-                        let t1 = timestamps.get(w[0] + 1).unwrap_or(&0);
-                        let t2 = timestamps.get(w[1] + 1).unwrap_or(&0);
-                        t2.saturating_sub(*t1) as f64 / 60.0
-                    })
-                    .collect();
-
-                if intervals.len() > 0 {
-                    let avg_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;
-                    let variance = intervals.iter()
-                        .map(|&x| (x - avg_interval).powi(2))
-                        .sum::<f64>() / intervals.len() as f64;
-                    let coefficient_of_variation = (variance.sqrt() / avg_interval.max(1.0)).min(1.0);
-
-                    if coefficient_of_variation < 0.5 { // Reasonably regular
-                        let avg_velocity = velocity_key as f64 / 100.0;
-                        let avg_size = cluster.iter().map(|&(_, _, delta)| delta as f64).sum::<f64>() / cluster.len() as f64;
-                        let confidence = cluster.len() as f64 / velocities.len() as f64;
-
-                        patterns.push(FuzzyPattern {
-                            pattern_type: "velocity_regular".to_string(),
-                            size: avg_size,
-                            frequency_minutes: avg_interval,
-                            confidence: confidence.min(1.0),
-                            occurrences: cluster.len(),
-                            method_confidence: confidence * (1.0 - coefficient_of_variation) * 0.9,
-                        });
-                    }
+            if delta > 0 && i + 1 < timestamps.len() && i > 0 {
+                let time_diff = (timestamps[i + 1] - timestamps[i]) as f64 / 60.0;
+                if time_diff > 0.0 {
+                    let velocity = delta as f64 / time_diff;
+                    activity_periods.push((i, velocity, delta, time_diff));
                 }
             }
         }
-
-        patterns.sort_by(|a, b| b.method_confidence.partial_cmp(&a.method_confidence).unwrap_or(std::cmp::Ordering::Equal));
-        patterns.into_iter().take(2).collect()
-    }
-
-    // Method 3: Rhythm Pattern Detection
-    fn detect_rhythm_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
-        let mut patterns = Vec::new();
-
-        // Find activity periods (non-zero deltas)
-        let activity_periods: Vec<(usize, i64)> = deltas.iter().enumerate()
-            .filter(|(_, &delta)| delta > 0)
-            .map(|(i, &delta)| (i, delta))
-            .collect();
 
         if activity_periods.len() < 3 {
             return patterns;
         }
 
-        // Calculate intervals between activity in minutes
-        let intervals: Vec<f64> = activity_periods.windows(2)
-            .map(|w| {
-                let t1 = timestamps.get(w[0].0 + 1).unwrap_or(&0);
-                let t2 = timestamps.get(w[1].0 + 1).unwrap_or(&0);
-                t2.saturating_sub(*t1) as f64 / 60.0
-            })
-            .collect();
-
-        // Try different tolerance levels for rhythm detection
-        for tolerance in [0.2, 0.4, 0.6] {
-            let modal_intervals = Self::find_approximate_modes(&intervals, tolerance);
+        // Simple velocity clustering
+        activity_periods.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        
+        let mut clusters = Vec::new();
+        let mut current_cluster = vec![activity_periods[0]];
+        
+        for i in 1..activity_periods.len() {
+            let prev_velocity = current_cluster.last().unwrap().1;
+            let curr_velocity = activity_periods[i].1;
             
-            for (modal_interval, occurrences) in modal_intervals {
-                if occurrences >= 3 {
-                    let avg_size = activity_periods.iter()
-                        .map(|(_, delta)| *delta as f64)
-                        .sum::<f64>() / activity_periods.len() as f64;
-                    
-                    let confidence = occurrences as f64 / intervals.len() as f64;
-                    let regularity_bonus = 1.0 - tolerance; // Reward tighter tolerance
+            if (curr_velocity - prev_velocity).abs() / prev_velocity.max(0.1) <= 0.4 {
+                current_cluster.push(activity_periods[i]);
+            } else {
+                if current_cluster.len() >= 3 {
+                    clusters.push(current_cluster);
+                }
+                current_cluster = vec![activity_periods[i]];
+            }
+        }
+        if current_cluster.len() >= 3 {
+            clusters.push(current_cluster);
+        }
+
+        // Analyze clusters for regularity
+        for cluster in clusters {
+            let intervals: Vec<f64> = cluster.windows(2)
+                .map(|w| (timestamps[w[1].0 + 1] - timestamps[w[0].0 + 1]) as f64 / 60.0)
+                .collect();
+            
+            if intervals.len() > 0 {
+                let avg_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;
+                let variance = intervals.iter()
+                    .map(|&x| (x - avg_interval).powi(2))
+                    .sum::<f64>() / intervals.len() as f64;
+                let cv = (variance.sqrt() / avg_interval.max(1.0)).min(1.0);
+
+                if cv < 0.6 {
+                    let avg_size = cluster.iter().map(|&(_, _, delta, _)| delta as f64).sum::<f64>() / cluster.len() as f64;
+                    let confidence = cluster.len() as f64 / activity_periods.len() as f64;
 
                     patterns.push(FuzzyPattern {
-                        pattern_type: format!("rhythm_{}pct", (tolerance * 100.0) as u32),
+                        pattern_type: "velocity_pattern".to_string(),
                         size: avg_size,
-                        frequency_minutes: modal_interval,
+                        frequency_minutes: avg_interval,
                         confidence: confidence.min(1.0),
-                        occurrences,
-                        method_confidence: confidence * regularity_bonus * 0.85,
+                        occurrences: cluster.len(),
+                        method_confidence: confidence * (1.0 - cv),
                     });
                 }
             }
@@ -531,121 +380,125 @@ impl ProductMetricsState {
         patterns.into_iter().take(2).collect()
     }
 
-    fn find_approximate_modes(intervals: &[f64], tolerance: f64) -> Vec<(f64, usize)> {
-        if intervals.is_empty() {
-            return Vec::new();
+    fn detect_rhythm_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
+        let mut patterns = Vec::new();
+        
+        let activity_indices: Vec<usize> = deltas.iter().enumerate()
+            .filter(|(_, &delta)| delta > 0)
+            .map(|(i, _)| i)
+            .collect();
+
+        if activity_indices.len() < 3 {
+            return patterns;
         }
 
-        let mut modes = Vec::new();
-        let mut used = vec![false; intervals.len()];
+        let intervals: Vec<f64> = activity_indices.windows(2)
+            .filter_map(|w| {
+                if w[1] + 1 < timestamps.len() && w[0] + 1 < timestamps.len() {
+                    Some((timestamps[w[1] + 1] - timestamps[w[0] + 1]) as f64 / 60.0)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
-        for (i, &interval) in intervals.iter().enumerate() {
-            if used[i] {
-                continue;
-            }
+        if intervals.is_empty() {
+            return patterns;
+        }
 
-            let mut cluster = vec![interval];
-            used[i] = true;
+        // Find modal intervals with tolerance
+        for tolerance in [0.25, 0.5] {
+            let mut used = vec![false; intervals.len()];
+            
+            for (i, &interval) in intervals.iter().enumerate() {
+                if used[i] {
+                    continue;
+                }
 
-            for (j, &other_interval) in intervals.iter().enumerate() {
-                if i != j && !used[j] {
-                    let relative_diff = (interval - other_interval).abs() / interval.max(0.1);
-                    if relative_diff <= tolerance {
-                        cluster.push(other_interval);
-                        used[j] = true;
+                let mut cluster = vec![interval];
+                used[i] = true;
+
+                for (j, &other_interval) in intervals.iter().enumerate() {
+                    if i != j && !used[j] {
+                        let relative_diff = (interval - other_interval).abs() / interval.max(0.1);
+                        if relative_diff <= tolerance {
+                            cluster.push(other_interval);
+                            used[j] = true;
+                        }
                     }
                 }
-            }
 
-            if cluster.len() >= 2 {
-                let avg_interval = cluster.iter().sum::<f64>() / cluster.len() as f64;
-                modes.push((avg_interval, cluster.len()));
+                if cluster.len() >= 3 {
+                    let avg_interval = cluster.iter().sum::<f64>() / cluster.len() as f64;
+                    let avg_size = activity_indices.iter()
+                        .map(|&i| deltas[i] as f64)
+                        .sum::<f64>() / activity_indices.len() as f64;
+                    let confidence = cluster.len() as f64 / intervals.len() as f64;
+
+                    patterns.push(FuzzyPattern {
+                        pattern_type: format!("rhythm_{}pct", (tolerance * 100.0) as u32),
+                        size: avg_size,
+                        frequency_minutes: avg_interval,
+                        confidence: confidence.min(1.0),
+                        occurrences: cluster.len(),
+                        method_confidence: confidence * (1.0 - tolerance * 0.5),
+                    });
+                }
             }
         }
 
-        modes
+        patterns.sort_by(|a, b| b.method_confidence.partial_cmp(&a.method_confidence).unwrap_or(std::cmp::Ordering::Equal));
+        patterns.into_iter().take(1).collect()
     }
 
-    // Pattern Fusion and Selection
-    fn fuse_fuzzy_patterns(
-        seq_patterns: Vec<FuzzyPattern>,
-        vel_patterns: Vec<FuzzyPattern>,
-        rhythm_patterns: Vec<FuzzyPattern>,
-    ) -> Option<ModalPattern> {
-        let mut all_patterns = Vec::new();
-        all_patterns.extend(seq_patterns);
-        all_patterns.extend(vel_patterns);
-        all_patterns.extend(rhythm_patterns);
-
-        if all_patterns.is_empty() {
-            return None;
-        }
-
-        // Sort by method confidence and select best
-        all_patterns.sort_by(|a, b| b.method_confidence.partial_cmp(&a.method_confidence).unwrap_or(std::cmp::Ordering::Equal));
-        
-        let best_pattern = &all_patterns[0];
-        
-        // Calculate overall confidence as weighted average
-        let total_weight: f64 = all_patterns.iter().map(|p| p.method_confidence).sum();
-        let weighted_confidence = if total_weight > 0.0 {
-            all_patterns.iter()
-                .map(|p| p.confidence * p.method_confidence)
-                .sum::<f64>() / total_weight
-        } else {
-            0.0
-        };
-
-        Some(ModalPattern {
-            size: best_pattern.size,
-            ratio: 1.0, // Will be calculated later based on moving week vs inferred volume
-            frequency_minutes: best_pattern.frequency_minutes,
-            occurrence_count: best_pattern.occurrences,
-            confidence: weighted_confidence,
-            detection_method: best_pattern.pattern_type.clone(),
-        })
-    }
-
-    // Main fuzzy pattern detection entry point
     fn detect_fuzzy_modal_pattern(
         moving_week_deltas: &[i64],
         inferred_volume_history: &[i64],
         timestamps: &[u64],
     ) -> (Option<ModalPattern>, PatternDetails) {
-        // Try fuzzy methods first
-        let seq_patterns = Self::detect_sequence_similarity_patterns(moving_week_deltas, timestamps);
+        
         let vel_patterns = Self::detect_velocity_patterns(moving_week_deltas, timestamps);
         let rhythm_patterns = Self::detect_rhythm_patterns(moving_week_deltas, timestamps);
 
         let pattern_details = PatternDetails {
             detection_method: "fuzzy_combined".to_string(),
-            fuzzy_confidence: 0.0, // Will be updated
+            fuzzy_confidence: 0.0,
             legacy_confidence: None,
-            sequence_patterns_found: seq_patterns.len(),
+            sequence_patterns_found: 0, // Simplified - removed expensive sequence similarity
             velocity_patterns_found: vel_patterns.len(),
             rhythm_patterns_found: rhythm_patterns.len(),
         };
 
-        // Try to fuse fuzzy patterns
-        if let Some(mut fuzzy_pattern) = Self::fuse_fuzzy_patterns(seq_patterns, vel_patterns, rhythm_patterns) {
-            // Calculate ratio based on actual data
+        // Combine fuzzy patterns
+        let mut all_patterns = vel_patterns;
+        all_patterns.extend(rhythm_patterns);
+
+        if let Some(best_pattern) = all_patterns.first() {
+            // Calculate ratio from actual pattern periods
             let pattern_periods = Self::find_patterns_from_deltas(moving_week_deltas, inferred_volume_history, timestamps);
-            if !pattern_periods.is_empty() {
-                let total_mw_delta: i64 = pattern_periods.iter().map(|p| p.moving_week_delta).sum();
-                let total_inferred: i64 = pattern_periods.iter().map(|p| p.inferred_volume).sum();
-                fuzzy_pattern.ratio = if total_inferred > 0 {
-                    total_mw_delta as f64 / total_inferred as f64
-                } else {
-                    1.0
-                };
-            }
+            let ratio = if !pattern_periods.is_empty() {
+                let total_mw: i64 = pattern_periods.iter().map(|p| p.moving_week_delta).sum();
+                let total_inf: i64 = pattern_periods.iter().map(|p| p.inferred_volume).sum();
+                if total_inf > 0 { total_mw as f64 / total_inf as f64 } else { 1.0 }
+            } else {
+                1.0
+            };
+
+            let fuzzy_pattern = ModalPattern {
+                size: best_pattern.size,
+                ratio,
+                frequency_minutes: best_pattern.frequency_minutes,
+                occurrence_count: best_pattern.occurrences,
+                confidence: best_pattern.confidence,
+                detection_method: best_pattern.pattern_type.clone(),
+            };
 
             let mut updated_details = pattern_details;
-            updated_details.fuzzy_confidence = fuzzy_pattern.confidence;
+            updated_details.fuzzy_confidence = best_pattern.confidence;
             return (Some(fuzzy_pattern), updated_details);
         }
 
-        // Fallback to legacy clustering
+        // Fallback to legacy
         let pattern_periods = Self::find_patterns_from_deltas(moving_week_deltas, inferred_volume_history, timestamps);
         if let Some(legacy_pattern) = Self::detect_modal_pattern_legacy(&pattern_periods) {
             let mut legacy_details = pattern_details;
@@ -657,14 +510,15 @@ impl ProductMetricsState {
         (None, pattern_details)
     }
 
-    // Legacy pattern detection (preserved from original)
     fn find_patterns_from_deltas(
         moving_week_deltas: &[i64],
         inferred_volume_history: &[i64],
         timestamps: &[u64],
     ) -> Vec<PatternPeriod> {
         let mut patterns = Vec::new();
-        for i in 0..moving_week_deltas.len().min(inferred_volume_history.len()) {
+        let max_len = moving_week_deltas.len().min(inferred_volume_history.len()).min(timestamps.len().saturating_sub(1));
+        
+        for i in 0..max_len {
             let delta = moving_week_deltas[i];
             let inferred = inferred_volume_history[i];
             if delta > 0 && inferred > 0 {
@@ -672,7 +526,7 @@ impl ProductMetricsState {
                     position: i,
                     moving_week_delta: delta,
                     inferred_volume: inferred,
-                    timestamp: timestamps[i + 1], // +1 because deltas are offset from snapshots
+                    timestamp: timestamps[i + 1],
                 });
             }
         }
@@ -684,7 +538,6 @@ impl ProductMetricsState {
             return None;
         }
         
-        // Group patterns by (delta, ratio)
         let mut cluster_map: HashMap<(i64, i64), Vec<PatternPeriod>> = HashMap::new();
         for p in pattern_periods {
             let ratio = if p.inferred_volume > 0 {
@@ -698,7 +551,6 @@ impl ProductMetricsState {
                 .push(p.clone());
         }
         
-        // Find cluster with most entries where it appears at least 3 times
         let mut modal: Option<(Vec<PatternPeriod>, i64, i64)> = None;
         for ((delta, ratio), cluster) in &cluster_map {
             if cluster.len() >= 3
@@ -708,7 +560,6 @@ impl ProductMetricsState {
             }
         }
         
-        // If no exact modal, try cluster by ratio within 10% tolerance
         if modal.is_none() {
             let mut ratio_map: HashMap<i64, Vec<PatternPeriod>> = HashMap::new();
             for p in pattern_periods {
@@ -719,36 +570,29 @@ impl ProductMetricsState {
                 };
                 ratio_map.entry(ratio).or_default().push(p.clone());
             }
-            for (ratio, cluster) in &ratio_map {
+            for (_ratio, cluster) in &ratio_map {
                 if cluster.len() < 3 {
                     continue;
                 }
-                // Find average delta for this ratio cluster
                 let avg_delta = cluster.iter().map(|p| p.moving_week_delta).sum::<i64>() / cluster.len() as i64;
-                // Accept cluster if all deltas are within 10% of mean
                 if cluster.iter().all(|p| (p.moving_week_delta - avg_delta).abs() <= (avg_delta as f64 * 0.1).max(1.0) as i64) {
                     if modal.is_none() || cluster.len() > modal.as_ref().unwrap().0.len() {
-                        modal = Some((cluster.clone(), avg_delta, *ratio));
+                        modal = Some((cluster.clone(), avg_delta, *_ratio));
                     }
                 }
             }
         }
         
-        let (pattern_set, modal_size, modal_ratio) = match modal {
-            Some(v) => v,
-            None => return None,
-        };
+        let (pattern_set, modal_size, modal_ratio) = modal?;
         
         let timestamps: Vec<u64> = pattern_set.iter().map(|p| p.timestamp).collect();
         if timestamps.len() < 2 {
             return None;
         }
         
-        let mut intervals = Vec::new();
-        for i in 1..timestamps.len() {
-            let interval_seconds = timestamps[i].saturating_sub(timestamps[i - 1]);
-            intervals.push(interval_seconds as f64 / 60.0);
-        }
+        let intervals: Vec<f64> = timestamps.windows(2)
+            .map(|w| w[1].saturating_sub(w[0]) as f64 / 60.0)
+            .collect();
         
         let frequency_minutes = if !intervals.is_empty() {
             intervals.iter().sum::<f64>() / intervals.len() as f64
@@ -781,7 +625,6 @@ impl ProductMetricsState {
         let player_instasell_transaction_frequency = if windows > 0.0 { self.player_instasell_event_count as f64 / windows } else { 0.0 };
         let player_instasell_transaction_size_average = if self.player_instasell_event_count > 0 { self.player_instasell_volume_total / self.player_instasell_event_count as f64 } else { 0.0 };
 
-        // Use fuzzy pattern detection
         let (instabuy_modal_pattern, instabuy_pattern_details) = Self::detect_fuzzy_modal_pattern(
             &self.buy_moving_week_deltas, 
             &self.inferred_buy_volume_history, 
@@ -793,10 +636,8 @@ impl ProductMetricsState {
             &self.timestamps
         );
 
-        // Use moving week total as ground truth (no scaling)
         let (instabuy_modal_size, instabuy_pattern_frequency, instabuy_scale_factor, instabuy_estimated_true_volume) = 
             if let Some(pattern) = &instabuy_modal_pattern {
-                // Calculate scale factor for diagnostics, but don't use it for final volume
                 let volume_coverage = if self.total_buy_moving_week_activity > 0 {
                     self.player_instabuy_volume_total / self.total_buy_moving_week_activity as f64
                 } else {
@@ -807,7 +648,6 @@ impl ProductMetricsState {
                 } else {
                     1.0
                 };
-                // Use moving week total as ground truth
                 (pattern.size, pattern.frequency_minutes, scale_factor, self.total_buy_moving_week_activity as f64)
             } else {
                 (0.0, 0.0, 1.0, self.total_buy_moving_week_activity as f64)
@@ -815,7 +655,6 @@ impl ProductMetricsState {
 
         let (instasell_modal_size, instasell_pattern_frequency, instasell_scale_factor, instasell_estimated_true_volume) = 
             if let Some(pattern) = &instasell_modal_pattern {
-                // Calculate scale factor for diagnostics, but don't use it for final volume
                 let volume_coverage = if self.total_sell_moving_week_activity > 0 {
                     self.player_instasell_volume_total / self.total_sell_moving_week_activity as f64
                 } else {
@@ -826,18 +665,15 @@ impl ProductMetricsState {
                 } else {
                     1.0
                 };
-                // Use moving week total as ground truth
                 (pattern.size, pattern.frequency_minutes, scale_factor, self.total_sell_moving_week_activity as f64)
             } else {
                 (0.0, 0.0, 1.0, self.total_sell_moving_week_activity as f64)
             };
 
-        // Calculate overall pattern detection confidence
         let buy_confidence = instabuy_modal_pattern.as_ref().map(|p| p.confidence).unwrap_or(0.0);
         let sell_confidence = instasell_modal_pattern.as_ref().map(|p| p.confidence).unwrap_or(0.0);
         let pattern_detection_confidence = ((buy_confidence + sell_confidence) / 2.0) * 100.0;
 
-        // Combine pattern details
         let combined_pattern_details = PatternDetails {
             detection_method: format!("buy:{}, sell:{}", 
                 instabuy_pattern_details.detection_method,
@@ -850,7 +686,7 @@ impl ProductMetricsState {
                 (None, Some(b)) => Some(b),
                 (None, None) => None,
             },
-            sequence_patterns_found: instabuy_pattern_details.sequence_patterns_found + instasell_pattern_details.sequence_patterns_found,
+            sequence_patterns_found: 0, // Removed expensive sequence detection
             velocity_patterns_found: instabuy_pattern_details.velocity_patterns_found + instasell_pattern_details.velocity_patterns_found,
             rhythm_patterns_found: instabuy_pattern_details.rhythm_patterns_found + instasell_pattern_details.rhythm_patterns_found,
         };
@@ -896,7 +732,6 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
     let new_mod = resp.headers().get("last-modified").and_then(|h| h.to_str().ok()).map(String::from);
     if let (Some(prev), Some(curr)) = (last_modified.as_ref(), new_mod.as_ref()) {
         if prev == curr {
-            println!("Last-Modified unchanged ({}). Disposing snapshot.", curr);
             return Ok(None);
         }
     }
@@ -949,7 +784,6 @@ async fn fetch_snapshot(last_modified: &mut Option<String>) -> Result<Option<Vec
             snapshot.push(info);
         }
     }
-    println!("Fetched snapshot with {} products", snapshot.len());
     Ok(Some(snapshot))
 }
 
@@ -962,14 +796,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let api_poll_interval_secs = std::env::var("API_POLL_INTERVAL_SECONDS")
         .ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(20);
 
-    const TARGET_WINDOWS: usize = 180;  // Exactly 1 hour at 20-second intervals
+    const TARGET_WINDOWS: usize = 180;
 
     println!("Configuration: Target windows = {} (1 hour), polling every {} seconds.", 
         TARGET_WINDOWS, api_poll_interval_secs);
-    println!("Fuzzy pattern detection: Sequence similarity, velocity clustering, rhythm detection with legacy fallback.");
-    println!("Note: All products exported including zero-activity periods for frequency analysis.");
+    println!("Fuzzy pattern detection: Velocity clustering, rhythm detection with legacy fallback.");
 
     loop {
+        // FIXED: Proper datetime formatting
         println!("💓 heartbeat at Local: {}  UTC: {}", 
             Local::now().format("%H:%M:%S"), 
             Utc::now().format("%Y-%m-%d %H:%M:%S")
@@ -982,88 +816,46 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .and_modify(|st| st.update(&info))
                         .or_insert_with(|| ProductMetricsState::new(&info));
                 }
-                println!("Updated {} product states. Progress: {}/{} windows", 
-                    states.len(),
-                    states.values().map(|s| s.windows_processed).max().unwrap_or(0),
-                    TARGET_WINDOWS
-                );
+                let max_windows = states.values().map(|s| s.windows_processed).max().unwrap_or(0);
+                println!("Updated {} products. Progress: {}/{} windows", states.len(), max_windows, TARGET_WINDOWS);
             }
-            Ok(None) => println!("No new snapshot data (Last-Modified unchanged)."),
-            Err(e) => eprintln!("Error fetching snapshot: {}", e),
+            Ok(None) => {} // No new data
+            Err(e) => eprintln!("Fetch error: {}", e),
         }
 
-        // Check if we've completed a full hour cycle
         let max_windows = states.values().map(|s| s.windows_processed).max().unwrap_or(0);
         
         if max_windows >= TARGET_WINDOWS {
-            println!(">>> Completing hourly cycle: {} windows collected (1 hour of data)", max_windows);
+            println!(">>> Hourly cycle complete: {} windows", max_windows);
             
-            // Process ALL products, including those with zero activity
             let results: Vec<_> = states.iter()
-                .map(|(pid, state)| {
-                    let result = state.finalize_with_sequences(pid.clone());
-                    
-                    // Log what we're including
-                    let activity_summary = if result.instabuy_estimated_true_volume > 0.0 || result.instasell_estimated_true_volume > 0.0 {
-                        format!("ACTIVE (buy: {:.1}, sell: {:.1}) [{}]", 
-                            result.instabuy_estimated_true_volume, 
-                            result.instasell_estimated_true_volume,
-                            result.pattern_details.detection_method
-                        )
-                    } else {
-                        "ZERO_ACTIVITY".to_string()
-                    };
-                    
-                    println!("  Including {}: {} - {} windows", pid, activity_summary, state.windows_processed);
-                    result
-                })
+                .map(|(pid, state)| state.finalize_with_sequences(pid.clone()))
                 .collect();
                 
             let ts = Utc::now().format("%Y%m%d%H%M%S").to_string();
             let local_path = format!("metrics/metrics_{}.json", ts);
             let remote_mega_path = format!("/remote_metrics/metrics_{}.json", ts);
             
-            let zero_activity_count = results.iter()
-                .filter(|r| r.instabuy_estimated_true_volume == 0.0 && r.instasell_estimated_true_volume == 0.0)
-                .count();
-            let active_count = results.len() - zero_activity_count;
+            let fuzzy_count = results.iter().filter(|r| r.pattern_details.detection_method.contains("velocity") || r.pattern_details.detection_method.contains("rhythm")).count();
+            let legacy_count = results.iter().filter(|r| r.pattern_details.detection_method.contains("legacy")).count();
             
-            let fuzzy_detected = results.iter()
-                .filter(|r| r.pattern_details.detection_method.contains("fuzzy"))
-                .count();
-            let legacy_detected = results.iter()
-                .filter(|r| r.pattern_details.detection_method.contains("legacy"))
-                .count();
-            
-            println!("Exporting hourly metrics: {} active, {} zero-activity, {} total", 
-                active_count, zero_activity_count, results.len());
-            println!("Pattern detection: {} fuzzy, {} legacy fallback", fuzzy_detected, legacy_detected);
+            println!("Exporting {} products: {} fuzzy, {} legacy patterns", 
+                results.len(), fuzzy_count, legacy_count);
             
             match fs::write(&local_path, serde_json::to_string_pretty(&results)?) {
                 Ok(_) => {
-                    println!("Successfully wrote 1-hour metrics for {} products (including zero-activity and delta sequences)", results.len());
+                    println!("Exported to {}", local_path);
                     
-                    // Run export engine
                     let export_engine_path = std::env::var("EXPORT_ENGINE_PATH")
                         .unwrap_or_else(|_| "export_engine".to_string());
-                    match Command::new(&export_engine_path)
+                    let _ = Command::new(&export_engine_path)
                         .arg(&local_path)
                         .arg(&remote_mega_path)
-                        .output() {
-                        Ok(output) => {
-                            println!("Export engine stdout:\n{}", String::from_utf8_lossy(&output.stdout));
-                            if !output.stderr.is_empty() {
-                                eprintln!("Export engine stderr:\n{}", String::from_utf8_lossy(&output.stderr));
-                            }
-                        }
-                        Err(e) => eprintln!("Failed to execute export_engine: {}", e),
-                    }
+                        .output();
                 }
-                Err(e) => eprintln!("Failed to write metrics file {}: {}", local_path, e),
+                Err(e) => eprintln!("Export error: {}", e),
             }
             
-            // Reset for next hour
-            println!("Resetting states for next hourly cycle");
             states.clear();
         }
 
