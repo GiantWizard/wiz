@@ -126,7 +126,6 @@ struct ProductMetricsState {
     timestamps: Vec<u64>,
     total_buy_moving_week_activity: i64,
     total_sell_moving_week_activity: i64,
-    // Delta sequences for fuzzy pattern detection
     buy_moving_week_deltas: Vec<i64>,
     sell_moving_week_deltas: Vec<i64>,
     buy_orders_deltas: Vec<i64>,
@@ -193,14 +192,12 @@ impl ProductMetricsState {
         if let Some(prev) = &self.prev_snapshot {
             self.windows_processed += 1;
 
-            // Calculate and store deltas for fuzzy pattern detection
             let buy_mw_delta = current.buy_moving_week - self.prev_buy_moving_week;
             let sell_mw_delta = current.sell_moving_week - self.prev_sell_moving_week;
             
             self.buy_moving_week_deltas.push(buy_mw_delta);
             self.sell_moving_week_deltas.push(sell_mw_delta);
 
-            // Calculate order book summary deltas
             let prev_buy_orders_total: i64 = prev.buy_orders.iter().map(|o| o.orders).sum();
             let current_buy_orders_total: i64 = current.buy_orders.iter().map(|o| o.orders).sum();
             let prev_sell_orders_total: i64 = prev.sell_orders.iter().map(|o| o.orders).sum();
@@ -303,19 +300,19 @@ impl ProductMetricsState {
         self.prev_sell_moving_week = current.sell_moving_week;
     }
 
-    // CORRECTED: More efficient fuzzy pattern detection
-
+    // FIXED: Use start timestamp for delta periods
     fn detect_velocity_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
         let mut patterns = Vec::new();
         let mut activity_periods = Vec::new();
 
-        // Extract activity periods with proper bounds checking
+        // FIXED: Use timestamps[i] (start of delta period) not timestamps[i+1]
         for (i, &delta) in deltas.iter().enumerate() {
-            if delta > 0 && i + 1 < timestamps.len() && i > 0 {
+            if delta > 0 && i + 1 < timestamps.len() {
                 let time_diff = (timestamps[i + 1] - timestamps[i]) as f64 / 60.0;
-                if time_diff > 0.0 {
+                if time_diff > 0.0 && time_diff < 60.0 {
                     let velocity = delta as f64 / time_diff;
-                    activity_periods.push((i, velocity, delta, time_diff));
+                    // Store: (delta_index, velocity, delta_value, start_timestamp)
+                    activity_periods.push((i, velocity, delta, timestamps[i])); // ← CHANGED: Use timestamps[i]
                 }
             }
         }
@@ -324,7 +321,7 @@ impl ProductMetricsState {
             return patterns;
         }
 
-        // Simple velocity clustering
+        // Cluster by velocity
         activity_periods.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
         
         let mut clusters = Vec::new();
@@ -347,31 +344,46 @@ impl ProductMetricsState {
             clusters.push(current_cluster);
         }
 
-        // Analyze clusters for regularity
+        // Calculate intervals using start timestamps
         for cluster in clusters {
-            let intervals: Vec<f64> = cluster.windows(2)
-                .map(|w| (timestamps[w[1].0 + 1] - timestamps[w[0].0 + 1]) as f64 / 60.0)
-                .collect();
-            
-            if intervals.len() > 0 {
-                let avg_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;
-                let variance = intervals.iter()
-                    .map(|&x| (x - avg_interval).powi(2))
-                    .sum::<f64>() / intervals.len() as f64;
-                let cv = (variance.sqrt() / avg_interval.max(1.0)).min(1.0);
+            if cluster.len() >= 2 {
+                let mut intervals = Vec::new();
+                
+                // Sort cluster by timestamp to ensure chronological order
+                let mut sorted_cluster = cluster.clone();
+                sorted_cluster.sort_by_key(|item| item.3); // Sort by timestamp
+                
+                for window in sorted_cluster.windows(2) {
+                    let time1 = window[0].3; // Start time of first delta
+                    let time2 = window[1].3; // Start time of second delta
+                    if time2 > time1 {
+                        let interval_minutes = (time2 - time1) as f64 / 60.0;
+                        if interval_minutes > 0.0 && interval_minutes <= 120.0 {
+                            intervals.push(interval_minutes);
+                        }
+                    }
+                }
+                
+                if !intervals.is_empty() {
+                    let avg_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;
+                    let variance = intervals.iter()
+                        .map(|&x| (x - avg_interval).powi(2))
+                        .sum::<f64>() / intervals.len() as f64;
+                    let cv = (variance.sqrt() / avg_interval.max(1.0)).min(1.0);
 
-                if cv < 0.6 {
-                    let avg_size = cluster.iter().map(|&(_, _, delta, _)| delta as f64).sum::<f64>() / cluster.len() as f64;
-                    let confidence = cluster.len() as f64 / activity_periods.len() as f64;
+                    if cv < 0.6 {
+                        let avg_size = sorted_cluster.iter().map(|&(_, _, delta, _)| delta as f64).sum::<f64>() / sorted_cluster.len() as f64;
+                        let confidence = sorted_cluster.len() as f64 / activity_periods.len() as f64;
 
-                    patterns.push(FuzzyPattern {
-                        pattern_type: "velocity_pattern".to_string(),
-                        size: avg_size,
-                        frequency_minutes: avg_interval,
-                        confidence: confidence.min(1.0),
-                        occurrences: cluster.len(),
-                        method_confidence: confidence * (1.0 - cv),
-                    });
+                        patterns.push(FuzzyPattern {
+                            pattern_type: "velocity_pattern".to_string(),
+                            size: avg_size,
+                            frequency_minutes: avg_interval,
+                            confidence: confidence.min(1.0),
+                            occurrences: sorted_cluster.len(),
+                            method_confidence: confidence * (1.0 - cv),
+                        });
+                    }
                 }
             }
         }
@@ -380,26 +392,32 @@ impl ProductMetricsState {
         patterns.into_iter().take(2).collect()
     }
 
+    // FIXED: Use start timestamp for delta periods
     fn detect_rhythm_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
         let mut patterns = Vec::new();
         
-        let activity_indices: Vec<usize> = deltas.iter().enumerate()
-            .filter(|(_, &delta)| delta > 0)
-            .map(|(i, _)| i)
-            .collect();
-
-        if activity_indices.len() < 3 {
-            return patterns;
-        }
-
-        let intervals: Vec<f64> = activity_indices.windows(2)
-            .filter_map(|w| {
-                if w[1] + 1 < timestamps.len() && w[0] + 1 < timestamps.len() {
-                    Some((timestamps[w[1] + 1] - timestamps[w[0] + 1]) as f64 / 60.0)
+        // FIXED: Store start timestamp of each delta period
+        let activity_data: Vec<(usize, u64, i64)> = deltas.iter().enumerate()
+            .filter_map(|(i, &delta)| {
+                if delta > 0 && i + 1 < timestamps.len() {
+                    Some((i, timestamps[i], delta)) // ← CHANGED: Use timestamps[i] (start of delta period)
                 } else {
                     None
                 }
             })
+            .collect();
+
+        if activity_data.len() < 3 {
+            return patterns;
+        }
+
+        // Calculate intervals between activity start times
+        let intervals: Vec<f64> = activity_data.windows(2)
+            .map(|w| {
+                let interval_seconds = w[1].1.saturating_sub(w[0].1);
+                interval_seconds as f64 / 60.0
+            })
+            .filter(|&interval| interval > 0.0 && interval <= 120.0)
             .collect();
 
         if intervals.is_empty() {
@@ -430,9 +448,9 @@ impl ProductMetricsState {
 
                 if cluster.len() >= 3 {
                     let avg_interval = cluster.iter().sum::<f64>() / cluster.len() as f64;
-                    let avg_size = activity_indices.iter()
-                        .map(|&i| deltas[i] as f64)
-                        .sum::<f64>() / activity_indices.len() as f64;
+                    let avg_size = activity_data.iter()
+                        .map(|&(_, _, delta)| delta as f64)
+                        .sum::<f64>() / activity_data.len() as f64;
                     let confidence = cluster.len() as f64 / intervals.len() as f64;
 
                     patterns.push(FuzzyPattern {
@@ -464,17 +482,15 @@ impl ProductMetricsState {
             detection_method: "fuzzy_combined".to_string(),
             fuzzy_confidence: 0.0,
             legacy_confidence: None,
-            sequence_patterns_found: 0, // Simplified - removed expensive sequence similarity
+            sequence_patterns_found: 0,
             velocity_patterns_found: vel_patterns.len(),
             rhythm_patterns_found: rhythm_patterns.len(),
         };
 
-        // Combine fuzzy patterns
         let mut all_patterns = vel_patterns;
         all_patterns.extend(rhythm_patterns);
 
         if let Some(best_pattern) = all_patterns.first() {
-            // Calculate ratio from actual pattern periods
             let pattern_periods = Self::find_patterns_from_deltas(moving_week_deltas, inferred_volume_history, timestamps);
             let ratio = if !pattern_periods.is_empty() {
                 let total_mw: i64 = pattern_periods.iter().map(|p| p.moving_week_delta).sum();
@@ -498,7 +514,6 @@ impl ProductMetricsState {
             return (Some(fuzzy_pattern), updated_details);
         }
 
-        // Fallback to legacy
         let pattern_periods = Self::find_patterns_from_deltas(moving_week_deltas, inferred_volume_history, timestamps);
         if let Some(legacy_pattern) = Self::detect_modal_pattern_legacy(&pattern_periods) {
             let mut legacy_details = pattern_details;
@@ -510,6 +525,7 @@ impl ProductMetricsState {
         (None, pattern_details)
     }
 
+    // FIXED: Use start timestamp for pattern periods
     fn find_patterns_from_deltas(
         moving_week_deltas: &[i64],
         inferred_volume_history: &[i64],
@@ -526,7 +542,7 @@ impl ProductMetricsState {
                     position: i,
                     moving_week_delta: delta,
                     inferred_volume: inferred,
-                    timestamp: timestamps[i + 1],
+                    timestamp: timestamps[i], // ← CHANGED: Use timestamps[i] (start of delta period)
                 });
             }
         }
@@ -636,6 +652,7 @@ impl ProductMetricsState {
             &self.timestamps
         );
 
+        // Scale factor calculated but NOT applied to final volume
         let (instabuy_modal_size, instabuy_pattern_frequency, instabuy_scale_factor, instabuy_estimated_true_volume) = 
             if let Some(pattern) = &instabuy_modal_pattern {
                 let volume_coverage = if self.total_buy_moving_week_activity > 0 {
@@ -643,11 +660,14 @@ impl ProductMetricsState {
                 } else {
                     1.0
                 };
+                
                 let scale_factor = if volume_coverage < 0.7 {
                     (1.0 / volume_coverage).min(2.0).max(1.0)
                 } else {
                     1.0
                 };
+                
+                // Always use moving week total as ground truth
                 (pattern.size, pattern.frequency_minutes, scale_factor, self.total_buy_moving_week_activity as f64)
             } else {
                 (0.0, 0.0, 1.0, self.total_buy_moving_week_activity as f64)
@@ -660,11 +680,14 @@ impl ProductMetricsState {
                 } else {
                     1.0
                 };
+                
                 let scale_factor = if volume_coverage < 0.7 {
                     (1.0 / volume_coverage).min(2.0).max(1.0)
                 } else {
                     1.0
                 };
+                
+                // Always use moving week total as ground truth
                 (pattern.size, pattern.frequency_minutes, scale_factor, self.total_sell_moving_week_activity as f64)
             } else {
                 (0.0, 0.0, 1.0, self.total_sell_moving_week_activity as f64)
@@ -686,7 +709,7 @@ impl ProductMetricsState {
                 (None, Some(b)) => Some(b),
                 (None, None) => None,
             },
-            sequence_patterns_found: 0, // Removed expensive sequence detection
+            sequence_patterns_found: 0,
             velocity_patterns_found: instabuy_pattern_details.velocity_patterns_found + instasell_pattern_details.velocity_patterns_found,
             rhythm_patterns_found: instabuy_pattern_details.rhythm_patterns_found + instasell_pattern_details.rhythm_patterns_found,
         };
@@ -798,12 +821,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     const TARGET_WINDOWS: usize = 180;
 
-    println!("Configuration: Target windows = {} (1 hour), polling every {} seconds.", 
+    println!("[GiantWizard] Configuration: Target windows = {} (1 hour), polling every {} seconds.", 
         TARGET_WINDOWS, api_poll_interval_secs);
-    println!("Fuzzy pattern detection: Velocity clustering, rhythm detection with legacy fallback.");
+    println!("[GiantWizard] Fuzzy pattern detection: FIXED timestamp logic - using start times for delta periods.");
+    println!("[GiantWizard] Scale analysis: Diagnostic only - volume estimates always use moving week totals as ground truth.");
 
     loop {
-        // FIXED: Proper datetime formatting
         println!("💓 heartbeat at Local: {}  UTC: {}", 
             Local::now().format("%H:%M:%S"), 
             Utc::now().format("%Y-%m-%d %H:%M:%S")
@@ -820,13 +843,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 println!("Updated {} products. Progress: {}/{} windows", states.len(), max_windows, TARGET_WINDOWS);
             }
             Ok(None) => {} // No new data
-            Err(e) => eprintln!("Fetch error: {}", e),
+            Err(e) => eprintln!("[GiantWizard] Fetch error: {}", e),
         }
 
         let max_windows = states.values().map(|s| s.windows_processed).max().unwrap_or(0);
         
         if max_windows >= TARGET_WINDOWS {
-            println!(">>> Hourly cycle complete: {} windows", max_windows);
+            println!(">>> [GiantWizard] Hourly cycle complete: {} windows", max_windows);
             
             let results: Vec<_> = states.iter()
                 .map(|(pid, state)| state.finalize_with_sequences(pid.clone()))
@@ -836,15 +859,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let local_path = format!("metrics/metrics_{}.json", ts);
             let remote_mega_path = format!("/remote_metrics/metrics_{}.json", ts);
             
-            let fuzzy_count = results.iter().filter(|r| r.pattern_details.detection_method.contains("velocity") || r.pattern_details.detection_method.contains("rhythm")).count();
-            let legacy_count = results.iter().filter(|r| r.pattern_details.detection_method.contains("legacy")).count();
+            let fuzzy_count = results.iter().filter(|r| 
+                r.pattern_details.detection_method.contains("velocity") || 
+                r.pattern_details.detection_method.contains("rhythm")
+            ).count();
+            let legacy_count = results.iter().filter(|r| 
+                r.pattern_details.detection_method.contains("legacy")
+            ).count();
             
-            println!("Exporting {} products: {} fuzzy, {} legacy patterns", 
+            println!("[GiantWizard] Exporting {} products: {} fuzzy patterns, {} legacy patterns", 
                 results.len(), fuzzy_count, legacy_count);
             
             match fs::write(&local_path, serde_json::to_string_pretty(&results)?) {
                 Ok(_) => {
-                    println!("Exported to {}", local_path);
+                    println!("[GiantWizard] ✅ Exported to {}", local_path);
                     
                     let export_engine_path = std::env::var("EXPORT_ENGINE_PATH")
                         .unwrap_or_else(|_| "export_engine".to_string());
@@ -853,7 +881,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .arg(&remote_mega_path)
                         .output();
                 }
-                Err(e) => eprintln!("Export error: {}", e),
+                Err(e) => eprintln!("[GiantWizard] ❌ Export error: {}", e),
             }
             
             states.clear();
