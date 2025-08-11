@@ -52,6 +52,7 @@ flowchart TD
         R_D --> R_G[Update process finished]
         R_E --> R_G
         R_F --> R_G
+        R_G --> R_H [Is the number of snapshots fetched 180?]
         
     end
     
