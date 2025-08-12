@@ -48,14 +48,39 @@ flowchart TD
     
         R_B -->|Price| R_D[Append new price to the price list in product states]
         R_B -->|MovingWeek| R_E[Subtract previous snapshot MovingWeek from current snapshot MovingWeek, then append this delta to the MovingWeek list in product states]
-        R_B -->|Summaries| R_F[Compare and mark changes from previous summaries, the append the amount of orders that dissapeared/appeared orders and the size of those changes]
+        R_B -->|Summaries| R_F["Compare and mark changes from previous summaries, the append the amount of orders that dissapeared/appeared orders and the size of those changes (i.e. {orders affected: 2, size 1: +100, size 2: +50}, {orders affected: 3, size 1: -100, size 2: -20, size 3: -5}"]
         R_D --> R_G[Update process finished]
         R_E --> R_G
         R_F --> R_G
-        R_G --> R_H [Is the number of snapshots fetched 180?]
+        R_G --> R_H[Is the number of snapshots fetched 180?]
         
     end
     
     %% Connecting the main flow to the subgraph
     R --> R_START
-    R_G --> G
+    R_H --> |No| G
+    R_H --> |Yes| S[Begin end of hour processing]
+
+    %% End of hour processing
+    S --> T[Average out the price list]
+    S --> U[Calculate how often new orders appear and their average size]
+    S --> V[Calculate sell/buy events]
+    subgraph Insta-Events/Hour Logic
+        direction TB
+        V_START(For each product in product states) --> V_A["Confirm amount of windows (179)"]
+        V_A --> V_B[Process summaries data]
+        V_A --> V_G[Process MovingWeek data]
+        V_B --> V_C["Eliminate positive size summary deltas (maximum 0, none should ever be mixed because they would cancel each other out and remain undetected)"]
+        V_C --> V_D["Sum up the sizes of the negative summary deltas and discard the 'orders affected' field. There should be a clean list of numbers left"]
+        V_D --> V_E[Take the absolute value of the summary deltas]
+        V_E --> V_F[Match up data points and put lists side by side]
+        V_G --> V_F
+        
+        V_F --> V_H[Divide summaries data points by ]
+        V_F --> V_H[]
+    end
+
+    V --> V_START
+    
+
+    
