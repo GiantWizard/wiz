@@ -67,53 +67,52 @@ flowchart TD
     S --> V[Calculate sell/buy events]
     subgraph Insta-Events/Hour Logic
         direction TB
-        V_START(For each product in product states) --> V_A["Confirm amount of windows (179)"]
-        V_A --> V_B[Process summaries data]
-        V_A --> V_O[Process MovingWeek data]
-        V_B --> V_C["Eliminate positive size summary deltas (maximum 0, none should ever be mixed because they would cancel each other out and remain undetected)"]
-        V_C --> V_D["Sum up the sizes of the negative summary deltas and discard the 'orders affected' field. There should be a clean list of numbers left"]
-        V_D --> V_E[Take the absolute value of the summary deltas]
-        V_E --> V_F[Match up data points and put lists side by side]    
-        V_O --> V_F
-        V_F --> V_G[Divide summaries data points by corresponding MovingWeek data points to get a list of ratios, and if MovingWeek is 0, return N/A]
-        V_G --> V_H[Sort the ratio-index pairs by ratio value in ascending order]
+        V_A(For each product in product states) --> V_B["Confirm amount of windows (179)"]
+        V_B --> V_C[Process summaries data]
+        V_B --> V_D[Process MovingWeek data]
+        V_C --> V_E["Eliminate positive size summary deltas (maximum 0, none should ever be mixed because they would cancel each other out and remain undetected)"]
+        V_E --> V_F["Sum up the sizes of the negative summary deltas and discard the 'orders affected' field. There should be a clean list of numbers left"]
+        V_F --> V_G[Take the absolute value of the summary deltas]
+        V_G --> V_H[Match up data points and put lists side by side]    
+        V_D --> V_H
+        V_H --> V_I[Divide summaries data points by corresponding MovingWeek data points to get a list of ratios, and if MovingWeek is 0, return N/A]
+        V_I --> V_J[Sort the ratio-index pairs by ratio value in ascending order]
 
         %% Candidacy Generation
-        V_H --> V_I[Set N=3 where N is the size of the group of candidacy, and if there is anything less than 3 that's put through we have no need for scaling up, the purpose of this section of the algorithm]
-        V_I --> V_J["Is N 180? (for analysis up to N=179)"]
-        V_J --> |No| V_K[Generate possible candidates by taking each consecutive list of N values]
-        V_K --> V_BB[For each candidate of size N...]
-        V_BB --> V_CC[Are all candidates of size N processed?]
-        V_CC --> |No| V_DD[Go to the next candidate]
-        V_DD --> V_L[Calculate variance of each ratio, which is the score for the homogenity of the candidate, and store both the candidate and the score in memory]
-        V_L --> V_Y["Calculate the variance of each excluded ratio (high is good), which tells us the noise and the quality of the information left behind"]
-        V_CC --> |Yes| V_N[Add 1 to N]
-        V_N --> V_J
-        V_J --> |Yes| V_M[Exit loop]
+        V_J --> V_K[Set N=3 where N is the size of the group of candidacy, and if there is anything less than 3 that's put through we have no need for scaling up, the purpose of this section of the algorithm]
+        V_K --> V_L["Is N 180? (for analysis up to N=179)"]
+        V_L --> |No| V_M[Generate possible candidates by taking each consecutive list of N values]
+        V_M --> V_N[For each candidate of size N...]
+        V_N --> V_O[Are all candidates of size N processed?]
+        V_O --> |No| V_P[Go to the next candidate]
+        V_P --> V_Q[Calculate variance of each ratio, which is the score for the homogenity of the candidate, and store both the candidate and the score in memory]
+        V_Q --> V_R["Calculate the variance of each excluded ratio (high is good), which tells us the noise and the quality of the information left behind"]
+        V_O --> |Yes| V_S[Add 1 to N]
+        V_S --> V_L
+        V_L --> |Yes| V_T[Exit loop]
 
         %% Pattern Detection
-        V_Y --> V_P[For each candidate and it's respective indices for each of its values, calculate the rhythm of its frequency]
-        V_P --> V_Q[Sort the event chronologically]
-        V_Q --> V_R[Calculate the time difference between each consecutive events]
-        V_R --> V_S[Calculate the mean of the periods]
-        V_S --> V_T[Calculate the variance for the candidate, which is the score for the rhythm of the candidate]
-        V_T --> V_AA[Store the candidate, the homogenity score, the rhythm score, and the exclusion score]
-        V_AA --> V_CC
+        V_R --> V_U[For each candidate and it's respective indices for each of its values, calculate the rhythm of its frequency]
+        V_U --> V_V[Sort the event chronologically]
+        V_V --> V_W[Calculate the time difference between each consecutive events]
+        V_W --> V_X[Calculate the mean of the periods]
+        V_X --> V_Y[Calculate the variance for the candidate, which is the score for the rhythm of the candidate]
+        V_Y --> V_Z[Store the candidate, the homogenity score, the rhythm score, and the exclusion score]
+        V_Z --> V_O
         
-
         %% Normalization
-
-        V_M --> V_U[Take the best and worst scores of the homogenity of the candidates and assign them to 0 and 1 where 0 is the most homogenous and 1 is the least]
-        V_M --> V_V[Take the best and worse scores of the rhythm of the candidates and assign them to 0 and 1 where 0 is the most rhythmic and 1 is the least]
-        V_M --> V_Z["Take the best and worse scores of the exclusion of the candidates and assign them to 0 and 1 where 1 is high quality excluded information (bad) and 0 is the low quality noise (good)"]
-        V_U --> V_W[Add the homogenity, rhythm scores, and the exclusion together for each candidate and check and return the best candidate]
-        V_V --> V_W
-        V_Z --> V_W
-        V_W --> V_X["N tells us how many frequent events usually are (179/N) and that this is the most consistent pattern amongst the entire group"]
-
+        V_T --> V_AA[Take the best and worst scores of the homogenity of the candidates and assign them to 0 and 1 where 0 is the most homogenous and 1 is the least]
+        V_T --> V_AB[Take the best and worse scores of the rhythm of the candidates and assign them to 0 and 1 where 0 is the most rhythmic and 1 is the least]
+        V_T --> V_AC["Take the best and worse scores of the exclusion of the candidates and assign them to 0 and 1 where 1 is high quality excluded information (bad) and 0 is the low quality noise (good)"]
+        V_AA --> V_AD[Add the homogenity, rhythm scores, and the exclusion together for each candidate and check and return the best candidate]
+        V_AB --> V_AD
+        V_AC --> V_AD
+        V_AD --> V_AE["A consistent pattern with N elements was identified and is the most consistent when analyzed"]
+        V_AE --> V_AF[Take the original MovingWeek list and identify the indices that were marked on the winning candidate]
+        V_AF --> V_AG[Average the points on those indices, then use the -----]
     end
 
-    V --> V_START
+    V --> V_A
     
 
     
