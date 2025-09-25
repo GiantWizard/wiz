@@ -1,0 +1,13 @@
+# Analysis-specific requirements for scripts in zzz/ directory
+# Install with: pip install -r requirements.txt -r requirements-analysis.txt
+
+# Additional analysis libraries
+concurrent-futures>=3.1.1; python_version<"3.2"  # Only needed for old Python versions
+matplotlib>=3.8.0
+numpy>=2.0.0,<2.3.0
+pandas>=2.2.0
+tqdm>=4.67.0
+
+# Optional machine learning libraries (if needed)
+# scikit-learn>=1.6.0  # Already in main requirements
+# scipy>=1.10.0  # Add if needed by analysis scripts

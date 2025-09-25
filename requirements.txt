@@ -1,0 +1,36 @@
+# Main requirements file for the wiz project
+# This file resolves dependency conflicts found in Google Colab and other environments
+
+# Core data science libraries
+numpy>=2.0.0,<2.3.0  # Compatible with OpenCV, scikit-learn, and other deps
+pandas>=2.2.0
+matplotlib>=3.8.0    # Avoiding yanked 3.9.1
+
+# Web framework
+flask>=3.0.0
+gunicorn>=21.0.0
+
+# HTTP requests - pinned to resolve conflicts
+requests>=2.32.4
+
+# Progress bars and concurrency
+tqdm>=4.67.0
+
+# Data processing
+json5>=0.9.0
+
+# Development/optional dependencies
+python-dotenv>=1.0.0
+discord.py>=2.3.0
+
+# System dependencies that need specific versions to avoid conflicts
+packaging>=24.2.0
+protobuf>=5.29.1,<7.0.0
+typing-extensions>=4.14.0
+
+# Scientific computing compatibility
+scikit-learn>=1.6.0
+
+# For Google Colab compatibility
+jedi>=0.16
+PyYAML>=6.0.2,<7.0.0
