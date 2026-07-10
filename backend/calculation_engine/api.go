@@ -193,8 +193,6 @@ func getApiResponse() (*HypixelAPIResponse, error) {
 }
 
 // forceRefreshAPIData provides an explicit way to trigger a data refresh.
-// With the current getApiResponse always fetching, this might be redundant for the main loop,
-// but could be useful for other purposes (e.g., an admin endpoint).
 func forceRefreshAPIData() (*HypixelAPIResponse, error) {
 	log.Println("[forceRefreshAPIData] Explicitly refreshing API data via fetchBazaarData()...")
 	err := fetchBazaarData() // This will attempt to update the global cache and apiFetchErr

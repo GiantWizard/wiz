@@ -22,10 +22,7 @@ type ProductMetrics struct {
 	// BuyMovingWeek  float64 `json:"buy_moving_week"` // If present and useful, though live API is often preferred
 }
 
-// --- Global variables for Metrics caching (used by legacy direct file load) ---
-// This caching mechanism is less used now that main.go handles metrics loading and updating.
-// However, getMetricsMap might still be called by older code paths if they exist,
-// or could be repurposed if direct file access is needed elsewhere.
+// --- Global variables for Metrics caching (legacy direct file load) ---
 var (
 	metricsFileCache    map[string]ProductMetrics // Key is ProductID (should be normalized)
 	loadMetricsFileOnce sync.Once                 // Ensures loading happens only once

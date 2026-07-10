@@ -30,9 +30,7 @@ type SingleRecipe struct {
 	Count int    `json:"count"` // How many items this recipe yields
 }
 
-// Item represents the structure of a recipe JSON file.
-// It can contain either a single 'recipe' object or an array of 'recipes'.
-// The parsing logic in helpers.go and tree_builder.go prioritizes 'recipes' if present.
+// Item represents the structure of a recipe JSON file (single 'recipe' or a 'recipes' array).
 type Item struct {
 	ItemID  string       `json:"itemid"`         // The Hypixel/Minecraft ID of the item this recipe crafts
 	Name    string       `json:"name,omitempty"` // Optional: a human-readable name

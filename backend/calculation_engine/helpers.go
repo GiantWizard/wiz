@@ -64,8 +64,6 @@ func calculateTotalC10MForLevel(
 // --- Level Expansion Helpers ---
 
 // expandSingleItemOneLevel expands a single item one level down, returning its direct ingredients.
-// Does NOT perform cost checks or recursion. Checks for presence of recipe data.
-// Returns: map[ingredientID -> quantityPerCraft], amountCrafted, bool wasExpanded, error criticalError
 func expandSingleItemOneLevel(
 	itemName string,
 	itemFilesDir string,
@@ -140,9 +138,7 @@ func expandSingleItemOneLevel(
 	return ingredientsInOneCraft, craftedAmount, true, nil // Success, was expanded
 }
 
-// expandIngredientsOneLevel takes a map of ingredients for the current level
-// and returns the map for the next level. It skips expanding items that
-// don't have a valid, non-empty recipe defined.
+// expandIngredientsOneLevel skips items without a valid recipe defined.
 func expandIngredientsOneLevel(
 	currentIngredients map[string]float64,
 	itemFilesDir string,

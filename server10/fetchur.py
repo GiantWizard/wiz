@@ -17,8 +17,6 @@ TRACKING_INTERVAL_SECONDS = 30
 REPORT_INTERVAL_CYCLES = 4 # Update stable list every 2 minutes
 
 # --- Shared Data (Thread-Safe) ---
-# This dictionary is shared between the background thread and the web server.
-# The lock prevents data corruption.
 shared_data = {
     "last_updated_utc": None,
     "stable_items": [],
@@ -26,9 +24,7 @@ shared_data = {
 }
 data_lock = threading.Lock()
 
-# ==============================================================================
 # 1. BACKGROUND THREAD: Continuously finds stable items
-# ==============================================================================
 def run_volatility_analysis():
     """This function runs in the background 24/7 to find stable items."""
     global shared_data
@@ -66,9 +62,7 @@ def run_volatility_analysis():
             print(f"BACKGROUND: Stability report generated. Found {len(latest_stable)} stable items.")
         time.sleep(TRACKING_INTERVAL_SECONDS)
 
-# ==============================================================================
 # 2. ON-DEMAND ANALYSIS: Runs only when the /flipper URL is visited
-# ==============================================================================
 def analyze_for_profit(stable_item_ids):
     """Fetches Hypixel data and analyzes the provided stable items for profit."""
     if not stable_item_ids:
@@ -138,9 +132,7 @@ def analyze_for_profit(stable_item_ids):
         
     return f"--- Top Profitable & Stable Bazaar Flips ---\n\n{header_line}\n{divider}\n" + "\n".join(data_lines)
 
-# ==============================================================================
 # 3. FLASK WEB SERVER: Serves the results to your browser
-# ==============================================================================
 app = Flask(__name__)
 
 @app.route('/')

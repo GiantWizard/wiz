@@ -51,10 +51,6 @@ const (
 )
 
 // --- Struct Definitions for main.go orchestration ---
-// These types (OptimizationRunOutput, OptimizationSummary, FailedItemDetail)
-// are specific to main.go's orchestration and reporting.
-// Types like ProductMetrics, OptimizedItemResult, HypixelAPIResponse
-// should be defined in their respective files (metrics.go, optimizer.go, api.go).
 type OptimizationRunOutput struct {
 	Summary OptimizationSummary   `json:"summary"`
 	Results []OptimizedItemResult `json:"results"` // OptimizedItemResult from optimizer.go
@@ -94,10 +90,7 @@ var (
 	metricsFileRegex           = regexp.MustCompile(`^metrics_(\d{14})\.json$`)
 )
 
-// downloadMetricsFromMega connects to MEGA, finds the newest metrics_<timestamp>.json
-// under any recognized “remote_metrics” path, downloads it, and writes it to localTargetFilename.
-// A much simpler and safer version of the download function.
-// It assumes a session is already managed externally (by the session-keeper).
+// downloadMetricsFromMega finds the newest metrics_<timestamp>.json under remote_metrics and downloads it.
 func downloadMetricsFromMega(localTargetFilename string) error {
 	homeEnv := os.Getenv("HOME")
 	if homeEnv == "" {
@@ -156,9 +149,7 @@ func downloadMetricsFromMega(localTargetFilename string) error {
 	return nil
 }
 
-// downloadAndStoreMetrics runs one download attempt and updates the in-memory cache
-// and on-disk file with the result. Called both once at startup and on each tick
-// of downloadMetricsPeriodically's ticker.
+// downloadAndStoreMetrics runs one download attempt and updates the in-memory cache and on-disk file.
 func downloadAndStoreMetrics() {
 	log.Println("downloadAndStoreMetrics: Initiating metrics download...")
 	// Use a predictable temporary name for the downloaded file before validation/processing

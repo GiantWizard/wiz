@@ -205,10 +205,7 @@ func formatCost(cost float64) string {
 	return fmt.Sprintf("%.2f", cost) // Standard to 2 decimal places
 }
 
-// sanitizeFloat converts NaN or Inf float64 values to 0.0.
-// Useful for fields where NaN/Inf are not semantically meaningful or cause issues downstream
-// if not explicitly handled (e.g. some database types, or calculations expecting numbers).
-// Consider if 0.0 is the correct default for your use case, or if another value (e.g. -1, or keeping NaN) is better.
+// sanitizeFloat converts NaN or Inf to 0.0.
 func sanitizeFloat(f float64) float64 {
 	if math.IsNaN(f) || math.IsInf(f, 0) { // Catches both +Inf and -Inf
 		return 0.0

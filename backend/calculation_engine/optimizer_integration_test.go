@@ -9,12 +9,7 @@ import (
 	"time"
 )
 
-// TestOptimizerAgainstLiveData exercises the real optimizer pipeline end-to-end:
-// real committed metrics, real recipe files in dependencies/items, and a live
-// Hypixel bazaar fetch (public endpoint, no API key required). It doesn't assert
-// a specific profit number (bazaar prices move); instead it checks that every
-// successfully-calculated result is internally consistent, which is what would
-// actually catch a broken formula.
+// TestOptimizerAgainstLiveData hits the real Hypixel bazaar and checks results are internally consistent, since profit numbers move with prices.
 func TestOptimizerAgainstLiveData(t *testing.T) {
 	if os.Getenv("SKIP_NETWORK_TESTS") != "" {
 		t.Skip("SKIP_NETWORK_TESTS set, skipping live Hypixel API test")
