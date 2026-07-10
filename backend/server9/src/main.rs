@@ -300,19 +300,18 @@ impl ProductMetricsState {
         self.prev_sell_moving_week = current.sell_moving_week;
     }
 
-    // FIXED: Use start timestamp for delta periods
+    // Uses timestamps[i], the start of each delta period, not timestamps[i+1]
     fn detect_velocity_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
         let mut patterns = Vec::new();
         let mut activity_periods = Vec::new();
 
-        // FIXED: Use timestamps[i] (start of delta period) not timestamps[i+1]
         for (i, &delta) in deltas.iter().enumerate() {
             if delta > 0 && i + 1 < timestamps.len() {
                 let time_diff = (timestamps[i + 1] - timestamps[i]) as f64 / 60.0;
                 if time_diff > 0.0 && time_diff < 60.0 {
                     let velocity = delta as f64 / time_diff;
                     // Store: (delta_index, velocity, delta_value, start_timestamp)
-                    activity_periods.push((i, velocity, delta, timestamps[i])); // ← CHANGED: Use timestamps[i]
+                    activity_periods.push((i, velocity, delta, timestamps[i]));
                 }
             }
         }
@@ -392,15 +391,14 @@ impl ProductMetricsState {
         patterns.into_iter().take(2).collect()
     }
 
-    // FIXED: Use start timestamp for delta periods
+    // Stores the start timestamp of each delta period (timestamps[i], not timestamps[i+1])
     fn detect_rhythm_patterns(deltas: &[i64], timestamps: &[u64]) -> Vec<FuzzyPattern> {
         let mut patterns = Vec::new();
-        
-        // FIXED: Store start timestamp of each delta period
+
         let activity_data: Vec<(usize, u64, i64)> = deltas.iter().enumerate()
             .filter_map(|(i, &delta)| {
                 if delta > 0 && i + 1 < timestamps.len() {
-                    Some((i, timestamps[i], delta)) // ← CHANGED: Use timestamps[i] (start of delta period)
+                    Some((i, timestamps[i], delta))
                 } else {
                     None
                 }
@@ -525,7 +523,7 @@ impl ProductMetricsState {
         (None, pattern_details)
     }
 
-    // FIXED: Use start timestamp for pattern periods
+    // Uses the start timestamp of each pattern period
     fn find_patterns_from_deltas(
         moving_week_deltas: &[i64],
         inferred_volume_history: &[i64],
@@ -542,7 +540,7 @@ impl ProductMetricsState {
                     position: i,
                     moving_week_delta: delta,
                     inferred_volume: inferred,
-                    timestamp: timestamps[i], // ← CHANGED: Use timestamps[i] (start of delta period)
+                    timestamp: timestamps[i],
                 });
             }
         }
@@ -823,7 +821,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("[GiantWizard] Configuration: Target windows = {} (1 hour), polling every {} seconds.", 
         TARGET_WINDOWS, api_poll_interval_secs);
-    println!("[GiantWizard] Fuzzy pattern detection: FIXED timestamp logic - using start times for delta periods.");
+    println!("[GiantWizard] Fuzzy pattern detection: using start times for delta periods.");
     println!("[GiantWizard] Scale analysis: Diagnostic only - volume estimates always use moving week totals as ground truth.");
 
     loop {

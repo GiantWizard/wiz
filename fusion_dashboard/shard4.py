@@ -33,19 +33,15 @@ def analyze_and_categorize_strategies(all_recipe_data):
         sell_order_price = market_price.get("insta_buy_cost")
 
         for recipe in item_data.get("recipes", []):
-            # --- CHANGE: START ---
-            # Get the output quantity for THIS specific recipe (defaults to 1.0 if not present)
+            # Output quantity for this specific recipe (defaults to 1.0 if not present)
             output_quantity = recipe.get("produces", {}).get("quantity", 1.0)
-            
-            # Calculate the total revenue for this fusion by multiplying price by quantity
+
+            # Total revenue for this fusion, scaled by output quantity
             total_insta_sell_revenue = insta_sell_price * output_quantity if insta_sell_price is not None else None
             total_sell_order_revenue = sell_order_price * output_quantity if sell_order_price is not None else None
-            # --- CHANGE: END ---
-            
+
             craft_costs = recipe.get("cost_summary", {})
-            
-            # --- CHANGE: START ---
-            # Use the new total revenue variables for profit calculation
+
             profits = {
                 "ib_both_is_prod": safe_subtract(total_insta_sell_revenue, craft_costs.get("cost_instabuy_both")),
                 "bo_c1_ib_c2_is_prod": safe_subtract(total_insta_sell_revenue, craft_costs.get("cost_instabuy_c1_buy_order_c2")),
@@ -56,7 +52,6 @@ def analyze_and_categorize_strategies(all_recipe_data):
                 "ib_c1_bo_c2_so_prod": safe_subtract(total_sell_order_revenue, craft_costs.get("cost_buy_order_c1_instabuy_c2")),
                 "bo_both_so_prod": safe_subtract(total_sell_order_revenue, craft_costs.get("cost_buy_order_both")),
             }
-            # --- CHANGE: END ---
 
             for key, profit in profits.items():
                 if profit is not None and profit > 0:

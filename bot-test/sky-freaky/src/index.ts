@@ -1,7 +1,4 @@
-// ONLY use this library for the verifier function
 import { verifyKey } from 'discord-interactions';
-
-// We still need the main type definition
 import { APIInteraction } from 'discord-api-types/v10';
 
 export interface Env {
@@ -30,7 +27,6 @@ export default {
 
     const interaction: APIInteraction = await request.json();
 
-    // FULFILLS REQUIREMENT: Acknowledging PING requests using raw numbers
     if (interaction.type === 1) { // 1 = PING
       console.log('Handling Ping request');
       return new Response(
@@ -39,8 +35,6 @@ export default {
       );
     }
 
-    // You can keep using enums for the rest of your app if you wish,
-    // but the PING/PONG is the most critical part for verification.
     if (interaction.type === 2) { // 2 = APPLICATION_COMMAND
       if ('name' in interaction.data && interaction.data.name.toLowerCase() === 'ping') {
         console.log('Handling ping command');

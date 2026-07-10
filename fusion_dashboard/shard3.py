@@ -270,12 +270,10 @@ def generate_fully_expanded_recipes(shards_data, shard_prices):
                     is_source_special = any(fam in {'Elemental', 'Amphibian', 'Reptile'} for fam in source_shard.get('families', []))
                     is_filler_special = any(fam in {'Elemental', 'Amphibian', 'Reptile'} for fam in filler_shard.get('families', []))
                     
-                    # --- CHANGE: START ---
-                    # Check if either component is a Reptile to determine the output quantity.
+                    # A Reptile component in either slot bumps the output quantity
                     is_source_reptile = 'Reptile' in source_shard.get('families', [])
                     is_filler_reptile = 'Reptile' in filler_shard.get('families', [])
                     output_quantity = 1.2 if is_source_reptile or is_filler_reptile else 1.0
-                    # --- CHANGE: END ---
                     
                     recipe_components = [
                         {"quantity": 2 if is_source_special else 5, "name": source_shard['name'], "id": source_id},
@@ -284,15 +282,12 @@ def generate_fully_expanded_recipes(shards_data, shard_prices):
                     for comp in recipe_components:
                         add_prices_to_component(comp, shard_prices)
                     
-                    # --- CHANGE: START ---
-                    # The 'produces' dict now includes the potentially modified output quantity.
                     recipes_for_current_shard.append({
                         "type": "Base Fusion (Expanded)",
                         "recipe_components": recipe_components,
                         "produces": {"quantity": output_quantity, "name": target_name, "id": target_id},
                         "cost_summary": calculate_recipe_cost_summary(recipe_components)
                     })
-                    # --- CHANGE: END ---
                     total_recipe_count += 1
         
         if recipes_for_current_shard:
