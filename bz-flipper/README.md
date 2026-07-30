@@ -11,12 +11,13 @@ endpoint.
 Hypixel's bazaar endpoint (`GET https://api.hypixel.net/v2/skyblock/bazaar`,
 no API key required) returns, per item:
 
-- `buy_summary`: the active **buy orders** (bids) for that item, highest
-  price first. The top entry is the best price you'd get if you instantly
-  sold into the book.
-- `sell_summary`: the active **sell orders** (asks) for that item, lowest
-  price first. The top entry is the best price you'd pay if you instantly
-  bought from the book.
+- `buy_summary`: despite the name, this is the book of active **sell
+  orders** (asks) for that item — it's named for the action you'd take
+  (buying), not who placed the order. The top entry is the lowest ask,
+  i.e. the price you'd pay to instantly buy.
+- `sell_summary`: the book of active **buy orders** (bids) — again named
+  for the action (selling). The top entry is the highest bid, i.e. the
+  price you'd get for instantly selling.
 - `quick_status`: aggregate stats — `buyPrice`/`sellPrice` (weighted
   averages of the summaries above), `buyOrders`/`sellOrders` (how many
   distinct orders are sitting in each book — a proxy for how much

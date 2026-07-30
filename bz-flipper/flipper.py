@@ -30,14 +30,19 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
     """
     flips = []
     for product_id, data in products.items():
-        buy_orders = data.get("buy_summary") or []   # bids, highest first
-        sell_orders = data.get("sell_summary") or []  # asks, lowest first
+        # Despite the names, buy_summary is the book of active SELL orders
+        # (its top price is what you'd pay to insta-buy, i.e. the ask), and
+        # sell_summary is the book of active BUY orders (its top price is
+        # what you'd get insta-selling, i.e. the bid). Named for the action
+        # you'd take, not who placed the order.
+        sell_orders = data.get("buy_summary") or []
+        buy_orders = data.get("sell_summary") or []
         status = data.get("quick_status") or {}
         if not buy_orders or not sell_orders:
             continue
 
-        bid = buy_orders[0]["pricePerUnit"]
         ask = sell_orders[0]["pricePerUnit"]
+        bid = buy_orders[0]["pricePerUnit"]
         if bid <= 0 or ask <= 0 or ask <= bid:
             continue
 
