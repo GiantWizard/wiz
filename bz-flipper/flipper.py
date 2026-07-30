@@ -67,10 +67,22 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
         if margin_pct < min_margin_pct:
             continue
 
-        volume_per_hour = min(status.get("buyMovingWeek", 0),
-                               status.get("sellMovingWeek", 0)) / HOURS_PER_WEEK
+        buy_moving_week = status.get("buyMovingWeek", 0)
+        sell_moving_week = status.get("sellMovingWeek", 0)
+        volume_per_hour = min(buy_moving_week, sell_moving_week) / HOURS_PER_WEEK
         if volume_per_hour < min_volume_per_hour:
             continue
+
+        # sellMovingWeek is realized flow through the buy-order (demand)
+        # book, buyMovingWeek through the sell-offer (supply) book. Their
+        # ratio is a directional pressure signal, distinct from the
+        # magnitude-only liquidity floor above: >1 means demand is being
+        # realized faster than supply is being absorbed (upward pressure),
+        # <1 the reverse. Informational only -- it doesn't affect ranking.
+        if buy_moving_week > 0:
+            demand_supply_ratio = sell_moving_week / buy_moving_week
+        else:
+            demand_supply_ratio = float("inf") if sell_moving_week > 0 else 1.0
 
         # quick_status.buyOrders/sellOrders follow the same "named by action"
         # convention as buy_summary/sell_summary: buyOrders is the count
@@ -99,6 +111,7 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
             "volume_per_hour": round(volume_per_hour, 1),
             "active_orders": active_orders,
             "capture_fraction": round(capture_fraction, 3),
+            "demand_supply_ratio": round(demand_supply_ratio, 2) if demand_supply_ratio != float("inf") else None,
             "estimated_profit_per_hour": round(
                 profit_per_item * volume_per_hour * capture_fraction, 0),
         })
@@ -109,9 +122,10 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
 
 def render_table(flips: list[dict], limit: int) -> str:
     headers = ["Item", "Buy Order", "Sell Order", "Profit/Item", "Margin", "Vol/hr",
-               "Orders", "Capture", "Est. Profit/hr"]
+               "Orders", "Capture", "Demand/Supply", "Est. Profit/hr"]
     rows = [headers]
     for f in flips[:limit]:
+        ratio = f["demand_supply_ratio"]
         rows.append([
             f["name"],
             f"{f['buy_order_price']:,.1f}",
@@ -121,6 +135,7 @@ def render_table(flips: list[dict], limit: int) -> str:
             f"{f['volume_per_hour']:,.0f}",
             f"{f['active_orders']:,}",
             f"{f['capture_fraction']:.0%}",
+            f"{ratio:.2f}" if ratio is not None else "inf",
             f"{f['estimated_profit_per_hour']:,.0f}",
         ])
     widths = [max(len(row[i]) for row in rows) for i in range(len(headers))]
