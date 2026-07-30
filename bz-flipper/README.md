@@ -40,7 +40,9 @@ For every product it computes:
 
 - `buy_order_price` / `sell_order_price` — top bid/ask nudged by
   `--undercut` coins, i.e. the orders you'd actually place.
-- `profit_per_item` — the spread you'd capture per unit after undercutting.
+- `profit_per_item` — the spread you'd capture per unit after undercutting
+  and the ~1.25%/1% sell tax (`--tax-pct`). Buy orders aren't taxed; only
+  the sale leg is, whether it's an instant-sell or a filled sell offer.
 - `margin_pct` — that profit as a percentage of your buy-order price.
 - `volume_per_hour` — `min(buyMovingWeek, sellMovingWeek) / (7*24)`, a
   liquidity floor: an item can't fill faster than the slower side of its
@@ -81,6 +83,7 @@ Flags (`python3 flipper.py --help`):
 | `--min-volume` | `10.0` | Minimum units/hour traded on the thinner side |
 | `--max-orders` | `0` (off) | Skip items with more active orders than this |
 | `--competition-weight` | `0.1` | How hard order-book competition discounts est. profit/hour |
+| `--tax-pct` | `1.25` | Bazaar sell tax, percent (1.25 base, 1.0 with the Bazaar Flipper perk) |
 | `--limit` | `40` | Max rows shown |
 | `--serve` | off | Run an HTTP server instead of a single run |
 | `--refresh-seconds` | `30` | How often `--serve` re-polls Hypixel |
@@ -90,8 +93,8 @@ Flags (`python3 flipper.py --help`):
 - This ranks by a simplified liquidity model; it doesn't simulate order
   queue position, so a crowded book (`active_orders` high) will fill
   slower than the estimate implies.
-- Bazaar currently has no transaction tax, so none is modeled. If Hypixel
-  reintroduces one, subtract it from `profit_per_item` in `find_flips`.
+- The sell tax is a flat `--tax-pct` on the sale leg; it doesn't model the
+  Bazaar Flipper perk's cost/eligibility or any other tax modifiers.
 - Not tested against live data in this session — outbound network access
   to `api.hypixel.net` isn't available in this environment. The bazaar
   response shape is stable and well documented (and matches the fields

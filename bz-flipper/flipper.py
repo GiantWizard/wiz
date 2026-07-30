@@ -21,7 +21,7 @@ def fetch_products() -> dict:
 
 def find_flips(products: dict, undercut: float, min_margin_pct: float,
                min_volume_per_hour: float, max_orders: int,
-               competition_weight: float) -> list[dict]:
+               competition_weight: float, tax_pct: float) -> list[dict]:
     """Score each product as a buy-order/sell-order flip.
 
     Strategy: place a buy order just above the current top bid, wait for it
@@ -56,7 +56,10 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
 
         buy_order_price = bid + undercut
         sell_order_price = ask - undercut
-        profit_per_item = sell_order_price - buy_order_price
+        # Buy orders aren't taxed; selling (instant-sell or a filled sell
+        # offer) is, at 1.25% base or 1% with the Bazaar Flipper perk.
+        net_sell_proceeds = sell_order_price * (1 - tax_pct / 100)
+        profit_per_item = net_sell_proceeds - buy_order_price
         if profit_per_item <= 0:
             continue
 
@@ -132,7 +135,7 @@ def render_table(flips: list[dict], limit: int) -> str:
 def run_once(args: argparse.Namespace) -> list[dict]:
     products = fetch_products()
     return find_flips(products, args.undercut, args.min_margin / 100,
-                       args.min_volume, args.max_orders, args.competition_weight)
+                       args.min_volume, args.max_orders, args.competition_weight, args.tax_pct)
 
 
 def serve(args: argparse.Namespace) -> None:
@@ -202,6 +205,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--competition-weight", type=float, default=0.1,
                          help="how hard order-book competition discounts estimated profit/hour "
                               "(capture_fraction = 1 / (1 + competitors * weight); 0 disables it)")
+    parser.add_argument("--tax-pct", type=float, default=1.25,
+                         help="bazaar sell tax in percent (1.25 base, 1.0 with the Bazaar Flipper perk)")
     return parser.parse_args()
 
 
