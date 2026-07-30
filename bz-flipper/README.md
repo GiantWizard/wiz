@@ -45,11 +45,17 @@ For every product it computes:
 - `volume_per_hour` — `min(buyMovingWeek, sellMovingWeek) / (7*24)`, a
   liquidity floor: an item can't fill faster than the slower side of its
   own market actually trades.
-- `estimated_profit_per_hour` — `profit_per_item * volume_per_hour`. This
-  assumes you capture *all* of the hourly volume, which is optimistic on
-  crowded items (see `active_orders`) and conservative on thin ones where
-  a single large order could fill instantly — treat it as a ranking
-  signal, not a guarantee.
+- `capture_fraction` — `1 / (1 + bottleneck_competitors * competition_weight)`,
+  where `bottleneck_competitors` is the larger of the two order counts
+  competing against your buy leg and your sell leg. Raw volume only tells
+  you an item trades; it doesn't tell you *your* order gets a share of
+  that flow, since everyone else on a crowded book is also undercutting.
+  This discounts for that: it's ~1 on an empty book and shrinks as
+  competition grows. Tune the discount with `--competition-weight`
+  (0 disables it entirely).
+- `estimated_profit_per_hour` — `profit_per_item * volume_per_hour *
+  capture_fraction`. Still a ranking signal, not a guarantee — queue
+  position isn't simulated exactly, just approximated by order count.
 
 Results are filtered by `--min-margin`, `--min-volume`, and optionally
 `--max-orders` (skip items with too much order-book competition to
@@ -74,6 +80,7 @@ Flags (`python3 flipper.py --help`):
 | `--min-margin` | `1.0` | Minimum profit margin, in percent |
 | `--min-volume` | `10.0` | Minimum units/hour traded on the thinner side |
 | `--max-orders` | `0` (off) | Skip items with more active orders than this |
+| `--competition-weight` | `0.1` | How hard order-book competition discounts est. profit/hour |
 | `--limit` | `40` | Max rows shown |
 | `--serve` | off | Run an HTTP server instead of a single run |
 | `--refresh-seconds` | `30` | How often `--serve` re-polls Hypixel |

@@ -20,13 +20,21 @@ def fetch_products() -> dict:
 
 
 def find_flips(products: dict, undercut: float, min_margin_pct: float,
-               min_volume_per_hour: float, max_orders: int) -> list[dict]:
+               min_volume_per_hour: float, max_orders: int,
+               competition_weight: float) -> list[dict]:
     """Score each product as a buy-order/sell-order flip.
 
     Strategy: place a buy order just above the current top bid, wait for it
     to fill, then place a sell order just below the current top ask. Profit
     is the spread minus the two undercuts; this is what "bazaar flipping"
     means as distinct from crafting/insta-buy-insta-sell arbitrage.
+
+    Raw volume tells you an item trades, not that *your* order gets a share
+    of it: on a crowded book everyone else is undercutting too, so your
+    order sits further back in the queue. `capture_fraction` discounts the
+    naive volume*profit estimate by how contested each side of the book is,
+    which is what actually distinguishes a good flip from a merely liquid
+    one.
     """
     flips = []
     for product_id, data in products.items():
@@ -61,9 +69,22 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
         if volume_per_hour < min_volume_per_hour:
             continue
 
-        active_orders = status.get("buyOrders", 0) + status.get("sellOrders", 0)
+        # quick_status.buyOrders/sellOrders follow the same "named by action"
+        # convention as buy_summary/sell_summary: buyOrders is the count
+        # backing buy_summary (the ask side, competing against our sell
+        # order), sellOrders backs sell_summary (the bid side, competing
+        # against our buy order).
+        sell_side_competitors = status.get("buyOrders", 0)
+        buy_side_competitors = status.get("sellOrders", 0)
+        active_orders = buy_side_competitors + sell_side_competitors
         if max_orders and active_orders > max_orders:
             continue
+
+        # A flip needs both legs to fill, so the more contested side is the
+        # bottleneck. capture_fraction -> 1 on an empty book, and shrinks as
+        # competition grows; competition_weight controls how hard.
+        bottleneck_competitors = max(buy_side_competitors, sell_side_competitors)
+        capture_fraction = 1.0 / (1.0 + bottleneck_competitors * competition_weight)
 
         flips.append({
             "product_id": product_id,
@@ -73,8 +94,10 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
             "profit_per_item": round(profit_per_item, 2),
             "margin_pct": round(margin_pct * 100, 2),
             "volume_per_hour": round(volume_per_hour, 1),
-            "estimated_profit_per_hour": round(profit_per_item * volume_per_hour, 0),
             "active_orders": active_orders,
+            "capture_fraction": round(capture_fraction, 3),
+            "estimated_profit_per_hour": round(
+                profit_per_item * volume_per_hour * capture_fraction, 0),
         })
 
     flips.sort(key=lambda f: f["estimated_profit_per_hour"], reverse=True)
@@ -82,7 +105,8 @@ def find_flips(products: dict, undercut: float, min_margin_pct: float,
 
 
 def render_table(flips: list[dict], limit: int) -> str:
-    headers = ["Item", "Buy Order", "Sell Order", "Profit/Item", "Margin", "Vol/hr", "Est. Profit/hr", "Orders"]
+    headers = ["Item", "Buy Order", "Sell Order", "Profit/Item", "Margin", "Vol/hr",
+               "Orders", "Capture", "Est. Profit/hr"]
     rows = [headers]
     for f in flips[:limit]:
         rows.append([
@@ -92,8 +116,9 @@ def render_table(flips: list[dict], limit: int) -> str:
             f"{f['profit_per_item']:,.1f}",
             f"{f['margin_pct']:.1f}%",
             f"{f['volume_per_hour']:,.0f}",
-            f"{f['estimated_profit_per_hour']:,.0f}",
             f"{f['active_orders']:,}",
+            f"{f['capture_fraction']:.0%}",
+            f"{f['estimated_profit_per_hour']:,.0f}",
         ])
     widths = [max(len(row[i]) for row in rows) for i in range(len(headers))]
     lines = []
@@ -107,7 +132,7 @@ def render_table(flips: list[dict], limit: int) -> str:
 def run_once(args: argparse.Namespace) -> list[dict]:
     products = fetch_products()
     return find_flips(products, args.undercut, args.min_margin / 100,
-                       args.min_volume, args.max_orders)
+                       args.min_volume, args.max_orders, args.competition_weight)
 
 
 def serve(args: argparse.Namespace) -> None:
@@ -174,6 +199,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-margin", type=float, default=1.0, help="minimum profit margin in percent")
     parser.add_argument("--min-volume", type=float, default=10.0, help="minimum traded units/hour required")
     parser.add_argument("--max-orders", type=int, default=0, help="skip items with more active orders than this (0 = no limit)")
+    parser.add_argument("--competition-weight", type=float, default=0.1,
+                         help="how hard order-book competition discounts estimated profit/hour "
+                              "(capture_fraction = 1 / (1 + competitors * weight); 0 disables it)")
     return parser.parse_args()
 
 
